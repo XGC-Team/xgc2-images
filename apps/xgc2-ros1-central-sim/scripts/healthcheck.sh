@@ -20,8 +20,8 @@ test -x /opt/qgroundcontrol/appdir/AppRun
 grep -a -q 'v4\.4\.4' /opt/qgroundcontrol/appdir/QGroundControl
 
 required_ros_packages=(
-  gazebo_session_manager
-  gazebo_sim_examples
+  xgc2_gazebo_scene
+  xgc2_robot_visualization
   gazebo_sim_visualization
   gazebo_sim_vrpn_bridge
   gazebo_sim_worlds
@@ -34,6 +34,10 @@ required_ros_packages=(
 for package in "${required_ros_packages[@]}"; do
   rospack find "${package}" >/dev/null
 done
+
+test -x \
+  /opt/ros/noetic/lib/xgc2_robot_visualization/xgc2_robot_description_publisher_node
+test -f /opt/ros/noetic/lib/libgazebo_scene_contract.so
 
 lock_file=/usr/share/xgc2-central-sim/packages.lock
 test -s "${lock_file}"

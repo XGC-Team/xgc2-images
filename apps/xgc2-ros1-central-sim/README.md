@@ -5,6 +5,11 @@ XGC2 centralized simulation mode. It runs the shared ROS master, Gazebo server,
 VRPN bridge and all configured FS150 and Scout Mini robots in one disposable
 container.
 
+Experiment orchestration and process ownership remain in XGC2 Core. The image
+contains only the maintained, independently versioned simulator products; the
+retired `gazebo-sim-manager`, `gazebo-sim-examples`, and umbrella packages are
+not installed.
+
 The image derives from `xgc-ros1-runtime:1.2.3`. XGC2 products are installed
 from `https://xgc2.apt.xiaokang.ink` only while the image is built. Container
 startup never runs `apt update` or installs products.

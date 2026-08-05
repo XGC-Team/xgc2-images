@@ -1,13 +1,12 @@
 # XGC2 products baked into xgc2-ros1-central-sim.
 # Keep exact Debian versions here so rebuilding the same app version cannot
 # silently select a newer simulator release from the APT repository.
-ros-noetic-xgc2-gazebo-sim-manager=1.1.0-21
-ros-noetic-xgc2-gazebo-sim-examples=1.1.0-21
-ros-noetic-xgc2-gazebo-sim-visualization=1.1.0-11
-ros-noetic-xgc2-gazebo-sim-vrpn-bridge=1.1.0-13
-ros-noetic-xgc2-gazebo-sim-worlds=1.1.0-10
-ros-noetic-xgc2-robot-visualization=0.1.0-5
-ros-noetic-xgc2-gazebo-sim-scout=0.4.9-23
-ros-noetic-xgc2-px4-sitl-1-12=1.12.3-15
-ros-noetic-xgc2-gazebo-sim-px4-1-12=1.12.3-15
-ros-noetic-xgc2-gazebo-sim-fs150-sitl=1.1.0-10
+ros-noetic-xgc2-gazebo-scene=1.2.0-12
+ros-noetic-xgc2-gazebo-sim-fs150-sitl=1.1.0-18
+ros-noetic-xgc2-gazebo-sim-px4-1-12=1.12.3-22
+ros-noetic-xgc2-gazebo-sim-scout=0.4.9-32
+ros-noetic-xgc2-gazebo-sim-visualization=1.1.0-25
+ros-noetic-xgc2-gazebo-sim-vrpn-bridge=1.1.0-23
+ros-noetic-xgc2-gazebo-sim-worlds=1.2.0-12
+ros-noetic-xgc2-px4-sitl-1-12=1.12.3-22
+ros-noetic-xgc2-robot-visualization=0.1.0-16
