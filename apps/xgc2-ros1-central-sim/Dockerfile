@@ -9,7 +9,7 @@ FROM ghcr.io/lxk36/xgc2-app-store/xgc-ros1-runtime:1.2.3@sha256:01bb09579865965b
 LABEL org.opencontainers.image.title="XGC2 ROS1 Central Simulation"
 LABEL org.opencontainers.image.description="Reproducible ROS Noetic central simulation runtime for XGC2 FS150, Scout Mini, and Mecanum UGV fleets."
 LABEL org.opencontainers.image.source="https://github.com/lxk36/xgc2-app-store"
-LABEL org.opencontainers.image.version="1.2.2"
+LABEL org.opencontainers.image.version="1.2.3"
 
 ARG XGC2_APT_BASE_URL=https://xgc2.apt.xiaokang.ink
 ARG QGC_APPIMAGE_URL=https://github.com/mavlink/qgroundcontrol/releases/download/v4.4.4/QGroundControl.AppImage
