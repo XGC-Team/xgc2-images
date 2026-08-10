@@ -17,7 +17,7 @@ App categories are intentionally limited to three operator-facing types:
 | App | Type | Image | Purpose |
 | --- | --- | --- | --- |
 | `xgc-ros1-runtime` | `simulation` | `ghcr.io/lxk36/xgc2-app-store/xgc-ros1-runtime` | Curated multi-architecture ROS Noetic simulation toolkit for ROS1, MAVROS, VRPN, Gazebo Classic and core robot visualization. |
-| `xgc2-ros1-central-sim` | `simulation` | `ghcr.io/lxk36/xgc2-app-store/xgc2-ros1-central-sim` | Version-locked amd64 ROS1 simulation runtime with FS150, PX4 1.12, Scout Mini, Mecanum UGV, current semantic Adapters, shared worlds, VRPN and QGroundControl 4.4.4 preinstalled. |
+| `xgc2-ros1-central-sim` | `simulation` | `ghcr.io/lxk36/xgc2-app-store/xgc2-ros1-central-sim` | Version-locked zero-Agent amd64 ROS1 simulation runtime with three robot simulators, semantic Adapters, ROS1 Tools, ROS Image RTP, Media Edge, shared worlds, VRPN and QGroundControl 4.4.4 preinstalled. |
 | `xgc1-focal-noetic-qt-builder` | `development` | `ghcr.io/lxk36/xgc2-app-store/xgc1-focal-noetic-qt-builder` | Multi-architecture XGC1 packaging image with ROS Noetic dependencies and source-built Qt 5.15.2. |
 | `px4-sitl-gazebo` | `simulation` | `ghcr.io/lxk36/xgc2-app-store/px4-sitl-gazebo` | PX4 software-in-the-loop simulation toolkit for Gazebo Classic and ROS Noetic. |
 | `gazebo-harmonic-ros2` | `simulation` | `ghcr.io/lxk36/xgc2-app-store/gazebo-harmonic-ros2` | Gazebo Harmonic with ROS 2 Jazzy integration. |

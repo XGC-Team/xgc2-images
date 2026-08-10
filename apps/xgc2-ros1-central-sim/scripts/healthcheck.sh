@@ -29,6 +29,9 @@ required_ros_packages=(
   gazebo_sim_worlds
   gazebo_sim_scout
   gazebo_sim_mecanum
+  xgc2_geometry_msgs
+  ros_image_rtp_adapter
+  xgc_ros1_tools_adapter
   px4_sitl_1_12
   gazebo_sim_px4_1_12
   gazebo_sim_fs150_sitl
@@ -45,6 +48,11 @@ test -f /opt/ros/noetic/lib/libgazebo_sim_mecanum_contract.so
 test -x /opt/ros/noetic/lib/xgc_px4_multirotor_ros1_adapter/xgc_px4_multirotor_ros1_adapter_node
 test -x /opt/ros/noetic/lib/xgc_scout_mini_ros1_adapter/xgc_scout_mini_ros1_adapter_node
 test -x /opt/ros/noetic/lib/xgc_mecanum_ugv_ros1_adapter/xgc_mecanum_ugv_ros1_adapter_node
+test -x /opt/ros/noetic/lib/ros_image_rtp_adapter/image_rtp_adapter
+test -x /opt/ros/noetic/lib/xgc_ros1_tools_adapter/xgc_ros1_tools_adapter_node
+test -x /opt/ros/noetic/lib/xgc_ros1_tools_adapter/xgc_ros1_tools_adapter_service_helper
+test -x /usr/bin/xgc-media-edge
+test -x /usr/lib/xgc2-media-edge/mediamtx
 
 linked_artifacts=(
   /usr/bin/gzserver-11.15.1
@@ -52,7 +60,10 @@ linked_artifacts=(
   /opt/ros/noetic/lib/rviz/rviz
   /opt/ros/noetic/lib/libgazebo_scene_contract.so
   /opt/ros/noetic/lib/libgazebo_sim_mecanum_contract.so
+  /opt/ros/noetic/lib/xgc_ros1_tools_adapter/xgc_ros1_tools_adapter_node
   /opt/qgroundcontrol/appdir/QGroundControl
+  /usr/bin/xgc-media-edge
+  /usr/lib/xgc2-media-edge/mediamtx
 )
 
 for artifact in "${linked_artifacts[@]}"; do

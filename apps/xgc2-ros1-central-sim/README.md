@@ -6,6 +6,12 @@ VRPN bridge and all configured FS150, Scout Mini, and Mecanum UGV robots in one
 disposable container. The matching current ROS1 semantic Adapters are baked in
 for those three supported robot families.
 
+The complete Central Simulation transport set is also installed at build time:
+XGC2 Geometry Messages, ROS Image RTP Adapter, ROS1 Tools Adapter, and Media
+Edge. Operators do not need to add those products in a derived local-fleet
+image. The image remains zero-Agent; Core enrollment and Agent lifecycle stay
+outside this container.
+
 Experiment orchestration and process ownership remain in XGC2 Core. The image
 contains only the maintained, independently versioned simulator products; the
 retired `gazebo-sim-manager`, `gazebo-sim-examples`, and umbrella packages are

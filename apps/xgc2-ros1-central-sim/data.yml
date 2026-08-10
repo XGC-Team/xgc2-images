@@ -12,7 +12,7 @@ additionalProperties:
     - QGroundControl
   shortDescEn: Reproducible central simulation image for FS150, Scout Mini, and Mecanum UGV fleets with QGroundControl 4.4.4.
   description:
-    en: Version-locked ROS Noetic and Gazebo Classic runtime with XGC2 FS150, PX4 1.12, Scout Mini, Mecanum UGV, current semantic Adapters, shared worlds, VRPN, visualization products and an extracted QGroundControl 4.4.4 runtime preinstalled.
+    en: Version-locked ROS Noetic and Gazebo Classic runtime with XGC2 FS150, PX4 1.12, Scout Mini, Mecanum UGV, semantic Adapters, Geometry Messages, ROS Image RTP, ROS1 Tools Adapter, Media Edge, shared worlds, VRPN, visualization products and QGroundControl 4.4.4 preinstalled while remaining zero-Agent.
   type: simulation
   crossVersionUpdate: true
   limit: 0

@@ -114,7 +114,9 @@ jobs:
                   "app" => app,
                   "version" => version,
                   "image" => image,
-                  "multiarch" => multiarch
+                  "multiarch" => multiarch,
+                  "no_cache" => doc["noCache"] == true,
+                  "version_only" => doc["publishVersionOnly"] == true
                 )
               end
               if multiarch
@@ -187,9 +189,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          tags="${{ matrix.image }}:${{ matrix.version }}-${{ matrix.arch }}"$'\n'"${{ matrix.image }}:latest-${{ matrix.arch }}"
-          if [[ "${{ matrix.multiarch }}" != "true" ]]; then
-            tags="${tags}"$'\n'"${{ matrix.image }}:${{ matrix.version }}"$'\n'"${{ matrix.image }}:latest"
+          if [[ "${{ matrix.version_only }}" == "true" && "${{ matrix.multiarch }}" != "true" ]]; then
+            tags="${{ matrix.image }}:${{ matrix.version }}"
+          else
+            tags="${{ matrix.image }}:${{ matrix.version }}-${{ matrix.arch }}"$'\n'"${{ matrix.image }}:latest-${{ matrix.arch }}"
+            if [[ "${{ matrix.multiarch }}" != "true" ]]; then
+              tags="${tags}"$'\n'"${{ matrix.image }}:${{ matrix.version }}"$'\n'"${{ matrix.image }}:latest"
+            fi
           fi
 
           if [[ "${{ github.event_name }}" != "pull_request" && -n "${XGC_CN_REGISTRY}" && -n "${XGC_CN_NAMESPACE}" && -n "${XGC_CN_USERNAME}" && -n "${XGC_CN_PASSWORD}" ]]; then
@@ -197,9 +203,13 @@ jobs:
             cn_namespace="${XGC_CN_NAMESPACE#/}"
             cn_namespace="${cn_namespace%/}"
             cn_image="${cn_registry}/${cn_namespace}/${{ matrix.app }}"
-            tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}-${{ matrix.arch }}"$'\n'"${cn_image}:latest-${{ matrix.arch }}"
-            if [[ "${{ matrix.multiarch }}" != "true" ]]; then
-              tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}"$'\n'"${cn_image}:latest"
+            if [[ "${{ matrix.version_only }}" == "true" && "${{ matrix.multiarch }}" != "true" ]]; then
+              tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}"
+            else
+              tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}-${{ matrix.arch }}"$'\n'"${cn_image}:latest-${{ matrix.arch }}"
+              if [[ "${{ matrix.multiarch }}" != "true" ]]; then
+                tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}"$'\n'"${cn_image}:latest"
+              fi
             fi
           fi
 
@@ -216,6 +226,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: ${{ github.event_name != 'pull_request' }}
           load: ${{ github.event_name == 'pull_request' }}
+          no-cache: ${{ matrix.no_cache }}
           tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha,scope=${{ matrix.app }}-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}-${{ matrix.arch }}
@@ -230,7 +241,11 @@ jobs:
             echo "No healthcheck entrypoint declared for apps/${{ matrix.app }}; image build completed."
             exit 0
           fi
-          docker run --rm "${{ matrix.image }}:${{ matrix.version }}-${{ matrix.arch }}" bash -lc "${healthcheck}"
+          image_tag="${{ matrix.version }}-${{ matrix.arch }}"
+          if [[ "${{ matrix.version_only }}" == "true" && "${{ matrix.multiarch }}" != "true" ]]; then
+            image_tag="${{ matrix.version }}"
+          fi
+          docker run --rm "${{ matrix.image }}:${image_tag}" bash -lc "${healthcheck}"
 
   manifest:
     needs:
@@ -331,9 +346,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          tags="${{ matrix.image }}:${{ matrix.version }}-${{ matrix.arch }}"$'\n'"${{ matrix.image }}:latest-${{ matrix.arch }}"
-          if [[ "${{ matrix.multiarch }}" != "true" ]]; then
-            tags="${tags}"$'\n'"${{ matrix.image }}:${{ matrix.version }}"$'\n'"${{ matrix.image }}:latest"
+          if [[ "${{ matrix.version_only }}" == "true" && "${{ matrix.multiarch }}" != "true" ]]; then
+            tags="${{ matrix.image }}:${{ matrix.version }}"
+          else
+            tags="${{ matrix.image }}:${{ matrix.version }}-${{ matrix.arch }}"$'\n'"${{ matrix.image }}:latest-${{ matrix.arch }}"
+            if [[ "${{ matrix.multiarch }}" != "true" ]]; then
+              tags="${tags}"$'\n'"${{ matrix.image }}:${{ matrix.version }}"$'\n'"${{ matrix.image }}:latest"
+            fi
           fi
 
           if [[ "${{ github.event_name }}" != "pull_request" && -n "${XGC_CN_REGISTRY}" && -n "${XGC_CN_NAMESPACE}" && -n "${XGC_CN_USERNAME}" && -n "${XGC_CN_PASSWORD}" ]]; then
@@ -341,9 +360,13 @@ jobs:
             cn_namespace="${XGC_CN_NAMESPACE#/}"
             cn_namespace="${cn_namespace%/}"
             cn_image="${cn_registry}/${cn_namespace}/${{ matrix.app }}"
-            tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}-${{ matrix.arch }}"$'\n'"${cn_image}:latest-${{ matrix.arch }}"
-            if [[ "${{ matrix.multiarch }}" != "true" ]]; then
-              tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}"$'\n'"${cn_image}:latest"
+            if [[ "${{ matrix.version_only }}" == "true" && "${{ matrix.multiarch }}" != "true" ]]; then
+              tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}"
+            else
+              tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}-${{ matrix.arch }}"$'\n'"${cn_image}:latest-${{ matrix.arch }}"
+              if [[ "${{ matrix.multiarch }}" != "true" ]]; then
+                tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}"$'\n'"${cn_image}:latest"
+              fi
             fi
           fi
 
@@ -360,6 +383,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: ${{ github.event_name != 'pull_request' }}
           load: ${{ github.event_name == 'pull_request' }}
+          no-cache: ${{ matrix.no_cache }}
           tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha,scope=${{ matrix.app }}-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}-${{ matrix.arch }}
@@ -374,7 +398,11 @@ jobs:
             echo "No healthcheck entrypoint declared for apps/${{ matrix.app }}; image build completed."
             exit 0
           fi
-          docker run --rm "${{ matrix.image }}:${{ matrix.version }}-${{ matrix.arch }}" bash -lc "${healthcheck}"
+          image_tag="${{ matrix.version }}-${{ matrix.arch }}"
+          if [[ "${{ matrix.version_only }}" == "true" && "${{ matrix.multiarch }}" != "true" ]]; then
+            image_tag="${{ matrix.version }}"
+          fi
+          docker run --rm "${{ matrix.image }}:${image_tag}" bash -lc "${healthcheck}"
 
   dependent_manifest:
     needs:

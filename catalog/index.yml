@@ -16,9 +16,9 @@ apps:
       - Gazebo Classic
   - key: xgc2-ros1-central-sim
     name: XGC2 ROS1 Central Simulation
-    version: 1.2.1
+    version: 1.2.2
     type: simulation
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-ros1-central-sim:1.2.1
+    image: ghcr.io/lxk36/xgc2-app-store/xgc2-ros1-central-sim:1.2.2
     app: ../apps/xgc2-ros1-central-sim/app.yml
     data: ../apps/xgc2-ros1-central-sim/data.yml
     compose: ../apps/xgc2-ros1-central-sim/docker-compose.yml
