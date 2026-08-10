@@ -2,15 +2,17 @@
 
 This app is the immutable ROS Noetic and Gazebo Classic runtime for the first
 XGC2 centralized simulation mode. It runs the shared ROS master, Gazebo server,
-VRPN bridge and all configured FS150 and Scout Mini robots in one disposable
-container.
+VRPN bridge and all configured FS150, Scout Mini, and Mecanum UGV robots in one
+disposable container. The matching current ROS1 semantic Adapters are baked in
+for those three supported robot families.
 
 Experiment orchestration and process ownership remain in XGC2 Core. The image
 contains only the maintained, independently versioned simulator products; the
 retired `gazebo-sim-manager`, `gazebo-sim-examples`, and umbrella packages are
 not installed.
 
-The image derives from `xgc-ros1-runtime:1.2.3`. XGC2 products are installed
+The image derives from the pinned amd64 manifest of `xgc-ros1-runtime:1.2.3`.
+XGC2 products are installed
 from `https://xgc2.apt.xiaokang.ink` only while the image is built. Container
 startup never runs `apt update` or installs products.
 
@@ -40,7 +42,8 @@ file read-only and QGC runs as the matching non-root user.
 Set `QGC_FORCE_SOFTWARE_OPENGL=1` only when the host GPU/driver combination
 cannot render QGC correctly through the container.
 
-PX4 1.14, product source trees and build toolchains are intentionally excluded.
+PX4 1.14, product source trees, Agent, Unitree B2, Mocap, and their catalogs are
+intentionally excluded. This image is released and accepted for amd64 only.
 
 ## Local build
 

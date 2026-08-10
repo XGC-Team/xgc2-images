@@ -85,8 +85,10 @@ jobs:
             app_file = "apps/#{app}/app.yml"
             next unless File.exist?(app_file)
 
-            dependency = YAML.safe_load_file(app_file)["dependsOnApp"]
+            app_doc = YAML.safe_load_file(app_file)
+            dependency = app_doc["dependsOnApp"]
             next if dependency.nil? || dependency.empty? || seen[dependency]
+            next if app_doc["rebuildDependency"] == false
 
             expanded_apps << dependency
             seen[dependency] = true

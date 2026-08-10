@@ -1,14 +1,15 @@
-FROM golang:1.26-bookworm AS execution-runner-build
+FROM golang:1.26-bookworm@sha256:db25d241820546be7b96953eea8d3e6bd15d413d59d00a75b68b74dfb5e2ecd2 AS execution-runner-build
 
 WORKDIR /src
 COPY scripts/xgc-process-runner.go /src/xgc-process-runner.go
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/xgc-process-runner /src/xgc-process-runner.go
 
-FROM ghcr.io/lxk36/xgc2-app-store/xgc-ros1-runtime:1.2.3
+FROM ghcr.io/lxk36/xgc2-app-store/xgc-ros1-runtime:1.2.3@sha256:01bb09579865965b441073618acce335480f0dbb3c029e967e7d42585be198a9
 
 LABEL org.opencontainers.image.title="XGC2 ROS1 Central Simulation"
-LABEL org.opencontainers.image.description="Reproducible ROS Noetic central simulation runtime for XGC2 FS150 and Scout Mini fleets."
+LABEL org.opencontainers.image.description="Reproducible ROS Noetic central simulation runtime for XGC2 FS150, Scout Mini, and Mecanum UGV fleets."
 LABEL org.opencontainers.image.source="https://github.com/lxk36/xgc2-app-store"
+LABEL org.opencontainers.image.version="1.2.1"
 
 ARG XGC2_APT_BASE_URL=https://xgc2.apt.xiaokang.ink
 ARG QGC_APPIMAGE_URL=https://github.com/mavlink/qgroundcontrol/releases/download/v4.4.4/QGroundControl.AppImage

@@ -1,5 +1,5 @@
 name: XGC2 ROS1 Central Simulation
-title: FS150 and Scout Mini central simulation runtime
+title: FS150, Scout Mini, and Mecanum UGV central simulation runtime
 additionalProperties:
   key: xgc2-ros1-central-sim
   name: XGC2 ROS1 Central Simulation
@@ -8,10 +8,11 @@ additionalProperties:
     - Gazebo Classic
     - FS150
     - Scout Mini
+    - Mecanum UGV
     - QGroundControl
-  shortDescEn: Reproducible central simulation image for FS150 and Scout Mini fleets with QGroundControl 4.4.4.
+  shortDescEn: Reproducible central simulation image for FS150, Scout Mini, and Mecanum UGV fleets with QGroundControl 4.4.4.
   description:
-    en: Version-locked ROS Noetic and Gazebo Classic runtime with XGC2 FS150, PX4 1.12, Scout Mini, shared worlds, VRPN, visualization products and an extracted QGroundControl 4.4.4 runtime preinstalled.
+    en: Version-locked ROS Noetic and Gazebo Classic runtime with XGC2 FS150, PX4 1.12, Scout Mini, Mecanum UGV, current semantic Adapters, shared worlds, VRPN, visualization products and an extracted QGroundControl 4.4.4 runtime preinstalled.
   type: simulation
   crossVersionUpdate: true
   limit: 0

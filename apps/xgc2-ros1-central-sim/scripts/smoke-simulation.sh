@@ -6,6 +6,7 @@ source /opt/ros/noetic/setup.bash
 
 roslaunch --files gazebo_sim_scout simple.launch rviz:=false >/dev/null
 roslaunch --files gazebo_sim_fs150_sitl fs150.launch gui:=false >/dev/null
+roslaunch --files gazebo_sim_mecanum simple.launch gui:=false >/dev/null
 roslaunch --files gazebo_sim_vrpn_bridge vrpn_server.launch >/dev/null
 
-echo "XGC2 central simulation launch files resolved successfully."
+echo "XGC2 central simulation launch files resolved successfully without starting or moving a robot."

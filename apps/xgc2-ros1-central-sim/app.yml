@@ -1,20 +1,22 @@
 key: xgc2-ros1-central-sim
 name: XGC2 ROS1 Central Simulation
-version: 1.2.0
-image: ghcr.io/lxk36/xgc2-app-store/xgc2-ros1-central-sim:1.2.0
-description: Version-locked central ROS Noetic simulation runtime with QGroundControl 4.4.4 for XGC2 FS150 and Scout Mini fleets.
+version: 1.2.1
+image: ghcr.io/lxk36/xgc2-app-store/xgc2-ros1-central-sim:1.2.1
+description: Version-locked central ROS Noetic simulation runtime with QGroundControl 4.4.4 for XGC2 FS150, Scout Mini, and Mecanum UGV fleets.
 type: simulation
 tags:
   - Noetic
   - Gazebo Classic
   - FS150
   - Scout Mini
+  - Mecanum UGV
   - QGroundControl
 architectures:
   - amd64
 security:
   requiresHostNetwork: true
 dependsOnApp: xgc-ros1-runtime
+rebuildDependency: false
 license: Apache-2.0
 source: https://github.com/lxk36/xgc2-app-store
 upstreamReferences:
