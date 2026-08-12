@@ -80,6 +80,7 @@ jobs:
 
           trap 'echo "waiting in-flight registry pushes"; wait_pushes || true' ERR
 
+          declare -A loaded_parents=()
           mapfile -t steps < <(jq -c '.[]' <<<"${LAYERS_JSON}")
           for step in "${steps[@]}"; do
             app="$(jq -r '.app' <<<"${step}")"
@@ -95,7 +96,10 @@ jobs:
             local_ref="${image}:${version}-${ARCH}"
             push_refs=("${local_ref}")
             tags=(-t "${local_ref}")
-            if [[ "${multiarch}" != "true" ]]; then
+            if [[ "${multiarch}" == "true" ]]; then
+              tags+=(-t "${image}:latest-${ARCH}")
+              push_refs+=("${image}:latest-${ARCH}")
+            else
               tags+=(-t "${image}:${version}" -t "${image}:latest")
               push_refs+=("${image}:${version}" "${image}:latest")
             fi
@@ -103,19 +107,24 @@ jobs:
               cn_ref="${cn_image_prefix}/${app}:${version}-${ARCH}"
               tags+=(-t "${cn_ref}")
               push_refs+=("${cn_ref}")
-              if [[ "${multiarch}" != "true" ]]; then
+              if [[ "${multiarch}" == "true" ]]; then
+                tags+=(-t "${cn_image_prefix}/${app}:latest-${ARCH}")
+                push_refs+=("${cn_image_prefix}/${app}:latest-${ARCH}")
+              else
                 tags+=(-t "${cn_image_prefix}/${app}:${version}" -t "${cn_image_prefix}/${app}:latest")
                 push_refs+=("${cn_image_prefix}/${app}:${version}" "${cn_image_prefix}/${app}:latest")
               fi
             fi
 
-            cache_args=(--cache-from "type=gha,scope=${app}-${ARCH}" --cache-to "type=gha,mode=max,scope=${app}-${ARCH}")
-            extra=(--pull=false)
+            # Keep cache-from on every layer. mode=min exports faster than max so
+            # the next compile is not stuck behind a full GHA cache upload.
+            cache_args=(--cache-from "type=gha,scope=${app}-${ARCH}" --cache-to "type=gha,mode=min,scope=${app}-${ARCH}")
+            extra=()
             if [[ "${no_cache}" == "true" ]]; then
               extra+=(--no-cache)
             fi
-            if [[ "${parent_image}" == ghcr.io/* ]]; then
-              extra+=(--build-context "${parent_image}=docker-image://${parent_image}")
+            if [[ -n "${parent_image}" && -n "${loaded_parents[${parent_image}]+x}" ]]; then
+              extra+=(--pull=false --build-context "${parent_image}=docker-image://${parent_image}")
             fi
 
             echo "::group::Build ${app} ${ARCH}"
@@ -131,6 +140,8 @@ jobs:
               "${tags[@]}" \
               "${context}"
             echo "::endgroup::"
+
+            loaded_parents["${local_ref}"]=1
 
             if [[ -n "${healthcheck}" ]]; then
               echo "::group::Smoke ${app} ${ARCH}"
