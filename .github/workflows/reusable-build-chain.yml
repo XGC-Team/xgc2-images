@@ -64,7 +64,8 @@ jobs:
               docker push "${ref}"
               echo "<< push ${ref} done"
             ) &
-            push_pids+=("$!")
+            last_push_pid="$!"
+            push_pids+=("${last_push_pid}")
           }
 
           wait_pushes() {
@@ -80,7 +81,8 @@ jobs:
 
           trap 'echo "waiting in-flight registry pushes"; wait_pushes || true' ERR
 
-          declare -A loaded_parents=()
+          last_push_pid=""
+          declare -A ghcr_parent_pid=()
           mapfile -t steps < <(jq -c '.[]' <<<"${LAYERS_JSON}")
           for step in "${steps[@]}"; do
             app="$(jq -r '.app' <<<"${step}")"
@@ -116,17 +118,16 @@ jobs:
               fi
             fi
 
-            # Keep cache-from on every layer. mode=min exports faster than max so
-            # the next compile is not stuck behind a full GHA cache upload.
             cache_args=(--cache-from "type=gha,scope=${app}-${ARCH}" --cache-to "type=gha,mode=min,scope=${app}-${ARCH}")
             extra=()
             if [[ "${no_cache}" == "true" ]]; then
               extra+=(--no-cache)
             fi
-            if [[ -n "${parent_image}" && -n "${loaded_parents[${parent_image}]+x}" ]]; then
-              # Use a non-registry local name. docker-image://ghcr.io/... makes
-              # buildx ask GHCR for metadata while the parent push is still in flight.
-              extra+=(--pull=false --build-context "${parent_image}=docker-image://${loaded_parents[${parent_image}]}")
+            # Child FROM needs the parent on GHCR. Wait only for that one push;
+            # ACR and extra tags keep running in the background.
+            if [[ -n "${parent_image}" && -n "${ghcr_parent_pid[${parent_image}]+x}" ]]; then
+              echo "waiting for GHCR parent ${parent_image}"
+              wait "${ghcr_parent_pid[${parent_image}]}"
             fi
 
             echo "::group::Build ${app} ${ARCH}"
@@ -143,20 +144,17 @@ jobs:
               "${context}"
             echo "::endgroup::"
 
-            local_alias="xgc2-local/${app}:${version}-${ARCH}"
-            docker tag "${local_ref}" "${local_alias}"
-            loaded_parents["${local_ref}"]="${local_alias}"
-
             if [[ -n "${healthcheck}" ]]; then
               echo "::group::Smoke ${app} ${ARCH}"
               docker run --rm --platform "${PLATFORM}" "${local_ref}" bash -lc "${healthcheck}"
               echo "::endgroup::"
             fi
 
-            # GHCR and ACR pushes do not block the next layer: the child FROM
-            # uses the image just loaded into the local docker engine.
             for ref in "${push_refs[@]}"; do
               bg_push "${ref}"
+              if [[ "${ref}" == "${local_ref}" ]]; then
+                ghcr_parent_pid["${local_ref}"]="${last_push_pid}"
+              fi
             done
           done
 
