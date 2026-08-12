@@ -204,6 +204,8 @@ end
 chain_manifest.sort_by! do |row|
   [UBUNTUS.index(ubuntu_of(row["app"])) || 99, LAYERS.index(load_app(row["app"]).fetch("buildLayer")) || 99]
 end
+
+def matrix(rows)
   JSON.generate({ "include" => rows })
 end
 
