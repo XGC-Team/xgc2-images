@@ -1,0 +1,20 @@
+key: xgc2-build-noble-base
+name: XGC2 noble CI base
+version: 1.0.0
+image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-noble-base:1.0.0
+fromImage: ubuntu:24.04
+description: Ubuntu noble CI base with apt hygiene only. No compilers, ROS, or XGC2 APT packages.
+type: build
+buildLayer: base
+tags:
+  - Build
+  - CI
+  - Noble
+architectures:
+  - amd64
+  - arm64/v8
+license: Apache-2.0
+source: https://github.com/lxk36/xgc2-app-store
+entrypoints:
+  shell: /bin/bash
+  healthcheck: /usr/local/bin/xgc2-build-healthcheck

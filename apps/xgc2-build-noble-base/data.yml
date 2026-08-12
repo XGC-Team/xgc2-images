@@ -1,0 +1,29 @@
+name: XGC2 noble CI base
+title: XGC2 noble CI base
+additionalProperties:
+  key: xgc2-build-noble-base
+  name: XGC2 noble CI base
+  tags:
+    - Build
+    - CI
+    - Noble
+  shortDescEn: Ubuntu noble CI base with apt hygiene only. No compilers, ROS, or XGC2 APT packages.
+  description:
+    en: Ubuntu noble CI base with apt hygiene only. No compilers, ROS, or XGC2 APT packages.
+  type: build
+  crossVersionUpdate: true
+  limit: 0
+  website: https://github.com/lxk36/xgc2-app-store
+  github: https://github.com/lxk36/xgc2-app-store
+  document: https://github.com/lxk36/xgc2-app-store/tree/master/apps/xgc2-build-noble-base
+  architectures:
+    - amd64
+    - arm64/v8
+  batchInstallSupport: false
+  formFields:
+    - default: xgc2-build-noble-base
+      envKey: CONTAINER_NAME
+      label:
+        en: Container name
+      required: true
+      type: text

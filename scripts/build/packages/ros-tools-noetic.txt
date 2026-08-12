@@ -1,0 +1,5 @@
+python3-catkin-tools
+python3-catkin-pkg
+python3-rosdep
+python3-rospkg
+python3-nose

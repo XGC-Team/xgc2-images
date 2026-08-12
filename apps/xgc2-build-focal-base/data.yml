@@ -1,0 +1,29 @@
+name: XGC2 focal CI base
+title: XGC2 focal CI base
+additionalProperties:
+  key: xgc2-build-focal-base
+  name: XGC2 focal CI base
+  tags:
+    - Build
+    - CI
+    - Focal
+  shortDescEn: Ubuntu focal CI base with apt hygiene only. No compilers, ROS, or XGC2 APT packages.
+  description:
+    en: Ubuntu focal CI base with apt hygiene only. No compilers, ROS, or XGC2 APT packages.
+  type: build
+  crossVersionUpdate: true
+  limit: 0
+  website: https://github.com/lxk36/xgc2-app-store
+  github: https://github.com/lxk36/xgc2-app-store
+  document: https://github.com/lxk36/xgc2-app-store/tree/master/apps/xgc2-build-focal-base
+  architectures:
+    - amd64
+    - arm64/v8
+  batchInstallSupport: false
+  formFields:
+    - default: xgc2-build-focal-base
+      envKey: CONTAINER_NAME
+      label:
+        en: Container name
+      required: true
+      type: text

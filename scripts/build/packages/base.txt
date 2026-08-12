@@ -1,0 +1,5 @@
+# Ubuntu hygiene only. No compilers, no ROS, no XGC2.
+ca-certificates
+locales
+tzdata
+netbase

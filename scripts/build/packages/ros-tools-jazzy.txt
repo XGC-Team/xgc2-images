@@ -1,0 +1,4 @@
+ros-dev-tools
+python3-colcon-common-extensions
+python3-rosdep
+python3-pytest

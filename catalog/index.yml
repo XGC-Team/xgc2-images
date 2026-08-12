@@ -146,6 +146,180 @@ apps:
     compose: ../apps/ros-jazzy-ros-base-noble/docker-compose.yml
     tags:
       - Jazzy
+  - key: xgc2-build-bionic-base
+    name: XGC2 bionic CI base
+    version: 1.0.0
+    type: build
+    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-bionic-base:1.0.0
+    app: ../apps/xgc2-build-bionic-base/app.yml
+    data: ../apps/xgc2-build-bionic-base/data.yml
+    compose: ../apps/xgc2-build-bionic-base/docker-compose.yml
+    tags:
+      - Build
+      - CI
+      - Bionic
+  - key: xgc2-build-bionic-dev
+    name: XGC2 bionic CI dev
+    version: 1.0.0
+    type: build
+    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-bionic-dev:1.0.0
+    app: ../apps/xgc2-build-bionic-dev/app.yml
+    data: ../apps/xgc2-build-bionic-dev/data.yml
+    compose: ../apps/xgc2-build-bionic-dev/docker-compose.yml
+    tags:
+      - Build
+      - CI
+      - Bionic
+  - key: xgc2-build-bionic-ros-melodic
+    name: XGC2 bionic melodic CI ros
+    version: 1.0.0
+    type: build
+    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-bionic-ros-melodic:1.0.0
+    app: ../apps/xgc2-build-bionic-ros-melodic/app.yml
+    data: ../apps/xgc2-build-bionic-ros-melodic/data.yml
+    compose: ../apps/xgc2-build-bionic-ros-melodic/docker-compose.yml
+    tags:
+      - Build
+      - CI
+      - Bionic
+      - Melodic
+  - key: xgc2-build-bionic-full-melodic
+    name: XGC2 bionic melodic CI full
+    version: 1.0.0
+    type: build
+    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-bionic-full-melodic:1.0.0
+    app: ../apps/xgc2-build-bionic-full-melodic/app.yml
+    data: ../apps/xgc2-build-bionic-full-melodic/data.yml
+    compose: ../apps/xgc2-build-bionic-full-melodic/docker-compose.yml
+    tags:
+      - Build
+      - CI
+      - Bionic
+      - Melodic
+  - key: xgc2-build-focal-base
+    name: XGC2 focal CI base
+    version: 1.0.0
+    type: build
+    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-focal-base:1.0.0
+    app: ../apps/xgc2-build-focal-base/app.yml
+    data: ../apps/xgc2-build-focal-base/data.yml
+    compose: ../apps/xgc2-build-focal-base/docker-compose.yml
+    tags:
+      - Build
+      - CI
+      - Focal
+  - key: xgc2-build-focal-dev
+    name: XGC2 focal CI dev
+    version: 1.0.0
+    type: build
+    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-focal-dev:1.0.0
+    app: ../apps/xgc2-build-focal-dev/app.yml
+    data: ../apps/xgc2-build-focal-dev/data.yml
+    compose: ../apps/xgc2-build-focal-dev/docker-compose.yml
+    tags:
+      - Build
+      - CI
+      - Focal
+  - key: xgc2-build-focal-ros-noetic
+    name: XGC2 focal noetic CI ros
+    version: 1.0.0
+    type: build
+    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-focal-ros-noetic:1.0.0
+    app: ../apps/xgc2-build-focal-ros-noetic/app.yml
+    data: ../apps/xgc2-build-focal-ros-noetic/data.yml
+    compose: ../apps/xgc2-build-focal-ros-noetic/docker-compose.yml
+    tags:
+      - Build
+      - CI
+      - Focal
+      - Noetic
+  - key: xgc2-build-focal-full-noetic
+    name: XGC2 focal noetic CI full
+    version: 1.0.0
+    type: build
+    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-focal-full-noetic:1.0.0
+    app: ../apps/xgc2-build-focal-full-noetic/app.yml
+    data: ../apps/xgc2-build-focal-full-noetic/data.yml
+    compose: ../apps/xgc2-build-focal-full-noetic/docker-compose.yml
+    tags:
+      - Build
+      - CI
+      - Focal
+      - Noetic
+  - key: xgc2-build-jammy-base
+    name: XGC2 jammy CI base
+    version: 1.0.0
+    type: build
+    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-jammy-base:1.0.0
+    app: ../apps/xgc2-build-jammy-base/app.yml
+    data: ../apps/xgc2-build-jammy-base/data.yml
+    compose: ../apps/xgc2-build-jammy-base/docker-compose.yml
+    tags:
+      - Build
+      - CI
+      - Jammy
+  - key: xgc2-build-jammy-dev
+    name: XGC2 jammy CI dev
+    version: 1.0.0
+    type: build
+    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-jammy-dev:1.0.0
+    app: ../apps/xgc2-build-jammy-dev/app.yml
+    data: ../apps/xgc2-build-jammy-dev/data.yml
+    compose: ../apps/xgc2-build-jammy-dev/docker-compose.yml
+    tags:
+      - Build
+      - CI
+      - Jammy
+  - key: xgc2-build-noble-base
+    name: XGC2 noble CI base
+    version: 1.0.0
+    type: build
+    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-noble-base:1.0.0
+    app: ../apps/xgc2-build-noble-base/app.yml
+    data: ../apps/xgc2-build-noble-base/data.yml
+    compose: ../apps/xgc2-build-noble-base/docker-compose.yml
+    tags:
+      - Build
+      - CI
+      - Noble
+  - key: xgc2-build-noble-dev
+    name: XGC2 noble CI dev
+    version: 1.0.0
+    type: build
+    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-noble-dev:1.0.0
+    app: ../apps/xgc2-build-noble-dev/app.yml
+    data: ../apps/xgc2-build-noble-dev/data.yml
+    compose: ../apps/xgc2-build-noble-dev/docker-compose.yml
+    tags:
+      - Build
+      - CI
+      - Noble
+  - key: xgc2-build-noble-ros-jazzy
+    name: XGC2 noble jazzy CI ros
+    version: 1.0.0
+    type: build
+    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-noble-ros-jazzy:1.0.0
+    app: ../apps/xgc2-build-noble-ros-jazzy/app.yml
+    data: ../apps/xgc2-build-noble-ros-jazzy/data.yml
+    compose: ../apps/xgc2-build-noble-ros-jazzy/docker-compose.yml
+    tags:
+      - Build
+      - CI
+      - Noble
+      - Jazzy
+  - key: xgc2-build-noble-full-jazzy
+    name: XGC2 noble jazzy CI full
+    version: 1.0.0
+    type: build
+    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-noble-full-jazzy:1.0.0
+    app: ../apps/xgc2-build-noble-full-jazzy/app.yml
+    data: ../apps/xgc2-build-noble-full-jazzy/data.yml
+    compose: ../apps/xgc2-build-noble-full-jazzy/docker-compose.yml
+    tags:
+      - Build
+      - CI
+      - Noble
+      - Jazzy
 tags:
   - key: Simulation
     name: Simulation
@@ -156,3 +330,6 @@ tags:
   - key: Development
     name: Development
     sort: 30
+  - key: Build
+    name: Build
+    sort: 40

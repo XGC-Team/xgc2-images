@@ -1,0 +1,12 @@
+# Melodic simulation / vision / MAVROS stack. Official packages only.
+cv-bridge
+image-transport
+pcl-conversions
+pcl-ros
+rviz
+robot-state-publisher
+joint-state-publisher
+joint-state-publisher-gui
+controller-manager
+ddynamic-reconfigure
+diagnostic-updater

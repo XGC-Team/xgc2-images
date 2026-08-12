@@ -1,0 +1,6 @@
+gazebo11
+libgazebo11-dev
+libpcl-dev
+libopencv-dev
+libogre-1.9-dev
+python3-opencv

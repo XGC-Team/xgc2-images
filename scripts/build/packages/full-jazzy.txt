@@ -1,0 +1,10 @@
+# Jazzy simulation / vision stack. Official packages only.
+rviz2
+cv-bridge
+image-transport
+robot-state-publisher
+joint-state-publisher
+xacro
+ros-gz
+ros-gz-sim
+pcl-conversions

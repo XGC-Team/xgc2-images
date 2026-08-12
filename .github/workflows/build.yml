@@ -31,6 +31,14 @@ jobs:
       mirror_matrix: ${{ steps.detect.outputs.mirror_matrix }}
       manifest_matrix: ${{ steps.detect.outputs.manifest_matrix }}
       dependent_manifest_matrix: ${{ steps.detect.outputs.dependent_manifest_matrix }}
+      build_layer_base: ${{ steps.detect.outputs.build_layer_base }}
+      build_layer_dev: ${{ steps.detect.outputs.build_layer_dev }}
+      build_layer_ros: ${{ steps.detect.outputs.build_layer_ros }}
+      build_layer_full: ${{ steps.detect.outputs.build_layer_full }}
+      manifest_layer_base: ${{ steps.detect.outputs.manifest_layer_base }}
+      manifest_layer_dev: ${{ steps.detect.outputs.manifest_layer_dev }}
+      manifest_layer_ros: ${{ steps.detect.outputs.manifest_layer_ros }}
+      manifest_layer_full: ${{ steps.detect.outputs.manifest_layer_full }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,95 +65,7 @@ jobs:
           echo "deleted=${deleted}" >> "$GITHUB_OUTPUT"
           echo "Changed apps: ${apps}"
           echo "Deleted apps: ${deleted}"
-
-          ruby -ryaml -rjson - "${apps}" <<'RUBY'
-          apps = JSON.parse(ARGV[0])
-          repository = ENV.fetch("GITHUB_REPOSITORY").downcase
-
-          def native_arch_entry(arch)
-            case arch
-            when "amd64", "linux/amd64"
-              { "arch" => "amd64", "platform" => "linux/amd64", "runner" => "ubuntu-latest" }
-            when "arm64", "arm64/v8", "linux/arm64", "linux/arm64/v8"
-              { "arch" => "arm64", "platform" => "linux/arm64", "runner" => "ubuntu-24.04-arm" }
-            else
-              raise "buildable app requests unsupported native architecture: #{arch}"
-            end
-          end
-
-          build = []
-          dependent_build = []
-          mirror = []
-          manifest = []
-          dependent_manifest = []
-
-          expanded_apps = apps.dup
-          seen = expanded_apps.to_h { |app| [app, true] }
-          expanded_apps.each do |app|
-            app_file = "apps/#{app}/app.yml"
-            next unless File.exist?(app_file)
-
-            app_doc = YAML.safe_load_file(app_file)
-            dependency = app_doc["dependsOnApp"]
-            next if dependency.nil? || dependency.empty? || seen[dependency]
-            next if app_doc["rebuildDependency"] == false
-
-            expanded_apps << dependency
-            seen[dependency] = true
-          end
-
-          expanded_apps.each do |app|
-            app_file = "apps/#{app}/app.yml"
-            raise "missing #{app_file}" unless File.exist?(app_file)
-
-            doc = YAML.safe_load_file(app_file)
-            version = doc.fetch("version")
-            image = "ghcr.io/#{repository}/#{app}"
-            architectures = Array(doc["architectures"] || ["amd64"])
-            buildable = File.exist?("apps/#{app}/Dockerfile")
-
-            if buildable
-              entries = architectures.map { |arch| native_arch_entry(arch) }
-              multiarch = entries.length > 1
-              build_target = doc["dependsOnApp"] ? dependent_build : build
-              manifest_target = doc["dependsOnApp"] ? dependent_manifest : manifest
-              entries.each do |entry|
-                build_target << entry.merge(
-                  "app" => app,
-                  "version" => version,
-                  "image" => image,
-                  "multiarch" => multiarch,
-                  "no_cache" => doc["noCache"] == true,
-                  "version_only" => doc["publishVersionOnly"] == true
-                )
-              end
-              if multiarch
-                manifest_target << {
-                  "app" => app,
-                  "version" => version,
-                  "image" => image,
-                  "arches" => entries.map { |entry| entry["arch"] }
-                }
-              end
-            else
-              mirror << {
-                "app" => app,
-                "version" => version,
-                "image" => image,
-                "source_image" => doc["upstreamImage"] || doc["image"],
-                "architectures" => architectures
-              }
-            end
-          end
-
-          File.open(ENV.fetch("GITHUB_OUTPUT"), "a") do |out|
-            out.puts "build_matrix=#{JSON.generate({ "include" => build })}"
-            out.puts "dependent_build_matrix=#{JSON.generate({ "include" => dependent_build })}"
-            out.puts "mirror_matrix=#{JSON.generate({ "include" => mirror })}"
-            out.puts "manifest_matrix=#{JSON.generate({ "include" => manifest })}"
-            out.puts "dependent_manifest_matrix=#{JSON.generate({ "include" => dependent_manifest })}"
-          end
-          RUBY
+          ruby scripts/detect-ci-matrices.rb "${apps}"
 
   deleted:
     needs: detect
@@ -155,6 +75,96 @@ jobs:
       - run: |
           echo "Deleted app definitions detected: ${{ needs.detect.outputs.deleted }}"
           echo "Image deletion is intentionally not automated. Remove registry tags manually after confirming no deployment still references them."
+
+  build_base:
+    needs: detect
+    if: needs.detect.outputs.build_layer_base != '{"include":[]}'
+    uses: ./.github/workflows/reusable-build-images.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.build_layer_base }}
+    secrets: inherit
+
+  manifest_base:
+    needs:
+      - detect
+      - build_base
+    if: github.event_name != 'pull_request' && needs.detect.outputs.manifest_layer_base != '{"include":[]}'
+    uses: ./.github/workflows/reusable-publish-manifest.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.manifest_layer_base }}
+    secrets: inherit
+
+  build_dev:
+    needs:
+      - detect
+      - build_base
+    if: >-
+      always() &&
+      needs.detect.result == 'success' &&
+      needs.detect.outputs.build_layer_dev != '{"include":[]}' &&
+      (needs.build_base.result == 'success' || needs.build_base.result == 'skipped')
+    uses: ./.github/workflows/reusable-build-images.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.build_layer_dev }}
+    secrets: inherit
+
+  manifest_dev:
+    needs:
+      - detect
+      - build_dev
+    if: github.event_name != 'pull_request' && needs.detect.outputs.manifest_layer_dev != '{"include":[]}'
+    uses: ./.github/workflows/reusable-publish-manifest.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.manifest_layer_dev }}
+    secrets: inherit
+
+  build_ros:
+    needs:
+      - detect
+      - build_dev
+    if: >-
+      always() &&
+      needs.detect.result == 'success' &&
+      needs.detect.outputs.build_layer_ros != '{"include":[]}' &&
+      (needs.build_dev.result == 'success' || needs.build_dev.result == 'skipped')
+    uses: ./.github/workflows/reusable-build-images.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.build_layer_ros }}
+    secrets: inherit
+
+  manifest_ros:
+    needs:
+      - detect
+      - build_ros
+    if: github.event_name != 'pull_request' && needs.detect.outputs.manifest_layer_ros != '{"include":[]}'
+    uses: ./.github/workflows/reusable-publish-manifest.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.manifest_layer_ros }}
+    secrets: inherit
+
+  build_full:
+    needs:
+      - detect
+      - build_ros
+    if: >-
+      always() &&
+      needs.detect.result == 'success' &&
+      needs.detect.outputs.build_layer_full != '{"include":[]}' &&
+      (needs.build_ros.result == 'success' || needs.build_ros.result == 'skipped')
+    uses: ./.github/workflows/reusable-build-images.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.build_layer_full }}
+    secrets: inherit
+
+  manifest_full:
+    needs:
+      - detect
+      - build_full
+    if: github.event_name != 'pull_request' && needs.detect.outputs.manifest_layer_full != '{"include":[]}'
+    uses: ./.github/workflows/reusable-publish-manifest.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.manifest_layer_full }}
+    secrets: inherit
 
   build:
     needs: detect

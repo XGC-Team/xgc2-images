@@ -1,0 +1,16 @@
+# Official ROS 2 Jazzy core. No XGC2 packages.
+ros-base
+ament-cmake
+ament-cmake-pytest
+ament-cmake-gtest
+ament-index-python
+rclcpp
+rcpputils
+rmw
+rosidl-runtime-cpp
+rosidl-typesupport-introspection-cpp
+std-msgs
+std-srvs
+rcl-interfaces
+urdf
+ros2pkg
