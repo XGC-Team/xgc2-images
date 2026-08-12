@@ -12,7 +12,7 @@ if grep -R -E 'xgc2\.apt|xgc2-apt' /etc/apt/sources.list /etc/apt/sources.list.d
   exit 1
 fi
 
-if dpkg-query -W -f='${Package}\n' 2>/dev/null | grep -E '^(lib)?xgc2-|ros-[a-z]+-xgc2-|ros-[a-z]+-sss-'; then
+if dpkg-query -W -f='${Package}\n' 2>/dev/null | grep -E '^(lib)?xgc2-|ros-[a-z0-9]+-xgc2-|ros-[a-z0-9]+-sss-|^scout-msgs$|^swarm-ros-bridge$|^livox-ros-driver$|^arx5-|^b2-|ros-[a-z0-9]+-(arx5|b2|scout|livox|swarm)-'; then
   echo "XGC2 product packages must not be installed in build images" >&2
   exit 1
 fi

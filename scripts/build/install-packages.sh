@@ -15,7 +15,15 @@ export DEBIAN_FRONTEND=noninteractive
 
 assert_not_xgc2() {
   local pkg="$1"
-  if [[ "${pkg}" =~ (^|/)((lib)?xgc2-|ros-[a-z]+-xgc2-|ros-[a-z]+-sss-) ]]; then
+  if [[ "${pkg}" =~ ^(lib)?xgc2- ]] ||
+     [[ "${pkg}" =~ ^ros-[a-z0-9]+-xgc2- ]] ||
+     [[ "${pkg}" =~ ^ros-[a-z0-9]+-sss- ]] ||
+     [[ "${pkg}" == scout-msgs ]] ||
+     [[ "${pkg}" == swarm-ros-bridge ]] ||
+     [[ "${pkg}" == livox-ros-driver ]] ||
+     [[ "${pkg}" =~ ^arx5- ]] ||
+     [[ "${pkg}" =~ ^b2- ]] ||
+     [[ "${pkg}" =~ ^ros-[a-z0-9]+-(arx5|b2|scout|livox|swarm)- ]]; then
     echo "refusing to install XGC2 product package: ${pkg}" >&2
     exit 1
   fi

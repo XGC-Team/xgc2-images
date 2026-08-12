@@ -1,4 +1,5 @@
 # Noetic simulation / vision / MAVROS stack. Official packages only.
+gazebo-dev
 gazebo-ros
 gazebo-msgs
 gazebo-plugins
@@ -29,3 +30,5 @@ tf-conversions
 octomap-ros
 interactive-markers
 vision-msgs
+gtsam
+jsk-rviz-plugins

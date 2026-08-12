@@ -6,6 +6,8 @@ python3-toml
 python3-pytest
 python3-jsonschema
 libzmq3-dev
+libtbb-dev
+libgoogle-glog-dev
 libsystemd-dev
 libncurses-dev
 libgmp-dev

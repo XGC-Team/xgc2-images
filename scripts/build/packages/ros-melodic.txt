@@ -22,4 +22,5 @@ urdf
 xacro
 nodelet
 topic-tools
+rosgraph
 serial

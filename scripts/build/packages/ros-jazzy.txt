@@ -14,3 +14,6 @@ std-srvs
 rcl-interfaces
 urdf
 ros2pkg
+ros2cli
+ros-environment
+ros-workspace

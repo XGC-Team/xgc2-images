@@ -45,3 +45,5 @@ roslint
 topic-tools
 mavros-msgs
 foxglove-msgs
+ros-babel-fish
+rosfmt
