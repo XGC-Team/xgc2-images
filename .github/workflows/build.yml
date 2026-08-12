@@ -77,7 +77,7 @@ jobs:
           echo "Image deletion is intentionally not automated. Remove registry tags manually after confirming no deployment still references them."
 
   # One independent chain per Ubuntu so jammy/noble never wait on bionic/focal.
-  # Within a chain: base → push → dev → push → ros → push → full → push.
+  # Within a chain: base → (GHCR push || ACR push || build next layer).
   # amd64 and arm64 for the same Ubuntu run in parallel.
   build_bionic:
     needs: detect

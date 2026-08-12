@@ -61,12 +61,14 @@ Every build image is amd64 and arm64.
 | `xgc2-build-noble-full-jazzy` | `full` | RViz2, ros-gz, PCL, OpenCV |
 
 CI runs one chain per Ubuntu × architecture in parallel (eight jobs when the
-full matrix is dirty). Each chain is `base` → `dev` → `ros` → `full`, and each
-layer is pushed to GHCR and Aliyun ACR before the next `FROM`. Unrelated
-distros never wait on each other. Multi-arch `:version` / `:latest` manifests
-are published per Ubuntu after that distro's amd64 and arm64 tags exist. A
-change to `scripts/build/` rebuilds the whole matrix. A change to one layer
-rebuilds that layer and its descendants.
+full matrix is dirty). Each chain is `base` → `dev` → `ros` → `full` on the
+same runner. After a layer is loaded locally, GHCR and Aliyun ACR pushes run
+in the background in parallel with the next layer's compile; the child `FROM`s
+the local parent, not a registry round-trip. The job waits for those pushes
+before it succeeds. Unrelated distros never wait on each other. Multi-arch
+`:version` / `:latest` manifests are published per Ubuntu after that distro's
+amd64 and arm64 tags exist. A change to `scripts/build/` rebuilds the whole
+matrix. A change to one layer rebuilds that layer and its descendants.
 
 ## Catalog
 
@@ -83,11 +85,11 @@ The catalog points to app files in this repository and GHCR images built by CI.
 Only app definitions changed by a commit are built or mirrored. The detector looks for changes under `apps/<app-key>/`. Changes under
 `scripts/build/` or the layered build workflows rebuild every `type: build`
 image. `type: build` images run as independent Ubuntu × architecture chains
-(`base → dev → ros → full` on the same runner) so a child `FROM`s a parent that
-was just pushed. Unrelated distros never wait on each other. Architecture tags
-are pushed to GHCR and Aliyun ACR after each layer; multi-arch `:version` /
-`:latest` manifests are published on `master` per Ubuntu after that distro's
-amd64 and arm64 tags exist.
+(`base → dev → ros → full` on the same runner) so a child `FROM`s the parent
+just loaded locally. GHCR and Aliyun ACR pushes for that layer run in the
+background and do not block the next compile. Unrelated distros never wait on
+each other. Multi-arch `:version` / `:latest` manifests are published on
+`master` per Ubuntu after that distro's amd64 and arm64 tags exist.
 
 An app without `apps/<app-key>/Dockerfile` is treated as an external-image app.
 CI reads `upstreamImage` from `app.yml` and mirrors that image into the XGC app
