@@ -21,28 +21,37 @@ if [[ "${VERSION_CODENAME}" != "${ubuntu_codename}" ]]; then
 fi
 
 apt-get update
-apt-get install -y --no-install-recommends ca-certificates curl gnupg dirmngr
+apt-get install -y --no-install-recommends ca-certificates curl gnupg
 
 install -d /usr/share/keyrings
 keyring=/usr/share/keyrings/ros-archive-keyring.gpg
 rm -f "${keyring}"
 
-curl -fsSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc \
-  | gpg --batch --yes --dearmor -o "${keyring}"
-
-# snapshots.ros.org (Melodic final) is signed by the ROS snapshot key, not ros.asc.
-import_extra_keys() {
-  local key
-  for key in "$@"; do
-    gpg --batch --yes --no-default-keyring --keyring "${keyring}" \
-      --keyserver hkps://keyserver.ubuntu.com \
-      --recv-keys "${key}"
-  done
+GNUPGHOME="$(mktemp -d)"
+export GNUPGHOME
+chmod 700 "${GNUPGHOME}"
+cleanup_gpg() {
+  rm -rf "${GNUPGHOME}"
 }
+trap cleanup_gpg EXIT
+
+import_asc() {
+  curl -fsSL "$1" | gpg --batch --yes --import
+}
+
+import_keyid() {
+  local keyid="$1"
+  curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&options=mr&search=0x${keyid}" \
+    | gpg --batch --yes --import
+}
+
+import_asc https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc
 
 case "${ros_distro}" in
   melodic)
-    import_extra_keys AD19BAB3CBF125EA C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
+    # snapshots.ros.org is not signed by ros.asc.
+    import_keyid AD19BAB3CBF125EA
+    import_keyid C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
     cat >/etc/apt/sources.list.d/ros1.list <<EOF
 deb [signed-by=${keyring}] http://snapshots.ros.org/melodic/final/ubuntu ${ubuntu_codename} main
 EOF
@@ -62,6 +71,9 @@ EOF
     exit 1
     ;;
 esac
+
+gpg --batch --yes --export --output "${keyring}"
+chmod 0644 "${keyring}"
 
 apt-get clean
 rm -rf /var/lib/apt/lists/*
