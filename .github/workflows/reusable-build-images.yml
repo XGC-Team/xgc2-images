@@ -66,6 +66,8 @@ jobs:
           file: ${{ matrix.file }}
           platforms: ${{ matrix.platform }}
           push: true
+          provenance: false
+          sbom: false
           no-cache: ${{ matrix.no_cache }}
           tags: ${{ steps.tags.outputs.tags }}
           build-args: |

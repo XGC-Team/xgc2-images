@@ -121,11 +121,13 @@ jobs:
   build_ros:
     needs:
       - detect
+      - build_base
       - build_dev
     if: >-
       always() &&
       needs.detect.result == 'success' &&
       needs.detect.outputs.build_layer_ros != '{"include":[]}' &&
+      (needs.build_base.result == 'success' || needs.build_base.result == 'skipped') &&
       (needs.build_dev.result == 'success' || needs.build_dev.result == 'skipped')
     uses: ./.github/workflows/reusable-build-images.yml
     with:
@@ -145,11 +147,15 @@ jobs:
   build_full:
     needs:
       - detect
+      - build_base
+      - build_dev
       - build_ros
     if: >-
       always() &&
       needs.detect.result == 'success' &&
       needs.detect.outputs.build_layer_full != '{"include":[]}' &&
+      (needs.build_base.result == 'success' || needs.build_base.result == 'skipped') &&
+      (needs.build_dev.result == 'success' || needs.build_dev.result == 'skipped') &&
       (needs.build_ros.result == 'success' || needs.build_ros.result == 'skipped')
     uses: ./.github/workflows/reusable-build-images.yml
     with:
@@ -236,6 +242,8 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: ${{ github.event_name != 'pull_request' }}
           load: ${{ github.event_name == 'pull_request' }}
+          provenance: false
+          sbom: false
           no-cache: ${{ matrix.no_cache }}
           tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha,scope=${{ matrix.app }}-${{ matrix.arch }}
@@ -393,6 +401,8 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: ${{ github.event_name != 'pull_request' }}
           load: ${{ github.event_name == 'pull_request' }}
+          provenance: false
+          sbom: false
           no-cache: ${{ matrix.no_cache }}
           tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha,scope=${{ matrix.app }}-${{ matrix.arch }}
