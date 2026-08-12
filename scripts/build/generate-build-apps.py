@@ -181,7 +181,9 @@ def healthcheck(ubuntu: str, layer: str, ros: str | None) -> str:
         ]
     elif layer == "ros":
         lines += [
+            "set +u",
             f"source /opt/ros/{ros}/setup.bash",
+            "set -u",
             f'test "${{ROS_DISTRO}}" = "{ros}"',
         ]
         if ros in {"humble", "jazzy"}:
@@ -189,7 +191,12 @@ def healthcheck(ubuntu: str, layer: str, ros: str | None) -> str:
         else:
             lines += ["command -v rospack >/dev/null", "command -v catkin_make >/dev/null"]
     else:
-        lines += [f"source /opt/ros/{ros}/setup.bash", f'test "${{ROS_DISTRO}}" = "{ros}"']
+        lines += [
+            "set +u",
+            f"source /opt/ros/{ros}/setup.bash",
+            "set -u",
+            f'test "${{ROS_DISTRO}}" = "{ros}"',
+        ]
         if ros in {"humble", "jazzy"}:
             lines += ["command -v rviz2 >/dev/null"]
         else:

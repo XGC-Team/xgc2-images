@@ -3,7 +3,9 @@ set -euo pipefail
 . /etc/os-release
 test "${VERSION_CODENAME}" = "jammy"
 /usr/local/bin/xgc2-build-assert-no-xgc2-apt.sh
+set +u
 source /opt/ros/humble/setup.bash
+set -u
 test "${ROS_DISTRO}" = "humble"
 command -v ros2 >/dev/null
 command -v colcon >/dev/null

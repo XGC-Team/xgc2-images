@@ -3,7 +3,9 @@ set -euo pipefail
 . /etc/os-release
 test "${VERSION_CODENAME}" = "bionic"
 /usr/local/bin/xgc2-build-assert-no-xgc2-apt.sh
+set +u
 source /opt/ros/melodic/setup.bash
+set -u
 test "${ROS_DISTRO}" = "melodic"
 command -v rviz >/dev/null
 command -v gazebo >/dev/null
