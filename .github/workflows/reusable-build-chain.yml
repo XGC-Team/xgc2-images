@@ -124,7 +124,9 @@ jobs:
               extra+=(--no-cache)
             fi
             if [[ -n "${parent_image}" && -n "${loaded_parents[${parent_image}]+x}" ]]; then
-              extra+=(--pull=false --build-context "${parent_image}=docker-image://${parent_image}")
+              # Use a non-registry local name. docker-image://ghcr.io/... makes
+              # buildx ask GHCR for metadata while the parent push is still in flight.
+              extra+=(--pull=false --build-context "${parent_image}=docker-image://${loaded_parents[${parent_image}]}")
             fi
 
             echo "::group::Build ${app} ${ARCH}"
@@ -141,7 +143,9 @@ jobs:
               "${context}"
             echo "::endgroup::"
 
-            loaded_parents["${local_ref}"]=1
+            local_alias="xgc2-local/${app}:${version}-${ARCH}"
+            docker tag "${local_ref}" "${local_alias}"
+            loaded_parents["${local_ref}"]="${local_alias}"
 
             if [[ -n "${healthcheck}" ]]; then
               echo "::group::Smoke ${app} ${ARCH}"
