@@ -1,0 +1,106 @@
+name: reusable-build-chain
+
+on:
+  workflow_call:
+    inputs:
+      matrix_json:
+        required: true
+        type: string
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    name: ${{ matrix.ubuntu }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    env:
+      XGC_CN_REGISTRY: ${{ secrets.XGC_CN_REGISTRY }}
+      XGC_CN_NAMESPACE: ${{ secrets.XGC_CN_NAMESPACE }}
+      XGC_CN_USERNAME: ${{ secrets.XGC_CN_USERNAME }}
+      XGC_CN_PASSWORD: ${{ secrets.XGC_CN_PASSWORD }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(inputs.matrix_json) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        if: env.XGC_CN_REGISTRY != '' && env.XGC_CN_NAMESPACE != '' && env.XGC_CN_USERNAME != '' && env.XGC_CN_PASSWORD != ''
+        with:
+          registry: ${{ env.XGC_CN_REGISTRY }}
+          username: ${{ env.XGC_CN_USERNAME }}
+          password: ${{ env.XGC_CN_PASSWORD }}
+
+      - name: Build and push ${{ matrix.ubuntu }} ${{ matrix.arch }} chain
+        shell: bash
+        env:
+          LAYERS_JSON: ${{ matrix.layers }}
+          ARCH: ${{ matrix.arch }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          set -euo pipefail
+
+          cn_image_prefix=""
+          if [[ -n "${XGC_CN_REGISTRY}" && -n "${XGC_CN_NAMESPACE}" && -n "${XGC_CN_USERNAME}" && -n "${XGC_CN_PASSWORD}" ]]; then
+            cn_registry="${XGC_CN_REGISTRY%/}"
+            cn_namespace="${XGC_CN_NAMESPACE#/}"
+            cn_namespace="${cn_namespace%/}"
+            cn_image_prefix="${cn_registry}/${cn_namespace}"
+          fi
+
+          mapfile -t steps < <(jq -c '.[]' <<<"${LAYERS_JSON}")
+          for step in "${steps[@]}"; do
+            app="$(jq -r '.app' <<<"${step}")"
+            version="$(jq -r '.version' <<<"${step}")"
+            image="$(jq -r '.image' <<<"${step}")"
+            file="$(jq -r '.file' <<<"${step}")"
+            context="$(jq -r '.context' <<<"${step}")"
+            parent_image="$(jq -r '.parent_image' <<<"${step}")"
+            no_cache="$(jq -r '.no_cache' <<<"${step}")"
+            multiarch="$(jq -r '.multiarch' <<<"${step}")"
+            healthcheck="$(ruby -ryaml -e 'doc = YAML.safe_load_file(ARGV[0]); puts doc.dig("entrypoints", "healthcheck").to_s' "apps/${app}/app.yml")"
+
+            tags=(-t "${image}:${version}-${ARCH}")
+            if [[ "${multiarch}" != "true" ]]; then
+              tags+=(-t "${image}:${version}" -t "${image}:latest")
+            fi
+            if [[ -n "${cn_image_prefix}" ]]; then
+              tags+=(-t "${cn_image_prefix}/${app}:${version}-${ARCH}")
+              if [[ "${multiarch}" != "true" ]]; then
+                tags+=(-t "${cn_image_prefix}/${app}:${version}" -t "${cn_image_prefix}/${app}:latest")
+              fi
+            fi
+
+            cache_args=(--cache-from "type=gha,scope=${app}-${ARCH}" --cache-to "type=gha,mode=max,scope=${app}-${ARCH}")
+            extra=()
+            if [[ "${no_cache}" == "true" ]]; then
+              extra+=(--no-cache)
+            fi
+
+            echo "::group::Build and push ${app} ${ARCH}"
+            docker buildx build \
+              --file "${file}" \
+              --platform "${PLATFORM}" \
+              --push \
+              --provenance=false \
+              --sbom=false \
+              --build-arg "PARENT_IMAGE=${parent_image}" \
+              "${cache_args[@]}" \
+              "${extra[@]}" \
+              "${tags[@]}" \
+              "${context}"
+            echo "::endgroup::"
+
+            if [[ -n "${healthcheck}" ]]; then
+              echo "::group::Smoke ${app} ${ARCH}"
+              docker pull --platform "${PLATFORM}" "${image}:${version}-${ARCH}"
+              docker run --rm --platform "${PLATFORM}" "${image}:${version}-${ARCH}" bash -lc "${healthcheck}"
+              echo "::endgroup::"
+            fi
+          done

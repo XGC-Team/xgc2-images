@@ -31,14 +31,14 @@ jobs:
       mirror_matrix: ${{ steps.detect.outputs.mirror_matrix }}
       manifest_matrix: ${{ steps.detect.outputs.manifest_matrix }}
       dependent_manifest_matrix: ${{ steps.detect.outputs.dependent_manifest_matrix }}
-      build_layer_base: ${{ steps.detect.outputs.build_layer_base }}
-      build_layer_dev: ${{ steps.detect.outputs.build_layer_dev }}
-      build_layer_ros: ${{ steps.detect.outputs.build_layer_ros }}
-      build_layer_full: ${{ steps.detect.outputs.build_layer_full }}
-      manifest_layer_base: ${{ steps.detect.outputs.manifest_layer_base }}
-      manifest_layer_dev: ${{ steps.detect.outputs.manifest_layer_dev }}
-      manifest_layer_ros: ${{ steps.detect.outputs.manifest_layer_ros }}
-      manifest_layer_full: ${{ steps.detect.outputs.manifest_layer_full }}
+      chain_bionic: ${{ steps.detect.outputs.chain_bionic }}
+      chain_focal: ${{ steps.detect.outputs.chain_focal }}
+      chain_jammy: ${{ steps.detect.outputs.chain_jammy }}
+      chain_noble: ${{ steps.detect.outputs.chain_noble }}
+      chain_manifest_bionic: ${{ steps.detect.outputs.chain_manifest_bionic }}
+      chain_manifest_focal: ${{ steps.detect.outputs.chain_manifest_focal }}
+      chain_manifest_jammy: ${{ steps.detect.outputs.chain_manifest_jammy }}
+      chain_manifest_noble: ${{ steps.detect.outputs.chain_manifest_noble }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -76,100 +76,99 @@ jobs:
           echo "Deleted app definitions detected: ${{ needs.detect.outputs.deleted }}"
           echo "Image deletion is intentionally not automated. Remove registry tags manually after confirming no deployment still references them."
 
-  build_base:
+  # One independent chain per Ubuntu so jammy/noble never wait on bionic/focal.
+  # Within a chain: base → push → dev → push → ros → push → full → push.
+  # amd64 and arm64 for the same Ubuntu run in parallel.
+  build_bionic:
     needs: detect
-    if: needs.detect.outputs.build_layer_base != '{"include":[]}'
-    uses: ./.github/workflows/reusable-build-images.yml
+    if: needs.detect.outputs.chain_bionic != '{"include":[]}'
+    uses: ./.github/workflows/reusable-build-chain.yml
     with:
-      matrix_json: ${{ needs.detect.outputs.build_layer_base }}
+      matrix_json: ${{ needs.detect.outputs.chain_bionic }}
     secrets: inherit
 
-  manifest_base:
+  manifest_bionic:
     needs:
       - detect
-      - build_base
-    if: github.event_name != 'pull_request' && needs.detect.outputs.manifest_layer_base != '{"include":[]}'
-    uses: ./.github/workflows/reusable-publish-manifest.yml
-    with:
-      matrix_json: ${{ needs.detect.outputs.manifest_layer_base }}
-    secrets: inherit
-
-  build_dev:
-    needs:
-      - detect
-      - build_base
+      - build_bionic
     if: >-
       always() &&
+      github.event_name != 'pull_request' &&
       needs.detect.result == 'success' &&
-      needs.detect.outputs.build_layer_dev != '{"include":[]}' &&
-      (needs.build_base.result == 'success' || needs.build_base.result == 'skipped')
-    uses: ./.github/workflows/reusable-build-images.yml
-    with:
-      matrix_json: ${{ needs.detect.outputs.build_layer_dev }}
-    secrets: inherit
-
-  manifest_dev:
-    needs:
-      - detect
-      - build_dev
-    if: github.event_name != 'pull_request' && needs.detect.outputs.manifest_layer_dev != '{"include":[]}'
+      needs.detect.outputs.chain_manifest_bionic != '{"include":[]}' &&
+      (needs.build_bionic.result == 'success' || needs.build_bionic.result == 'failure')
     uses: ./.github/workflows/reusable-publish-manifest.yml
     with:
-      matrix_json: ${{ needs.detect.outputs.manifest_layer_dev }}
+      matrix_json: ${{ needs.detect.outputs.chain_manifest_bionic }}
     secrets: inherit
 
-  build_ros:
+  build_focal:
+    needs: detect
+    if: needs.detect.outputs.chain_focal != '{"include":[]}'
+    uses: ./.github/workflows/reusable-build-chain.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.chain_focal }}
+    secrets: inherit
+
+  manifest_focal:
     needs:
       - detect
-      - build_base
-      - build_dev
+      - build_focal
     if: >-
       always() &&
+      github.event_name != 'pull_request' &&
       needs.detect.result == 'success' &&
-      needs.detect.outputs.build_layer_ros != '{"include":[]}' &&
-      (needs.build_base.result == 'success' || needs.build_base.result == 'skipped') &&
-      (needs.build_dev.result == 'success' || needs.build_dev.result == 'skipped')
-    uses: ./.github/workflows/reusable-build-images.yml
-    with:
-      matrix_json: ${{ needs.detect.outputs.build_layer_ros }}
-    secrets: inherit
-
-  manifest_ros:
-    needs:
-      - detect
-      - build_ros
-    if: github.event_name != 'pull_request' && needs.detect.outputs.manifest_layer_ros != '{"include":[]}'
+      needs.detect.outputs.chain_manifest_focal != '{"include":[]}' &&
+      (needs.build_focal.result == 'success' || needs.build_focal.result == 'failure')
     uses: ./.github/workflows/reusable-publish-manifest.yml
     with:
-      matrix_json: ${{ needs.detect.outputs.manifest_layer_ros }}
+      matrix_json: ${{ needs.detect.outputs.chain_manifest_focal }}
     secrets: inherit
 
-  build_full:
+  build_jammy:
+    needs: detect
+    if: needs.detect.outputs.chain_jammy != '{"include":[]}'
+    uses: ./.github/workflows/reusable-build-chain.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.chain_jammy }}
+    secrets: inherit
+
+  manifest_jammy:
     needs:
       - detect
-      - build_base
-      - build_dev
-      - build_ros
+      - build_jammy
     if: >-
       always() &&
+      github.event_name != 'pull_request' &&
       needs.detect.result == 'success' &&
-      needs.detect.outputs.build_layer_full != '{"include":[]}' &&
-      (needs.build_base.result == 'success' || needs.build_base.result == 'skipped') &&
-      (needs.build_dev.result == 'success' || needs.build_dev.result == 'skipped') &&
-      (needs.build_ros.result == 'success' || needs.build_ros.result == 'skipped')
-    uses: ./.github/workflows/reusable-build-images.yml
-    with:
-      matrix_json: ${{ needs.detect.outputs.build_layer_full }}
-    secrets: inherit
-
-  manifest_full:
-    needs:
-      - detect
-      - build_full
-    if: github.event_name != 'pull_request' && needs.detect.outputs.manifest_layer_full != '{"include":[]}'
+      needs.detect.outputs.chain_manifest_jammy != '{"include":[]}' &&
+      (needs.build_jammy.result == 'success' || needs.build_jammy.result == 'failure')
     uses: ./.github/workflows/reusable-publish-manifest.yml
     with:
-      matrix_json: ${{ needs.detect.outputs.manifest_layer_full }}
+      matrix_json: ${{ needs.detect.outputs.chain_manifest_jammy }}
+    secrets: inherit
+
+  build_noble:
+    needs: detect
+    if: needs.detect.outputs.chain_noble != '{"include":[]}'
+    uses: ./.github/workflows/reusable-build-chain.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.chain_noble }}
+    secrets: inherit
+
+  manifest_noble:
+    needs:
+      - detect
+      - build_noble
+    if: >-
+      always() &&
+      github.event_name != 'pull_request' &&
+      needs.detect.result == 'success' &&
+      needs.detect.outputs.chain_manifest_noble != '{"include":[]}' &&
+      (needs.build_noble.result == 'success' || needs.build_noble.result == 'failure')
+    uses: ./.github/workflows/reusable-publish-manifest.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.chain_manifest_noble }}
     secrets: inherit
 
   build:

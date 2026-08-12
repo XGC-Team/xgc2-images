@@ -9,6 +9,7 @@ repository = ENV.fetch("GITHUB_REPOSITORY").downcase
 output_path = ENV.fetch("GITHUB_OUTPUT")
 
 LAYERS = %w[base dev ros full].freeze
+UBUNTUS = %w[bionic focal jammy noble].freeze
 
 def native_arch_entry(arch)
   case arch
@@ -26,6 +27,13 @@ def load_app(name)
   raise "missing #{path}" unless File.exist?(path)
 
   YAML.safe_load_file(path)
+end
+
+def ubuntu_of(app)
+  parts = app.split("-")
+  raise "cannot parse ubuntu from #{app}" unless parts.length >= 4 && parts[0, 2] == %w[xgc2 build]
+
+  parts[2]
 end
 
 children = Hash.new { |h, k| h[k] = [] }
@@ -79,8 +87,9 @@ legacy_dependent_build = []
 mirror = []
 legacy_manifest = []
 legacy_dependent_manifest = []
-layer_build = LAYERS.to_h { |layer| [layer, []] }
-layer_manifest = LAYERS.to_h { |layer| [layer, []] }
+chain_by_ubuntu = Hash.new { |h, k| h[k] = [] }
+chain_manifest = []
+seen_manifest = {}
 
 expanded.each do |app|
   doc = load_app(app)
@@ -111,46 +120,90 @@ expanded.each do |app|
   layer = doc["type"] == "build" ? doc.fetch("buildLayer") : nil
   raise "build app #{app} has unknown buildLayer #{layer.inspect}" if doc["type"] == "build" && !LAYERS.include?(layer)
 
-  build_rows = entries.map do |entry|
-    row = entry.merge(
+  if layer
+    chain_by_ubuntu[ubuntu_of(app)] << {
+      "layer" => layer,
+      "order" => LAYERS.index(layer),
+      "app" => app,
+      "version" => version,
+      "image" => image,
+      "multiarch" => multiarch,
+      "no_cache" => doc["noCache"] == true,
+      "context" => ".",
+      "file" => "apps/#{app}/Dockerfile",
+      "from_image" => doc["fromImage"],
+      "parent_image" => parent_image,
+      "arches" => entries.map { |entry| entry["arch"] }
+    }
+    if multiarch && !seen_manifest[app]
+      chain_manifest << {
+        "app" => app,
+        "version" => version,
+        "image" => image,
+        "arches" => entries.map { |entry| entry["arch"] }
+      }
+      seen_manifest[app] = true
+    end
+    next
+  end
+
+  target = parent ? legacy_dependent_build : legacy_build
+  manifest_target = parent ? legacy_dependent_manifest : legacy_manifest
+  entries.each do |entry|
+    target << entry.merge(
       "app" => app,
       "version" => version,
       "image" => image,
       "multiarch" => multiarch,
       "no_cache" => doc["noCache"] == true,
       "version_only" => doc["publishVersionOnly"] == true,
-      "context" => doc["type"] == "build" ? "." : "apps/#{app}",
-      "file" => doc["type"] == "build" ? "apps/#{app}/Dockerfile" : "apps/#{app}/Dockerfile",
-      "parent_image" => if parent_image
-                          "#{parent_image}-#{entry["arch"]}"
-                        elsif doc["fromImage"]
-                          doc["fromImage"]
-                        else
-                          ""
-                        end
+      "context" => "apps/#{app}",
+      "file" => "apps/#{app}/Dockerfile",
+      "parent_image" => ""
     )
-    row
   end
-
-  manifest_row = {
+  manifest_target << {
     "app" => app,
     "version" => version,
     "image" => image,
     "arches" => entries.map { |entry| entry["arch"] }
-  }
+  } if multiarch
+end
 
-  if layer
-    layer_build[layer].concat(build_rows)
-    layer_manifest[layer] << manifest_row if multiarch
-  else
-    target = parent ? legacy_dependent_build : legacy_build
-    manifest_target = parent ? legacy_dependent_manifest : legacy_manifest
-    target.concat(build_rows)
-    manifest_target << manifest_row if multiarch
+chain = []
+chain_by_ubuntu.keys.sort.each do |ubuntu|
+  steps = chain_by_ubuntu[ubuntu].sort_by { |item| item["order"] }
+  %w[amd64 arm64].each do |arch|
+    entry = native_arch_entry(arch)
+    layers = steps.select { |item| item["arches"].include?(arch) }.map do |item|
+      parent = if item["parent_image"]
+                 "#{item["parent_image"]}-#{arch}"
+               else
+                 item["from_image"].to_s
+               end
+      {
+        "app" => item["app"],
+        "version" => item["version"],
+        "image" => item["image"],
+        "file" => item["file"],
+        "context" => item["context"],
+        "no_cache" => item["no_cache"],
+        "multiarch" => item["multiarch"],
+        "parent_image" => parent
+      }
+    end
+    next if layers.empty?
+
+    chain << entry.merge(
+      "ubuntu" => ubuntu,
+      "layers" => JSON.generate(layers)
+    )
   end
 end
 
-def matrix(rows)
+chain_manifest.sort_by! do |row|
+  [UBUNTUS.index(ubuntu_of(row["app"])) || 99, LAYERS.index(load_app(row["app"]).fetch("buildLayer")) || 99]
+end
   JSON.generate({ "include" => rows })
 end
 
@@ -160,13 +213,16 @@ File.open(output_path, "a") do |out|
   out.puts "mirror_matrix=#{matrix(mirror)}"
   out.puts "manifest_matrix=#{matrix(legacy_manifest)}"
   out.puts "dependent_manifest_matrix=#{matrix(legacy_dependent_manifest)}"
-  LAYERS.each do |layer|
-    out.puts "build_layer_#{layer}=#{matrix(layer_build[layer])}"
-    out.puts "manifest_layer_#{layer}=#{matrix(layer_manifest[layer])}"
+  UBUNTUS.each do |ubuntu|
+    rows = chain.select { |row| row["ubuntu"] == ubuntu }
+    manifests = chain_manifest.select { |row| ubuntu_of(row["app"]) == ubuntu }
+    out.puts "chain_#{ubuntu}=#{matrix(rows)}"
+    out.puts "chain_manifest_#{ubuntu}=#{matrix(manifests)}"
   end
 end
 
 warn "legacy build=#{legacy_build.length} dependent=#{legacy_dependent_build.length} mirror=#{mirror.length}"
-LAYERS.each do |layer|
-  warn "layer #{layer}=#{layer_build[layer].length}"
+warn "chains=#{chain.length} chain_manifests=#{chain_manifest.length}"
+chain.each do |row|
+  warn "  #{row["ubuntu"]}-#{row["arch"]}: #{JSON.parse(row["layers"]).map { |s| s["app"] }.join(" -> ")}"
 end

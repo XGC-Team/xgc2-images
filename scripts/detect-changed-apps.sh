@@ -25,7 +25,7 @@ while IFS= read -r file; do
   [[ -z "$file" ]] && continue
   status="${file%%$'\t'*}"
   path="${file#*$'\t'}"
-  if [[ "$path" =~ ^scripts/build/ ]] || [[ "$path" == ".github/workflows/build.yml" ]] || [[ "$path" == ".github/workflows/reusable-build-images.yml" ]] || [[ "$path" == "scripts/detect-ci-matrices.rb" ]]; then
+  if [[ "$path" =~ ^scripts/build/ ]] || [[ "$path" == ".github/workflows/build.yml" ]] || [[ "$path" == ".github/workflows/reusable-build-images.yml" ]] || [[ "$path" == ".github/workflows/reusable-build-chain.yml" ]] || [[ "$path" == "scripts/detect-ci-matrices.rb" ]]; then
     rebuild_all_build_images=true
   fi
   if [[ "$path" =~ ^apps/([^/]+)/ ]]; then
