@@ -5,7 +5,7 @@ python3-packaging
 python3-toml
 python3-pytest
 python3-jsonschema
-libzmqpp-dev
+libzmq3-dev
 libsystemd-dev
 libncurses-dev
 libgmp-dev

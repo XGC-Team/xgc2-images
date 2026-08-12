@@ -46,6 +46,20 @@ if [[ "${#packages[@]}" -eq 0 ]]; then
   exit 0
 fi
 
+if [[ -f /etc/os-release ]]; then
+  # shellcheck disable=SC1091
+  . /etc/os-release
+  if [[ "${ID:-}" == "ubuntu" ]]; then
+    if [[ -f /etc/apt/sources.list.d/ubuntu.sources ]]; then
+      sed -i 's/^Components: main$/Components: main universe restricted multiverse/' \
+        /etc/apt/sources.list.d/ubuntu.sources || true
+    fi
+    if [[ -f /etc/apt/sources.list ]]; then
+      sed -i -E 's/ (main)$/ main universe restricted multiverse/' /etc/apt/sources.list || true
+    fi
+  fi
+fi
+
 apt-get update
 apt-get install -y --no-install-recommends "${packages[@]}"
 apt-get clean
