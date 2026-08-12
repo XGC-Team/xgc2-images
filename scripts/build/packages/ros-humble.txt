@@ -1,5 +1,4 @@
-# Official ROS 2 core used by adapters, msgs, and Python nodes.
-# Short names are prefixed with ros-<distro>- at install. No XGC2 packages.
+# Official ROS 2 Humble core. Same family as jazzy; no XGC2 packages.
 ros-base
 ament-cmake
 ament-cmake-pytest

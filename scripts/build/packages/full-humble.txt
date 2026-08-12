@@ -1,0 +1,10 @@
+# Humble simulation / vision stack. Official packages only. No gz-harmonic.
+rviz2
+cv-bridge
+image-transport
+robot-state-publisher
+joint-state-publisher
+xacro
+ros-gz
+ros-gz-sim
+pcl-conversions

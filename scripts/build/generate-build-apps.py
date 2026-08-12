@@ -25,8 +25,8 @@ TREES = [
     {
         "ubuntu": "jammy",
         "from_os": "ubuntu:22.04",
-        "ros": None,
-        "layers": ("base", "dev"),
+        "ros": "humble",
+        "layers": ("base", "dev", "ros", "full"),
     },
     {
         "ubuntu": "noble",
@@ -184,13 +184,13 @@ def healthcheck(ubuntu: str, layer: str, ros: str | None) -> str:
             f"source /opt/ros/{ros}/setup.bash",
             f'test "${{ROS_DISTRO}}" = "{ros}"',
         ]
-        if ros == "jazzy":
+        if ros in {"humble", "jazzy"}:
             lines += ["command -v ros2 >/dev/null", "command -v colcon >/dev/null"]
         else:
             lines += ["command -v rospack >/dev/null", "command -v catkin_make >/dev/null"]
     else:
         lines += [f"source /opt/ros/{ros}/setup.bash", f'test "${{ROS_DISTRO}}" = "{ros}"']
-        if ros == "jazzy":
+        if ros in {"humble", "jazzy"}:
             lines += ["command -v rviz2 >/dev/null"]
         else:
             lines += ["command -v rviz >/dev/null", "command -v gazebo >/dev/null"]

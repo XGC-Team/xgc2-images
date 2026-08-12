@@ -40,7 +40,7 @@ xgc2-build-<ubuntu>-<layer>[-<ros>]
 
 Layers are `base` → `dev` → `ros` → `full`. Ubuntu trees are `bionic`, `focal`,
 `jammy`, and `noble`. ROS is only stacked where the distro matches:
-Melodic on Bionic, Noetic on Focal, Jazzy on Noble. Jammy stops at `dev`.
+Melodic on Bionic, Noetic on Focal, Humble on Jammy, Jazzy on Noble.
 Every build image is amd64 and arm64.
 
 | App | Layer | FROM / contains |
@@ -55,6 +55,8 @@ Every build image is amd64 and arm64.
 | `xgc2-build-focal-full-noetic` | `full` | Gazebo 11, RViz, PCL, OpenCV, MAVROS |
 | `xgc2-build-jammy-base` | `base` | `ubuntu:22.04` + apt hygiene |
 | `xgc2-build-jammy-dev` | `dev` | same toolchain family as focal |
+| `xgc2-build-jammy-ros-humble` | `ros` | official ROS 2 Humble core |
+| `xgc2-build-jammy-full-humble` | `full` | RViz2, ros-gz, PCL, OpenCV |
 | `xgc2-build-noble-base` | `base` | `ubuntu:24.04` + apt hygiene |
 | `xgc2-build-noble-dev` | `dev` | same toolchain family as jammy |
 | `xgc2-build-noble-ros-jazzy` | `ros` | official ROS 2 Jazzy core |
