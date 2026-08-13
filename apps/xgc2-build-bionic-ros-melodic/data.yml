@@ -14,9 +14,9 @@ additionalProperties:
   type: build
   crossVersionUpdate: true
   limit: 0
-  website: https://github.com/lxk36/xgc2-app-store
-  github: https://github.com/lxk36/xgc2-app-store
-  document: https://github.com/lxk36/xgc2-app-store/tree/master/apps/xgc2-build-bionic-ros-melodic
+  website: https://github.com/XGC-Team/xgc2-app-store
+  github: https://github.com/XGC-Team/xgc2-app-store
+  document: https://github.com/XGC-Team/xgc2-app-store/tree/master/apps/xgc2-build-bionic-ros-melodic
   architectures:
     - amd64
     - arm64/v8

@@ -12,7 +12,7 @@ tags:
 architectures:
   - amd64
 license: Apache-2.0
-source: https://github.com/lxk36/xgc2-app-store
+source: https://github.com/XGC-Team/xgc2-app-store
 upstreamReferences:
   - PX4-Autopilot v1.16.0
   - Micro-XRCE-DDS-Agent v2.4.3

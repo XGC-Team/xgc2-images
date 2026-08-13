@@ -11,7 +11,7 @@ tags:
 architectures:
   - amd64
 license: Apache-2.0
-source: https://github.com/lxk36/xgc2-app-store
+source: https://github.com/XGC-Team/xgc2-app-store
 upstreamReferences:
   - osrf/ros:jazzy-desktop-full
   - Ubuntu Qt 6 packages

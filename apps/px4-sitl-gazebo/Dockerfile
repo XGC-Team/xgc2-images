@@ -2,7 +2,7 @@ FROM osrf/ros:noetic-desktop-full
 
 LABEL org.opencontainers.image.title="PX4 SITL Gazebo"
 LABEL org.opencontainers.image.description="PX4 software-in-the-loop simulation toolkit for Gazebo Classic and ROS Noetic."
-LABEL org.opencontainers.image.source="https://github.com/lxk36/xgc2-app-store"
+LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-app-store"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ROS_DISTRO=noetic
