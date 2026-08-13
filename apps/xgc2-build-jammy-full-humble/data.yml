@@ -1,0 +1,30 @@
+name: XGC2 jammy humble CI full
+title: XGC2 jammy humble CI full
+additionalProperties:
+  key: xgc2-build-jammy-full-humble
+  name: XGC2 jammy humble CI full
+  tags:
+    - Build
+    - CI
+    - Jammy
+    - Humble
+  shortDescEn: Ubuntu jammy + official ROS humble full CI image including simulation and vision stacks. No XGC2 APT packages.
+  description:
+    en: Ubuntu jammy + official ROS humble full CI image including simulation and vision stacks. No XGC2 APT packages.
+  type: build
+  crossVersionUpdate: true
+  limit: 0
+  website: https://github.com/lxk36/xgc2-app-store
+  github: https://github.com/lxk36/xgc2-app-store
+  document: https://github.com/lxk36/xgc2-app-store/tree/master/apps/xgc2-build-jammy-full-humble
+  architectures:
+    - amd64
+    - arm64/v8
+  batchInstallSupport: false
+  formFields:
+    - default: xgc2-build-jammy-full-humble
+      envKey: CONTAINER_NAME
+      label:
+        en: Container name
+      required: true
+      type: text

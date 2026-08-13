@@ -1,0 +1,163 @@
+name: reusable-build-chain
+
+on:
+  workflow_call:
+    inputs:
+      matrix_json:
+        required: true
+        type: string
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    name: ${{ matrix.ubuntu }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    env:
+      XGC_CN_REGISTRY: ${{ secrets.XGC_CN_REGISTRY }}
+      XGC_CN_NAMESPACE: ${{ secrets.XGC_CN_NAMESPACE }}
+      XGC_CN_USERNAME: ${{ secrets.XGC_CN_USERNAME }}
+      XGC_CN_PASSWORD: ${{ secrets.XGC_CN_PASSWORD }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(inputs.matrix_json) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        if: env.XGC_CN_REGISTRY != '' && env.XGC_CN_NAMESPACE != '' && env.XGC_CN_USERNAME != '' && env.XGC_CN_PASSWORD != ''
+        with:
+          registry: ${{ env.XGC_CN_REGISTRY }}
+          username: ${{ env.XGC_CN_USERNAME }}
+          password: ${{ env.XGC_CN_PASSWORD }}
+
+      - name: Build ${{ matrix.ubuntu }} ${{ matrix.arch }} chain
+        shell: bash
+        env:
+          LAYERS_JSON: ${{ matrix.layers }}
+          ARCH: ${{ matrix.arch }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          set -euo pipefail
+
+          cn_image_prefix=""
+          if [[ -n "${XGC_CN_REGISTRY}" && -n "${XGC_CN_NAMESPACE}" && -n "${XGC_CN_USERNAME}" && -n "${XGC_CN_PASSWORD}" ]]; then
+            cn_registry="${XGC_CN_REGISTRY%/}"
+            cn_namespace="${XGC_CN_NAMESPACE#/}"
+            cn_namespace="${cn_namespace%/}"
+            cn_image_prefix="${cn_registry}/${cn_namespace}"
+          fi
+
+          push_pids=()
+
+          bg_push() {
+            local ref="$1"
+            (
+              set -euo pipefail
+              echo ">> push ${ref}"
+              docker push "${ref}"
+              echo "<< push ${ref} done"
+            ) &
+            last_push_pid="$!"
+            push_pids+=("${last_push_pid}")
+          }
+
+          wait_pushes() {
+            local pid rc=0
+            for pid in "${push_pids[@]+"${push_pids[@]}"}"; do
+              if ! wait "${pid}"; then
+                echo "registry push pid ${pid} failed" >&2
+                rc=1
+              fi
+            done
+            return "${rc}"
+          }
+
+          trap 'echo "waiting in-flight registry pushes"; wait_pushes || true' ERR
+
+          last_push_pid=""
+          declare -A ghcr_parent_pid=()
+          mapfile -t steps < <(jq -c '.[]' <<<"${LAYERS_JSON}")
+          for step in "${steps[@]}"; do
+            app="$(jq -r '.app' <<<"${step}")"
+            version="$(jq -r '.version' <<<"${step}")"
+            image="$(jq -r '.image' <<<"${step}")"
+            file="$(jq -r '.file' <<<"${step}")"
+            context="$(jq -r '.context' <<<"${step}")"
+            parent_image="$(jq -r '.parent_image' <<<"${step}")"
+            no_cache="$(jq -r '.no_cache' <<<"${step}")"
+            multiarch="$(jq -r '.multiarch' <<<"${step}")"
+            healthcheck="$(ruby -ryaml -e 'doc = YAML.safe_load_file(ARGV[0]); puts doc.dig("entrypoints", "healthcheck").to_s' "apps/${app}/app.yml")"
+
+            local_ref="${image}:${version}-${ARCH}"
+            push_refs=("${local_ref}")
+            tags=(-t "${local_ref}")
+            if [[ "${multiarch}" == "true" ]]; then
+              tags+=(-t "${image}:latest-${ARCH}")
+              push_refs+=("${image}:latest-${ARCH}")
+            else
+              tags+=(-t "${image}:${version}" -t "${image}:latest")
+              push_refs+=("${image}:${version}" "${image}:latest")
+            fi
+            if [[ -n "${cn_image_prefix}" ]]; then
+              cn_ref="${cn_image_prefix}/${app}:${version}-${ARCH}"
+              tags+=(-t "${cn_ref}")
+              push_refs+=("${cn_ref}")
+              if [[ "${multiarch}" == "true" ]]; then
+                tags+=(-t "${cn_image_prefix}/${app}:latest-${ARCH}")
+                push_refs+=("${cn_image_prefix}/${app}:latest-${ARCH}")
+              else
+                tags+=(-t "${cn_image_prefix}/${app}:${version}" -t "${cn_image_prefix}/${app}:latest")
+                push_refs+=("${cn_image_prefix}/${app}:${version}" "${cn_image_prefix}/${app}:latest")
+              fi
+            fi
+
+            cache_args=(--cache-from "type=gha,scope=${app}-${ARCH}" --cache-to "type=gha,mode=min,scope=${app}-${ARCH}")
+            extra=()
+            if [[ "${no_cache}" == "true" ]]; then
+              extra+=(--no-cache)
+            fi
+            # Child FROM needs the parent on GHCR. Wait only for that one push;
+            # ACR and extra tags keep running in the background.
+            if [[ -n "${parent_image}" && -n "${ghcr_parent_pid[${parent_image}]+x}" ]]; then
+              echo "waiting for GHCR parent ${parent_image}"
+              wait "${ghcr_parent_pid[${parent_image}]}"
+            fi
+
+            echo "::group::Build ${app} ${ARCH}"
+            docker buildx build \
+              --file "${file}" \
+              --platform "${PLATFORM}" \
+              --load \
+              --provenance=false \
+              --sbom=false \
+              --build-arg "PARENT_IMAGE=${parent_image}" \
+              "${cache_args[@]}" \
+              "${extra[@]}" \
+              "${tags[@]}" \
+              "${context}"
+            echo "::endgroup::"
+
+            if [[ -n "${healthcheck}" ]]; then
+              echo "::group::Smoke ${app} ${ARCH}"
+              docker run --rm --platform "${PLATFORM}" "${local_ref}" bash -lc "${healthcheck}"
+              echo "::endgroup::"
+            fi
+
+            for ref in "${push_refs[@]}"; do
+              bg_push "${ref}"
+              if [[ "${ref}" == "${local_ref}" ]]; then
+                ghcr_parent_pid["${local_ref}"]="${last_push_pid}"
+              fi
+            done
+          done
+
+          echo "::group::Wait for GHCR and ACR pushes"
+          wait_pushes
+          echo "::endgroup::"

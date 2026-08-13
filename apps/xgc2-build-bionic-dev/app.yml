@@ -1,0 +1,20 @@
+key: xgc2-build-bionic-dev
+name: XGC2 bionic CI dev
+version: 1.0.0
+image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-bionic-dev:1.0.0
+dependsOnApp: xgc2-build-bionic-base
+description: Ubuntu bionic CI compile and Debian packaging image. No ROS and no XGC2 APT packages.
+type: build
+buildLayer: dev
+tags:
+  - Build
+  - CI
+  - Bionic
+architectures:
+  - amd64
+  - arm64/v8
+license: Apache-2.0
+source: https://github.com/lxk36/xgc2-app-store
+entrypoints:
+  shell: /bin/bash
+  healthcheck: /usr/local/bin/xgc2-build-healthcheck

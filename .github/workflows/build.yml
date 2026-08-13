@@ -31,6 +31,14 @@ jobs:
       mirror_matrix: ${{ steps.detect.outputs.mirror_matrix }}
       manifest_matrix: ${{ steps.detect.outputs.manifest_matrix }}
       dependent_manifest_matrix: ${{ steps.detect.outputs.dependent_manifest_matrix }}
+      chain_bionic: ${{ steps.detect.outputs.chain_bionic }}
+      chain_focal: ${{ steps.detect.outputs.chain_focal }}
+      chain_jammy: ${{ steps.detect.outputs.chain_jammy }}
+      chain_noble: ${{ steps.detect.outputs.chain_noble }}
+      chain_manifest_bionic: ${{ steps.detect.outputs.chain_manifest_bionic }}
+      chain_manifest_focal: ${{ steps.detect.outputs.chain_manifest_focal }}
+      chain_manifest_jammy: ${{ steps.detect.outputs.chain_manifest_jammy }}
+      chain_manifest_noble: ${{ steps.detect.outputs.chain_manifest_noble }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,95 +65,7 @@ jobs:
           echo "deleted=${deleted}" >> "$GITHUB_OUTPUT"
           echo "Changed apps: ${apps}"
           echo "Deleted apps: ${deleted}"
-
-          ruby -ryaml -rjson - "${apps}" <<'RUBY'
-          apps = JSON.parse(ARGV[0])
-          repository = ENV.fetch("GITHUB_REPOSITORY").downcase
-
-          def native_arch_entry(arch)
-            case arch
-            when "amd64", "linux/amd64"
-              { "arch" => "amd64", "platform" => "linux/amd64", "runner" => "ubuntu-latest" }
-            when "arm64", "arm64/v8", "linux/arm64", "linux/arm64/v8"
-              { "arch" => "arm64", "platform" => "linux/arm64", "runner" => "ubuntu-24.04-arm" }
-            else
-              raise "buildable app requests unsupported native architecture: #{arch}"
-            end
-          end
-
-          build = []
-          dependent_build = []
-          mirror = []
-          manifest = []
-          dependent_manifest = []
-
-          expanded_apps = apps.dup
-          seen = expanded_apps.to_h { |app| [app, true] }
-          expanded_apps.each do |app|
-            app_file = "apps/#{app}/app.yml"
-            next unless File.exist?(app_file)
-
-            app_doc = YAML.safe_load_file(app_file)
-            dependency = app_doc["dependsOnApp"]
-            next if dependency.nil? || dependency.empty? || seen[dependency]
-            next if app_doc["rebuildDependency"] == false
-
-            expanded_apps << dependency
-            seen[dependency] = true
-          end
-
-          expanded_apps.each do |app|
-            app_file = "apps/#{app}/app.yml"
-            raise "missing #{app_file}" unless File.exist?(app_file)
-
-            doc = YAML.safe_load_file(app_file)
-            version = doc.fetch("version")
-            image = "ghcr.io/#{repository}/#{app}"
-            architectures = Array(doc["architectures"] || ["amd64"])
-            buildable = File.exist?("apps/#{app}/Dockerfile")
-
-            if buildable
-              entries = architectures.map { |arch| native_arch_entry(arch) }
-              multiarch = entries.length > 1
-              build_target = doc["dependsOnApp"] ? dependent_build : build
-              manifest_target = doc["dependsOnApp"] ? dependent_manifest : manifest
-              entries.each do |entry|
-                build_target << entry.merge(
-                  "app" => app,
-                  "version" => version,
-                  "image" => image,
-                  "multiarch" => multiarch,
-                  "no_cache" => doc["noCache"] == true,
-                  "version_only" => doc["publishVersionOnly"] == true
-                )
-              end
-              if multiarch
-                manifest_target << {
-                  "app" => app,
-                  "version" => version,
-                  "image" => image,
-                  "arches" => entries.map { |entry| entry["arch"] }
-                }
-              end
-            else
-              mirror << {
-                "app" => app,
-                "version" => version,
-                "image" => image,
-                "source_image" => doc["upstreamImage"] || doc["image"],
-                "architectures" => architectures
-              }
-            end
-          end
-
-          File.open(ENV.fetch("GITHUB_OUTPUT"), "a") do |out|
-            out.puts "build_matrix=#{JSON.generate({ "include" => build })}"
-            out.puts "dependent_build_matrix=#{JSON.generate({ "include" => dependent_build })}"
-            out.puts "mirror_matrix=#{JSON.generate({ "include" => mirror })}"
-            out.puts "manifest_matrix=#{JSON.generate({ "include" => manifest })}"
-            out.puts "dependent_manifest_matrix=#{JSON.generate({ "include" => dependent_manifest })}"
-          end
-          RUBY
+          ruby scripts/detect-ci-matrices.rb "${apps}"
 
   deleted:
     needs: detect
@@ -155,6 +75,101 @@ jobs:
       - run: |
           echo "Deleted app definitions detected: ${{ needs.detect.outputs.deleted }}"
           echo "Image deletion is intentionally not automated. Remove registry tags manually after confirming no deployment still references them."
+
+  # One independent chain per Ubuntu so jammy/noble never wait on bionic/focal.
+  # Within a chain: base → (GHCR push || ACR push || build next layer).
+  # amd64 and arm64 for the same Ubuntu run in parallel.
+  build_bionic:
+    needs: detect
+    if: needs.detect.outputs.chain_bionic != '{"include":[]}'
+    uses: ./.github/workflows/reusable-build-chain.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.chain_bionic }}
+    secrets: inherit
+
+  manifest_bionic:
+    needs:
+      - detect
+      - build_bionic
+    if: >-
+      always() &&
+      github.event_name != 'pull_request' &&
+      needs.detect.result == 'success' &&
+      needs.detect.outputs.chain_manifest_bionic != '{"include":[]}' &&
+      (needs.build_bionic.result == 'success' || needs.build_bionic.result == 'failure')
+    uses: ./.github/workflows/reusable-publish-manifest.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.chain_manifest_bionic }}
+    secrets: inherit
+
+  build_focal:
+    needs: detect
+    if: needs.detect.outputs.chain_focal != '{"include":[]}'
+    uses: ./.github/workflows/reusable-build-chain.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.chain_focal }}
+    secrets: inherit
+
+  manifest_focal:
+    needs:
+      - detect
+      - build_focal
+    if: >-
+      always() &&
+      github.event_name != 'pull_request' &&
+      needs.detect.result == 'success' &&
+      needs.detect.outputs.chain_manifest_focal != '{"include":[]}' &&
+      (needs.build_focal.result == 'success' || needs.build_focal.result == 'failure')
+    uses: ./.github/workflows/reusable-publish-manifest.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.chain_manifest_focal }}
+    secrets: inherit
+
+  build_jammy:
+    needs: detect
+    if: needs.detect.outputs.chain_jammy != '{"include":[]}'
+    uses: ./.github/workflows/reusable-build-chain.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.chain_jammy }}
+    secrets: inherit
+
+  manifest_jammy:
+    needs:
+      - detect
+      - build_jammy
+    if: >-
+      always() &&
+      github.event_name != 'pull_request' &&
+      needs.detect.result == 'success' &&
+      needs.detect.outputs.chain_manifest_jammy != '{"include":[]}' &&
+      (needs.build_jammy.result == 'success' || needs.build_jammy.result == 'failure')
+    uses: ./.github/workflows/reusable-publish-manifest.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.chain_manifest_jammy }}
+    secrets: inherit
+
+  build_noble:
+    needs: detect
+    if: needs.detect.outputs.chain_noble != '{"include":[]}'
+    uses: ./.github/workflows/reusable-build-chain.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.chain_noble }}
+    secrets: inherit
+
+  manifest_noble:
+    needs:
+      - detect
+      - build_noble
+    if: >-
+      always() &&
+      github.event_name != 'pull_request' &&
+      needs.detect.result == 'success' &&
+      needs.detect.outputs.chain_manifest_noble != '{"include":[]}' &&
+      (needs.build_noble.result == 'success' || needs.build_noble.result == 'failure')
+    uses: ./.github/workflows/reusable-publish-manifest.yml
+    with:
+      matrix_json: ${{ needs.detect.outputs.chain_manifest_noble }}
+    secrets: inherit
 
   build:
     needs: detect
@@ -226,6 +241,8 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: ${{ github.event_name != 'pull_request' }}
           load: ${{ github.event_name == 'pull_request' }}
+          provenance: false
+          sbom: false
           no-cache: ${{ matrix.no_cache }}
           tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha,scope=${{ matrix.app }}-${{ matrix.arch }}
@@ -383,6 +400,8 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: ${{ github.event_name != 'pull_request' }}
           load: ${{ github.event_name == 'pull_request' }}
+          provenance: false
+          sbom: false
           no-cache: ${{ matrix.no_cache }}
           tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha,scope=${{ matrix.app }}-${{ matrix.arch }}

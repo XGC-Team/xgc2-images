@@ -1,0 +1,5 @@
+gazebo9
+libgazebo9-dev
+libpcl-dev
+libopencv-dev
+python-opencv

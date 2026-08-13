@@ -8,11 +8,14 @@ public deployment server is required until XGC needs remote, unattended CD.
 
 ## Apps
 
-App categories are intentionally limited to three operator-facing types:
+App categories:
 
 - `simulation`: SITL, Gazebo, QGroundControl and simulator support images.
 - `deployment`: multi-architecture images intended for robot or field hosts.
 - `development`: source development and debugging workstations.
+- `build`: layered CI compile images. Product CI should `FROM` these and compile
+  only. They never install XGC2 APT packages (`xgc2-*`, `libxgc2-*`,
+  `ros-*-xgc2-*`); those are build products, not image dependencies.
 
 | App | Type | Image | Purpose |
 | --- | --- | --- | --- |
@@ -29,6 +32,46 @@ App categories are intentionally limited to three operator-facing types:
 | `ros-jazzy-desktop-full` | `development` | `ghcr.io/lxk36/xgc2-app-store/ros-jazzy-desktop-full` | Official OSRF ROS 2 Jazzy desktop-full image mirrored for amd64 development use. |
 | `ros-jazzy-ros-base-noble` | `deployment` | `ghcr.io/lxk36/xgc2-app-store/ros-jazzy-ros-base-noble` | Official ROS 2 Jazzy ros-base image mirrored for amd64 and arm64 deployments. |
 
+CI compile images use a fixed name:
+
+```text
+xgc2-build-<ubuntu>-<layer>[-<ros>]
+```
+
+Layers are `base` → `dev` → `ros` → `full`. Ubuntu trees are `bionic`, `focal`,
+`jammy`, and `noble`. ROS is only stacked where the distro matches:
+Melodic on Bionic, Noetic on Focal, Humble on Jammy, Jazzy on Noble.
+Every build image is amd64 and arm64.
+
+| App | Layer | FROM / contains |
+| --- | --- | --- |
+| `xgc2-build-bionic-base` | `base` | `ubuntu:18.04` + apt hygiene |
+| `xgc2-build-bionic-dev` | `dev` | compilers, CMake, dpkg, common C++/Python libs |
+| `xgc2-build-bionic-ros-melodic` | `ros` | official ROS Melodic core |
+| `xgc2-build-bionic-full-melodic` | `full` | Gazebo 9, RViz, PCL, OpenCV |
+| `xgc2-build-focal-base` | `base` | `ubuntu:20.04` + apt hygiene |
+| `xgc2-build-focal-dev` | `dev` | compilers, packaging, protobuf/grpc, desktop smoke libs |
+| `xgc2-build-focal-ros-noetic` | `ros` | official ROS Noetic core |
+| `xgc2-build-focal-full-noetic` | `full` | Gazebo 11, RViz, PCL, OpenCV, MAVROS |
+| `xgc2-build-jammy-base` | `base` | `ubuntu:22.04` + apt hygiene |
+| `xgc2-build-jammy-dev` | `dev` | same toolchain family as focal |
+| `xgc2-build-jammy-ros-humble` | `ros` | official ROS 2 Humble core |
+| `xgc2-build-jammy-full-humble` | `full` | RViz2, ros-gz, PCL, OpenCV |
+| `xgc2-build-noble-base` | `base` | `ubuntu:24.04` + apt hygiene |
+| `xgc2-build-noble-dev` | `dev` | same toolchain family as jammy |
+| `xgc2-build-noble-ros-jazzy` | `ros` | official ROS 2 Jazzy core |
+| `xgc2-build-noble-full-jazzy` | `full` | RViz2, ros-gz, PCL, OpenCV |
+
+CI runs one chain per Ubuntu × architecture in parallel (eight jobs when the
+full matrix is dirty). Each chain is `base` → `dev` → `ros` → `full` on the
+same runner. After a layer is loaded locally, GHCR and Aliyun ACR pushes run
+in the background in parallel with the next layer's compile; the child `FROM`s
+the local parent, not a registry round-trip. The job waits for those pushes
+before it succeeds. Unrelated distros never wait on each other. Multi-arch
+`:version` / `:latest` manifests are published per Ubuntu after that distro's
+amd64 and arm64 tags exist. A change to `scripts/build/` rebuilds the whole
+matrix. A change to one layer rebuilds that layer and its descendants.
+
 ## Catalog
 
 XGC can sync the static catalog from:
@@ -41,12 +84,14 @@ The catalog points to app files in this repository and GHCR images built by CI.
 
 ## Image Build
 
-Only app definitions changed by a commit are built or mirrored. The detector
-looks for changes under:
-
-```text
-apps/<app-key>/
-```
+Only app definitions changed by a commit are built or mirrored. The detector looks for changes under `apps/<app-key>/`. Changes under
+`scripts/build/` or the layered build workflows rebuild every `type: build`
+image. `type: build` images run as independent Ubuntu × architecture chains
+(`base → dev → ros → full` on the same runner) so a child `FROM`s the parent
+just loaded locally. GHCR and Aliyun ACR pushes for that layer run in the
+background and do not block the next compile. Unrelated distros never wait on
+each other. Multi-arch `:version` / `:latest` manifests are published on
+`master` per Ubuntu after that distro's amd64 and arm64 tags exist.
 
 An app without `apps/<app-key>/Dockerfile` is treated as an external-image app.
 CI reads `upstreamImage` from `app.yml` and mirrors that image into the XGC app

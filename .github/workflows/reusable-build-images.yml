@@ -1,0 +1,89 @@
+name: reusable-build-images
+
+on:
+  workflow_call:
+    inputs:
+      matrix_json:
+        required: true
+        type: string
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: ${{ matrix.runner }}
+    env:
+      XGC_CN_REGISTRY: ${{ secrets.XGC_CN_REGISTRY }}
+      XGC_CN_NAMESPACE: ${{ secrets.XGC_CN_NAMESPACE }}
+      XGC_CN_USERNAME: ${{ secrets.XGC_CN_USERNAME }}
+      XGC_CN_PASSWORD: ${{ secrets.XGC_CN_PASSWORD }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(inputs.matrix_json) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        if: env.XGC_CN_REGISTRY != '' && env.XGC_CN_NAMESPACE != '' && env.XGC_CN_USERNAME != '' && env.XGC_CN_PASSWORD != ''
+        with:
+          registry: ${{ env.XGC_CN_REGISTRY }}
+          username: ${{ env.XGC_CN_USERNAME }}
+          password: ${{ env.XGC_CN_PASSWORD }}
+
+      - id: tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          tags="${{ matrix.image }}:${{ matrix.version }}-${{ matrix.arch }}"
+          if [[ "${{ matrix.multiarch }}" != "true" ]]; then
+            tags="${tags}"$'\n'"${{ matrix.image }}:${{ matrix.version }}"$'\n'"${{ matrix.image }}:latest"
+          fi
+          if [[ -n "${XGC_CN_REGISTRY}" && -n "${XGC_CN_NAMESPACE}" && -n "${XGC_CN_USERNAME}" && -n "${XGC_CN_PASSWORD}" ]]; then
+            cn_registry="${XGC_CN_REGISTRY%/}"
+            cn_namespace="${XGC_CN_NAMESPACE#/}"
+            cn_namespace="${cn_namespace%/}"
+            cn_image="${cn_registry}/${cn_namespace}/${{ matrix.app }}"
+            tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}-${{ matrix.arch }}"
+            if [[ "${{ matrix.multiarch }}" != "true" ]]; then
+              tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}"$'\n'"${cn_image}:latest"
+            fi
+          fi
+          {
+            echo "tags<<EOF"
+            printf '%s\n' "${tags}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          platforms: ${{ matrix.platform }}
+          push: true
+          provenance: false
+          sbom: false
+          no-cache: ${{ matrix.no_cache }}
+          tags: ${{ steps.tags.outputs.tags }}
+          build-args: |
+            PARENT_IMAGE=${{ matrix.parent_image }}
+          cache-from: type=gha,scope=${{ matrix.app }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}-${{ matrix.arch }}
+
+      - name: Smoke image
+        shell: bash
+        run: |
+          set -euo pipefail
+          healthcheck="$(ruby -ryaml -e 'doc = YAML.safe_load_file(ARGV[0]); puts doc.dig("entrypoints", "healthcheck").to_s' "apps/${{ matrix.app }}/app.yml")"
+          if [[ -z "${healthcheck}" ]]; then
+            echo "No healthcheck entrypoint declared for apps/${{ matrix.app }}; image build completed."
+            exit 0
+          fi
+          image="${{ matrix.image }}:${{ matrix.version }}-${{ matrix.arch }}"
+          docker pull --platform "${{ matrix.platform }}" "${image}"
+          docker run --rm --platform "${{ matrix.platform }}" "${image}" bash -lc "${healthcheck}"

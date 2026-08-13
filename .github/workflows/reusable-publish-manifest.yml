@@ -1,0 +1,65 @@
+name: reusable-publish-manifest
+
+on:
+  workflow_call:
+    inputs:
+      matrix_json:
+        required: true
+        type: string
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  manifest:
+    runs-on: ubuntu-latest
+    env:
+      XGC_CN_REGISTRY: ${{ secrets.XGC_CN_REGISTRY }}
+      XGC_CN_NAMESPACE: ${{ secrets.XGC_CN_NAMESPACE }}
+      XGC_CN_USERNAME: ${{ secrets.XGC_CN_USERNAME }}
+      XGC_CN_PASSWORD: ${{ secrets.XGC_CN_PASSWORD }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(inputs.matrix_json) }}
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        if: env.XGC_CN_REGISTRY != '' && env.XGC_CN_NAMESPACE != '' && env.XGC_CN_USERNAME != '' && env.XGC_CN_PASSWORD != ''
+        with:
+          registry: ${{ env.XGC_CN_REGISTRY }}
+          username: ${{ env.XGC_CN_USERNAME }}
+          password: ${{ env.XGC_CN_PASSWORD }}
+      - name: Publish multi-architecture manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          create_manifest() {
+            local image="$1"
+            local target="$2"
+            shift 2
+            local refs=()
+            local arch
+            for arch in "$@"; do
+              refs+=("${image}:${target}-${arch}")
+            done
+            docker buildx imagetools create -t "${image}:${target}" "${refs[@]}"
+          }
+
+          mapfile -t arches < <(jq -r '.[]' <<< '${{ toJson(matrix.arches) }}')
+          create_manifest "${{ matrix.image }}" "${{ matrix.version }}" "${arches[@]}"
+          create_manifest "${{ matrix.image }}" "latest" "${arches[@]}"
+
+          if [[ -n "${XGC_CN_REGISTRY}" && -n "${XGC_CN_NAMESPACE}" && -n "${XGC_CN_USERNAME}" && -n "${XGC_CN_PASSWORD}" ]]; then
+            cn_registry="${XGC_CN_REGISTRY%/}"
+            cn_namespace="${XGC_CN_NAMESPACE#/}"
+            cn_namespace="${cn_namespace%/}"
+            cn_image="${cn_registry}/${cn_namespace}/${{ matrix.app }}"
+            create_manifest "${cn_image}" "${{ matrix.version }}" "${arches[@]}"
+            create_manifest "${cn_image}" "latest" "${arches[@]}"
+          fi

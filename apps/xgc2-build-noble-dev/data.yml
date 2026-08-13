@@ -1,0 +1,29 @@
+name: XGC2 noble CI dev
+title: XGC2 noble CI dev
+additionalProperties:
+  key: xgc2-build-noble-dev
+  name: XGC2 noble CI dev
+  tags:
+    - Build
+    - CI
+    - Noble
+  shortDescEn: Ubuntu noble CI compile and Debian packaging image. No ROS and no XGC2 APT packages.
+  description:
+    en: Ubuntu noble CI compile and Debian packaging image. No ROS and no XGC2 APT packages.
+  type: build
+  crossVersionUpdate: true
+  limit: 0
+  website: https://github.com/lxk36/xgc2-app-store
+  github: https://github.com/lxk36/xgc2-app-store
+  document: https://github.com/lxk36/xgc2-app-store/tree/master/apps/xgc2-build-noble-dev
+  architectures:
+    - amd64
+    - arm64/v8
+  batchInstallSupport: false
+  formFields:
+    - default: xgc2-build-noble-dev
+      envKey: CONTAINER_NAME
+      label:
+        en: Container name
+      required: true
+      type: text

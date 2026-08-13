@@ -1,0 +1,10 @@
+gazebo11
+libgazebo11-dev
+libpcl-dev
+libopencv-dev
+libogre-1.9-dev
+libglew-dev
+libjpeg-dev
+libgl1-mesa-dev
+python3-opencv
+genromfs

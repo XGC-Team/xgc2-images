@@ -1,0 +1,30 @@
+name: XGC2 noble jazzy CI ros
+title: XGC2 noble jazzy CI ros
+additionalProperties:
+  key: xgc2-build-noble-ros-jazzy
+  name: XGC2 noble jazzy CI ros
+  tags:
+    - Build
+    - CI
+    - Noble
+    - Jazzy
+  shortDescEn: Ubuntu noble + official ROS jazzy CI image for compiling product sources. No XGC2 APT packages.
+  description:
+    en: Ubuntu noble + official ROS jazzy CI image for compiling product sources. No XGC2 APT packages.
+  type: build
+  crossVersionUpdate: true
+  limit: 0
+  website: https://github.com/lxk36/xgc2-app-store
+  github: https://github.com/lxk36/xgc2-app-store
+  document: https://github.com/lxk36/xgc2-app-store/tree/master/apps/xgc2-build-noble-ros-jazzy
+  architectures:
+    - amd64
+    - arm64/v8
+  batchInstallSupport: false
+  formFields:
+    - default: xgc2-build-noble-ros-jazzy
+      envKey: CONTAINER_NAME
+      label:
+        en: Container name
+      required: true
+      type: text

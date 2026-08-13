@@ -1,0 +1,5 @@
+python-catkin-tools
+python-rosdep
+python-rospkg
+python-empy
+python-nose

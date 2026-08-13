@@ -1,0 +1,26 @@
+# Official ROS Melodic core. Short names are prefixed with ros-melodic- at install.
+# Product packages are forbidden in build images.
+ros-base
+catkin
+roscpp
+rospy
+roslaunch
+rospack
+roslib
+std-msgs
+std-srvs
+geometry-msgs
+sensor-msgs
+nav-msgs
+message-generation
+message-runtime
+genmsg
+tf
+tf2
+tf2-ros
+urdf
+xacro
+nodelet
+topic-tools
+rosgraph
+serial

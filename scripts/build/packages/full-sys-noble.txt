@@ -1,0 +1,4 @@
+libpcl-dev
+libopencv-dev
+python3-opencv
+genromfs

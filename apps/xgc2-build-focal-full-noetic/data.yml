@@ -1,0 +1,30 @@
+name: XGC2 focal noetic CI full
+title: XGC2 focal noetic CI full
+additionalProperties:
+  key: xgc2-build-focal-full-noetic
+  name: XGC2 focal noetic CI full
+  tags:
+    - Build
+    - CI
+    - Focal
+    - Noetic
+  shortDescEn: Ubuntu focal + official ROS noetic full CI image including simulation and vision stacks. No XGC2 APT packages.
+  description:
+    en: Ubuntu focal + official ROS noetic full CI image including simulation and vision stacks. No XGC2 APT packages.
+  type: build
+  crossVersionUpdate: true
+  limit: 0
+  website: https://github.com/lxk36/xgc2-app-store
+  github: https://github.com/lxk36/xgc2-app-store
+  document: https://github.com/lxk36/xgc2-app-store/tree/master/apps/xgc2-build-focal-full-noetic
+  architectures:
+    - amd64
+    - arm64/v8
+  batchInstallSupport: false
+  formFields:
+    - default: xgc2-build-focal-full-noetic
+      envKey: CONTAINER_NAME
+      label:
+        en: Container name
+      required: true
+      type: text

@@ -1,0 +1,7 @@
+libpcl-dev
+libopencv-dev
+python3-opencv
+genromfs
+libglew-dev
+libjpeg-dev
+libgl1-mesa-dev
