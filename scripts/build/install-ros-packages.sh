@@ -80,6 +80,31 @@ if [[ "${dry_run}" -eq 1 ]]; then
 fi
 
 apt-get update
-apt-get install -y --no-install-recommends "${packages[@]}"
+
+# Humble ros-gz is published for amd64 but not arm64; skip any name whose
+# candidate is (none) on this architecture instead of failing the whole layer.
+arch="$(dpkg --print-architecture)"
+available=()
+skipped=()
+for pkg in "${packages[@]}"; do
+  candidate="$(apt-cache policy "${pkg}" | awk '/Candidate:/ {print $2; exit}')"
+  if [[ -z "${candidate}" || "${candidate}" == "(none)" ]]; then
+    echo "skipping unavailable ROS package on ${arch}: ${pkg}" >&2
+    skipped+=("${pkg}")
+    continue
+  fi
+  available+=("${pkg}")
+done
+
+if [[ "${#skipped[@]}" -gt 0 ]]; then
+  echo "skipped ${#skipped[@]} ROS package(s) not in the ${arch} index" >&2
+fi
+
+if [[ "${#available[@]}" -eq 0 ]]; then
+  echo "none of the requested ROS packages are available on ${arch}" >&2
+  exit 1
+fi
+
+apt-get install -y --no-install-recommends "${available[@]}"
 apt-get clean
 rm -rf /var/lib/apt/lists/*

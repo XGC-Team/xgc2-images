@@ -1,4 +1,5 @@
 # Humble simulation / vision stack. Official packages only. No gz-harmonic.
+# ros-gz / ros-gz-sim are in the amd64 index only; arm64 skips them at install.
 rviz2
 cv-bridge
 image-transport
