@@ -56,16 +56,33 @@ jobs:
 
           push_pids=()
 
+          docker_push() {
+            local ref="$1"
+            local attempt=1
+            local max=3
+            while true; do
+              echo ">> push ${ref} (attempt ${attempt}/${max})"
+              if docker push "${ref}"; then
+                echo "<< push ${ref} done"
+                return 0
+              fi
+              if [[ "${attempt}" -ge "${max}" ]]; then
+                echo "push ${ref} failed after ${attempt} attempts" >&2
+                return 1
+              fi
+              echo "push ${ref} failed (attempt ${attempt}/${max}), retrying" >&2
+              attempt=$((attempt + 1))
+              sleep $((attempt * 3))
+            done
+          }
+
           bg_push() {
             local ref="$1"
             (
               set -euo pipefail
-              echo ">> push ${ref}"
-              docker push "${ref}"
-              echo "<< push ${ref} done"
+              docker_push "${ref}"
             ) &
-            last_push_pid="$!"
-            push_pids+=("${last_push_pid}")
+            push_pids+=("$!")
           }
 
           wait_pushes() {
@@ -81,8 +98,6 @@ jobs:
 
           trap 'echo "waiting in-flight registry pushes"; wait_pushes || true' ERR
 
-          last_push_pid=""
-          declare -A ghcr_parent_pid=()
           mapfile -t steps < <(jq -c '.[]' <<<"${LAYERS_JSON}")
           for step in "${steps[@]}"; do
             app="$(jq -r '.app' <<<"${step}")"
@@ -123,12 +138,6 @@ jobs:
             if [[ "${no_cache}" == "true" ]]; then
               extra+=(--no-cache)
             fi
-            # Child FROM needs the parent on GHCR. Wait only for that one push;
-            # ACR and extra tags keep running in the background.
-            if [[ -n "${parent_image}" && -n "${ghcr_parent_pid[${parent_image}]+x}" ]]; then
-              echo "waiting for GHCR parent ${parent_image}"
-              wait "${ghcr_parent_pid[${parent_image}]}"
-            fi
 
             echo "::group::Build ${app} ${ARCH}"
             docker buildx build \
@@ -150,11 +159,18 @@ jobs:
               echo "::endgroup::"
             fi
 
+            # Push GHCR :version-<arch> first and wait. Two tags of the same
+            # image pushed in parallel can 409/unknown blob on GHCR, which
+            # then aborts the rest of the chain before full is built.
+            echo "::group::Push ${app} ${ARCH} GHCR ${version}"
+            docker_push "${local_ref}"
+            echo "::endgroup::"
+
             for ref in "${push_refs[@]}"; do
-              bg_push "${ref}"
               if [[ "${ref}" == "${local_ref}" ]]; then
-                ghcr_parent_pid["${local_ref}"]="${last_push_pid}"
+                continue
               fi
+              bg_push "${ref}"
             done
           done
 

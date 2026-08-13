@@ -77,7 +77,8 @@ jobs:
           echo "Image deletion is intentionally not automated. Remove registry tags manually after confirming no deployment still references them."
 
   # One independent chain per Ubuntu so jammy/noble never wait on bionic/focal.
-  # Within a chain: base → (GHCR push || ACR push || build next layer).
+  # Within a chain: wait for GHCR :version-<arch>, then overlap :latest-<arch>
+  # and ACR pushes with the next layer compile.
   # amd64 and arm64 for the same Ubuntu run in parallel.
   build_bionic:
     needs: detect
@@ -96,7 +97,7 @@ jobs:
       github.event_name != 'pull_request' &&
       needs.detect.result == 'success' &&
       needs.detect.outputs.chain_manifest_bionic != '{"include":[]}' &&
-      (needs.build_bionic.result == 'success' || needs.build_bionic.result == 'failure')
+      needs.build_bionic.result == 'success'
     uses: ./.github/workflows/reusable-publish-manifest.yml
     with:
       matrix_json: ${{ needs.detect.outputs.chain_manifest_bionic }}
@@ -119,7 +120,7 @@ jobs:
       github.event_name != 'pull_request' &&
       needs.detect.result == 'success' &&
       needs.detect.outputs.chain_manifest_focal != '{"include":[]}' &&
-      (needs.build_focal.result == 'success' || needs.build_focal.result == 'failure')
+      needs.build_focal.result == 'success'
     uses: ./.github/workflows/reusable-publish-manifest.yml
     with:
       matrix_json: ${{ needs.detect.outputs.chain_manifest_focal }}
@@ -142,7 +143,7 @@ jobs:
       github.event_name != 'pull_request' &&
       needs.detect.result == 'success' &&
       needs.detect.outputs.chain_manifest_jammy != '{"include":[]}' &&
-      (needs.build_jammy.result == 'success' || needs.build_jammy.result == 'failure')
+      needs.build_jammy.result == 'success'
     uses: ./.github/workflows/reusable-publish-manifest.yml
     with:
       matrix_json: ${{ needs.detect.outputs.chain_manifest_jammy }}
@@ -165,7 +166,7 @@ jobs:
       github.event_name != 'pull_request' &&
       needs.detect.result == 'success' &&
       needs.detect.outputs.chain_manifest_noble != '{"include":[]}' &&
-      (needs.build_noble.result == 'success' || needs.build_noble.result == 'failure')
+      needs.build_noble.result == 'success'
     uses: ./.github/workflows/reusable-publish-manifest.yml
     with:
       matrix_json: ${{ needs.detect.outputs.chain_manifest_noble }}
