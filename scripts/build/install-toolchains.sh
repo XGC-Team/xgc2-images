@@ -263,6 +263,20 @@ install_meson() {
   meson --version
 }
 
+install_python_proto_generators() {
+  # xgc2-protobuf generate.sh imports grpc_tools.protoc.
+  case "${codename}" in
+    jammy|noble)
+      python3 -m pip install --no-cache-dir "grpcio-tools==1.70.0" "PyYAML==6.0.2"
+      python3 -c "import grpc_tools.protoc, yaml"
+      ;;
+    *)
+      return 0
+      ;;
+  esac
+}
+
 install_skopeo
 install_meson
+install_python_proto_generators
 write_profile
