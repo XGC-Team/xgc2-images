@@ -2,8 +2,8 @@
 # Install pinned CI toolchains into /usr/local. Apt packages belong in
 # packages/*.txt; this script covers binaries Ubuntu does not ship at the
 # versions product CI needs (Node, pnpm/yarn via corepack, uv, Go, Rust,
-# Bun, gh, buf, skopeo on focal, and meson 1.3.2 on focal/jammy). Ripgrep is
-# installed in the base layer.
+# Bun, gh, buf, skopeo on focal, meson 1.3.2 on focal/jammy, and a pinned
+# CasADi for NMPC codegen). Ripgrep is installed in the base layer.
 set -euo pipefail
 
 if [[ "$(id -u)" != "0" ]]; then
@@ -276,7 +276,24 @@ install_python_proto_generators() {
   esac
 }
 
+install_casadi() {
+  # Shared NMPC / acados / controller codegen pin. Bionic stays on 3.5.5
+  # because 18.04's Python 3.6 cannot import CasADi 3.7.
+  local casadi_version
+  case "${codename}" in
+    bionic) casadi_version="3.5.5" ;;
+    focal|jammy|noble) casadi_version="3.7.2" ;;
+    *)
+      echo "unsupported Ubuntu codename for CasADi: ${codename}" >&2
+      exit 1
+      ;;
+  esac
+  python3 -m pip install --no-cache-dir "casadi==${casadi_version}" "Deprecated==1.2.14"
+  python3 -c "import casadi, deprecated; print('casadi', casadi.__version__)"
+}
+
 install_skopeo
 install_meson
 install_python_proto_generators
+install_casadi
 write_profile

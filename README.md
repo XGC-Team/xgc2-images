@@ -52,7 +52,7 @@ Every build image is amd64 and arm64.
 | `xgc2-build-bionic-ros-melodic` | `ros` | official ROS Melodic core |
 | `xgc2-build-bionic-full-melodic` | `full` | Gazebo 9, RViz, PCL, OpenCV |
 | `xgc2-build-focal-base` | `base` | `ubuntu:20.04` + apt hygiene + ripgrep |
-| `xgc2-build-focal-dev` | `dev` | compilers, Node 22, pnpm 11, yarn 4.17, uv, Go 1.26, Rust, Bun, skopeo, gh, buf, xvfb, protobuf/grpc |
+| `xgc2-build-focal-dev` | `dev` | compilers, Node 22, pnpm 11, yarn 4.17, uv, Go 1.26, Rust, Bun, skopeo, gh, buf, xvfb, protobuf/grpc, CasADi 3.7.2 |
 | `xgc2-build-focal-ros-noetic` | `ros` | official ROS Noetic core |
 | `xgc2-build-focal-full-noetic` | `full` | Gazebo 11, RViz, PCL, OpenCV, MAVROS |
 | `xgc2-build-jammy-base` | `base` | `ubuntu:22.04` + apt hygiene + ripgrep |

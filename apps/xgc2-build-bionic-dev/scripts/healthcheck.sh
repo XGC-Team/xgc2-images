@@ -18,7 +18,7 @@ command -v buf >/dev/null
 command -v rg >/dev/null
 dpkg-query -W libzmq3-dev libzmqpp-dev cmake fakeroot dpkg-dev \
   libeigen3-dev libgtest-dev libgflags-dev meson >/dev/null
-python3 -c 'import yaml,numpy'
+python3 -c 'import yaml,numpy,casadi,deprecated; assert casadi.__version__.startswith("3.5.")'
 node -v | grep -q '^v16'
 if dpkg-query -W -f='${Package}\n' | grep -E '^(lib)?xgc2-|ros-[a-z]+-xgc2-'; then
   echo "XGC2 packages leaked into build image" >&2
