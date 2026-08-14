@@ -72,5 +72,11 @@ jobs:
             echo "extra registry root was not resolved" >&2
             exit 1
           fi
-          curl -fsS -o /dev/null -u "${EXTRA_USERNAME}:${EXTRA_PASSWORD}" "https://${EXTRA_REGISTRY}/v2/"
-          echo "extra registry /v2/ ok"
+          # docker login already completed the Bearer token dance. Harbor-style
+          # registries still return 401 for Basic on /v2/; treat that as reachable.
+          code="$(curl -sS -o /dev/null -w '%{http_code}' \
+            -u "${EXTRA_USERNAME}:${EXTRA_PASSWORD}" "https://${EXTRA_REGISTRY}/v2/" || true)"
+          case "${code}" in
+            200|401) echo "extra registry /v2/ returned ${code}" ;;
+            *) echo "extra registry /v2/ returned ${code}" >&2; exit 1 ;;
+          esac
