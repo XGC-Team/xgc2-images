@@ -16,7 +16,10 @@ command -v go >/dev/null
 command -v gh >/dev/null
 command -v buf >/dev/null
 command -v rg >/dev/null
-dpkg-query -W libzmq3-dev libzmqpp-dev cmake fakeroot dpkg-dev >/dev/null
+dpkg-query -W libzmq3-dev libzmqpp-dev cmake fakeroot dpkg-dev \
+  libeigen3-dev libgtest-dev libgflags-dev meson \
+  libgrpc++-dev libprotobuf-dev protobuf-compiler-grpc libre2-dev \
+  clang-format clang-tidy cppcheck >/dev/null
 python3 -c 'import yaml,numpy'
 node -v | grep -q '^v22'
 command -v skopeo >/dev/null

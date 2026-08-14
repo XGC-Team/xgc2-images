@@ -36,6 +36,7 @@ python3-empy
 python3-jinja2
 libeigen3-dev
 libgtest-dev
+libgflags-dev
 libyaml-cpp-dev
 libboost-dev
 libssl-dev

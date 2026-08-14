@@ -7,6 +7,12 @@ rospy
 roslaunch
 rospack
 roslib
+rostest
+rosunit
+rosmsg
+rostopic
+rosbash
+rosbag
 std-msgs
 std-srvs
 geometry-msgs

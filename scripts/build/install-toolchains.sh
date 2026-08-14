@@ -2,7 +2,8 @@
 # Install pinned CI toolchains into /usr/local. Apt packages belong in
 # packages/*.txt; this script covers binaries Ubuntu does not ship at the
 # versions product CI needs (Node, pnpm/yarn via corepack, uv, Go, Rust,
-# Bun, gh, buf, and skopeo on focal). Ripgrep is installed in the base layer.
+# Bun, gh, buf, skopeo on focal, and meson 1.3.2 on focal/jammy). Ripgrep is
+# installed in the base layer.
 set -euo pipefail
 
 if [[ "$(id -u)" != "0" ]]; then
@@ -248,5 +249,20 @@ install_rust
 install_bun
 install_gh
 install_buf
+install_meson() {
+  # mavlink-router needs meson 1.3; focal/jammy apt ships 0.53/0.61.
+  # noble already has 1.3 from apt. bionic stays on archive meson (unused).
+  case "${codename}" in
+    focal|jammy)
+      python3 -m pip install --no-cache-dir "meson==1.3.2"
+      ;;
+    *)
+      return 0
+      ;;
+  esac
+  meson --version
+}
+
 install_skopeo
+install_meson
 write_profile
