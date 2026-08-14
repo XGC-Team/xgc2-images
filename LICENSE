@@ -1,0 +1,9 @@
+Copyright (c) 2026 XGC Team. All rights reserved.
+
+This repository and the container images published from it are proprietary.
+No right is granted to use, copy, modify, merge, publish, distribute,
+sublicense, or sell this software except with prior written permission
+from XGC Team.
+
+Third-party base images and packages, including Ubuntu, ROS, and other
+upstream projects, remain under their own licenses.

@@ -174,3 +174,8 @@ docker run --rm xgc2-ros1-central-sim:local \
 docker run --rm xgc2-ros1-central-sim:local \
   /usr/local/bin/xgc2-central-sim-smoke
 ```
+
+## License
+
+See `LICENSE`.
+
