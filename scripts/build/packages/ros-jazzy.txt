@@ -29,6 +29,7 @@ tf2-ros
 tf2-geometry-msgs
 message-filters
 urdf
+xacro
 launch
 launch-ros
 ros2launch

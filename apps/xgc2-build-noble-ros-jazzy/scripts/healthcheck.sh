@@ -9,6 +9,7 @@ set -u
 test "${ROS_DISTRO}" = "jazzy"
 command -v ros2 >/dev/null
 command -v colcon >/dev/null
+dpkg-query -W ros-jazzy-ament-cmake ros-jazzy-xacro cmake fakeroot dpkg-dev >/dev/null
 if dpkg-query -W -f='${Package}\n' | grep -E '^(lib)?xgc2-|ros-[a-z]+-xgc2-'; then
   echo "XGC2 packages leaked into build image" >&2
   exit 1

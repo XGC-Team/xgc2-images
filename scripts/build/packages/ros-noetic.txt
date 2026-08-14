@@ -43,6 +43,9 @@ pluginlib
 nodelet
 roslint
 topic-tools
+serial
+robot-state-publisher
+joint-state-publisher
 mavros-msgs
 foxglove-msgs
 ros-babel-fish

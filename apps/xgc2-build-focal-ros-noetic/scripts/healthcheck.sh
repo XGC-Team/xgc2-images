@@ -9,6 +9,9 @@ set -u
 test "${ROS_DISTRO}" = "noetic"
 command -v rospack >/dev/null
 command -v catkin_make >/dev/null
+dpkg-query -W ros-noetic-serial ros-noetic-joint-state-publisher \
+  ros-noetic-robot-state-publisher libzmqpp-dev libzmq3-dev \
+  cmake fakeroot dpkg-dev >/dev/null
 if dpkg-query -W -f='${Package}\n' | grep -E '^(lib)?xgc2-|ros-[a-z]+-xgc2-'; then
   echo "XGC2 packages leaked into build image" >&2
   exit 1

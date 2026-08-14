@@ -24,3 +24,5 @@ nodelet
 topic-tools
 rosgraph
 serial
+robot-state-publisher
+joint-state-publisher

@@ -201,6 +201,7 @@ def healthcheck(ubuntu: str, layer: str, ros: str | None) -> str:
             "command -v gh >/dev/null",
             "command -v buf >/dev/null",
             "command -v rg >/dev/null",
+            "dpkg-query -W libzmq3-dev libzmqpp-dev cmake fakeroot dpkg-dev >/dev/null",
             "python3 -c 'import yaml,numpy'",
         ]
         if ubuntu == "bionic":
@@ -220,9 +221,19 @@ def healthcheck(ubuntu: str, layer: str, ros: str | None) -> str:
             f'test "${{ROS_DISTRO}}" = "{ros}"',
         ]
         if ros in {"humble", "jazzy"}:
-            lines += ["command -v ros2 >/dev/null", "command -v colcon >/dev/null"]
+            lines += [
+                "command -v ros2 >/dev/null",
+                "command -v colcon >/dev/null",
+                f"dpkg-query -W ros-{ros}-ament-cmake ros-{ros}-xacro cmake fakeroot dpkg-dev >/dev/null",
+            ]
         else:
-            lines += ["command -v rospack >/dev/null", "command -v catkin_make >/dev/null"]
+            lines += [
+                "command -v rospack >/dev/null",
+                "command -v catkin_make >/dev/null",
+                f"dpkg-query -W ros-{ros}-serial ros-{ros}-joint-state-publisher "
+                f"ros-{ros}-robot-state-publisher libzmqpp-dev libzmq3-dev "
+                "cmake fakeroot dpkg-dev >/dev/null",
+            ]
     else:
         lines += [
             "set +u",

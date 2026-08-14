@@ -53,3 +53,5 @@ udev
 sudo
 meson
 libusb-1.0-0-dev
+libzmq3-dev
+libzmqpp-dev

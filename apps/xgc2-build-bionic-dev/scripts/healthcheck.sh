@@ -16,6 +16,7 @@ command -v go >/dev/null
 command -v gh >/dev/null
 command -v buf >/dev/null
 command -v rg >/dev/null
+dpkg-query -W libzmq3-dev libzmqpp-dev cmake fakeroot dpkg-dev >/dev/null
 python3 -c 'import yaml,numpy'
 node -v | grep -q '^v16'
 if dpkg-query -W -f='${Package}\n' | grep -E '^(lib)?xgc2-|ros-[a-z]+-xgc2-'; then
