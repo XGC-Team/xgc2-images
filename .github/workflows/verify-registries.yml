@@ -1,0 +1,56 @@
+name: Verify registries
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    env:
+      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY }}
+      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE }}
+      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME }}
+      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check secrets present
+        run: |
+          set -euo pipefail
+          missing=0
+          for key in EXTRA_REGISTRY EXTRA_NAMESPACE EXTRA_USERNAME EXTRA_PASSWORD; do
+            if [[ -z "${!key}" ]]; then
+              echo "${key} is empty"
+              missing=1
+            else
+              echo "${key} is set"
+            fi
+          done
+          exit "${missing}"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.EXTRA_REGISTRY }}
+          username: ${{ env.EXTRA_USERNAME }}
+          password: ${{ env.EXTRA_PASSWORD }}
+      - name: Probe registry API
+        run: |
+          set -euo pipefail
+          # shellcheck source=scripts/ci-registry-roots.sh
+          source scripts/ci-registry-roots.sh
+          if [[ -z "${GHCR_ROOT}" || -z "${EXTRA_ROOT}" ]]; then
+            echo "registry roots were not resolved" >&2
+            exit 1
+          fi
+          echo "GHCR and extra roots resolved"
+          curl -fsS -o /dev/null -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://ghcr.io/v2/
+          echo "GHCR /v2/ ok"
+          curl -fsS -o /dev/null -u "${EXTRA_USERNAME}:${EXTRA_PASSWORD}" "https://${EXTRA_REGISTRY}/v2/"
+          echo "extra registry /v2/ ok"

@@ -5,15 +5,7 @@ require "json"
 require "yaml"
 
 apps = JSON.parse(ARGV[0])
-owner = ENV.fetch("GITHUB_REPOSITORY").split("/", 2).first.downcase
-namespace = ENV.fetch("EXTRA_NAMESPACE", "").strip.sub(%r{\A/+}, "").sub(%r{/+\z}, "")
-repository = if namespace.empty?
-               ENV.fetch("GITHUB_REPOSITORY").downcase
-             elsif namespace.include?("/")
-               namespace.downcase
-             else
-               "#{owner}/#{namespace.downcase}"
-             end
+repository = ENV.fetch("GITHUB_REPOSITORY").downcase
 output_path = ENV.fetch("GITHUB_OUTPUT")
 force_no_cache = ENV["GITHUB_EVENT_NAME"] == "schedule"
 

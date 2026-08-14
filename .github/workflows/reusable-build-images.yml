@@ -41,23 +41,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # shellcheck source=scripts/ci-registry-roots.sh
+          source scripts/ci-registry-roots.sh
+          image="$(rewrite_ghcr "${{ matrix.image }}")"
           if [[ "${LATEST_ONLY}" == "true" ]]; then
-            tags="${{ matrix.image }}:latest-${{ matrix.arch }}"
+            tags="${image}:latest-${{ matrix.arch }}"
             if [[ "${{ matrix.multiarch }}" != "true" ]]; then
-              tags="${tags}"$'\n'"${{ matrix.image }}:latest"
+              tags="${tags}"$'\n'"${image}:latest"
             fi
           else
-            tags="${{ matrix.image }}:${{ matrix.version }}-${{ matrix.arch }}"
-            tags="${tags}"$'\n'"${{ matrix.image }}:latest-${{ matrix.arch }}"
+            tags="${image}:${{ matrix.version }}-${{ matrix.arch }}"
+            tags="${tags}"$'\n'"${image}:latest-${{ matrix.arch }}"
             if [[ "${{ matrix.multiarch }}" != "true" ]]; then
-              tags="${tags}"$'\n'"${{ matrix.image }}:${{ matrix.version }}"$'\n'"${{ matrix.image }}:latest"
+              tags="${tags}"$'\n'"${image}:${{ matrix.version }}"$'\n'"${image}:latest"
             fi
           fi
-          if [[ -n "${EXTRA_REGISTRY}" && -n "${EXTRA_NAMESPACE}" && -n "${EXTRA_USERNAME}" && -n "${EXTRA_PASSWORD}" ]]; then
-            extra_registry="${EXTRA_REGISTRY%/}"
-            extra_namespace="${EXTRA_NAMESPACE#/}"
-            extra_namespace="${extra_namespace%/}"
-            extra_image="${extra_registry}/${extra_namespace}/${{ matrix.app }}"
+          if [[ -n "${EXTRA_ROOT}" ]]; then
+            extra_image="${EXTRA_ROOT}/${{ matrix.app }}"
             if [[ "${LATEST_ONLY}" == "true" ]]; then
               tags="${tags}"$'\n'"${extra_image}:latest-${{ matrix.arch }}"
               if [[ "${{ matrix.multiarch }}" != "true" ]]; then

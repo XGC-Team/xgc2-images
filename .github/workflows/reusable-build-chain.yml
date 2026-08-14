@@ -47,13 +47,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          extra_prefix=""
-          if [[ -n "${EXTRA_REGISTRY}" && -n "${EXTRA_NAMESPACE}" && -n "${EXTRA_USERNAME}" && -n "${EXTRA_PASSWORD}" ]]; then
-            extra_registry="${EXTRA_REGISTRY%/}"
-            extra_namespace="${EXTRA_NAMESPACE#/}"
-            extra_namespace="${extra_namespace%/}"
-            extra_prefix="${extra_registry}/${extra_namespace}"
-          fi
+          # shellcheck source=scripts/ci-registry-roots.sh
+          source scripts/ci-registry-roots.sh
+          extra_prefix="${EXTRA_ROOT}"
 
           push_pids=()
 
@@ -103,10 +99,10 @@ jobs:
           for step in "${steps[@]}"; do
             app="$(jq -r '.app' <<<"${step}")"
             version="$(jq -r '.version' <<<"${step}")"
-            image="$(jq -r '.image' <<<"${step}")"
+            image="$(rewrite_ghcr "$(jq -r '.image' <<<"${step}")")"
             file="$(jq -r '.file' <<<"${step}")"
             context="$(jq -r '.context' <<<"${step}")"
-            parent_image="$(jq -r '.parent_image' <<<"${step}")"
+            parent_image="$(rewrite_ghcr "$(jq -r '.parent_image' <<<"${step}")")"
             no_cache="$(jq -r '.no_cache' <<<"${step}")"
             multiarch="$(jq -r '.multiarch' <<<"${step}")"
             healthcheck="$(ruby -ryaml -e 'doc = YAML.safe_load_file(ARGV[0]); puts doc.dig("entrypoints", "healthcheck").to_s' "apps/${app}/app.yml")"
