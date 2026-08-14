@@ -12,16 +12,16 @@ jobs:
     runs-on: ubuntu-latest
     env:
       EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY }}
-      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE }}
+      EXTRA_NAMESPACE: ${{ vars.EXTRA_NAMESPACE || secrets.EXTRA_NAMESPACE }}
       EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME }}
       EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
-      - name: Check secrets present
+      - name: Check extra registry config
         run: |
           set -euo pipefail
           missing=0
-          for key in EXTRA_REGISTRY EXTRA_NAMESPACE EXTRA_USERNAME EXTRA_PASSWORD; do
+          for key in EXTRA_REGISTRY EXTRA_USERNAME EXTRA_PASSWORD; do
             if [[ -z "${!key}" ]]; then
               echo "${key} is empty"
               missing=1
@@ -29,6 +29,12 @@ jobs:
               echo "${key} is set"
             fi
           done
+          if [[ -z "${EXTRA_NAMESPACE}" ]]; then
+            echo "EXTRA_NAMESPACE is empty"
+            missing=1
+          else
+            echo "EXTRA_NAMESPACE is set"
+          fi
           exit "${missing}"
       - uses: docker/login-action@v3
         with:

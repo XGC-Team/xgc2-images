@@ -1,5 +1,6 @@
 # Shared by GitHub Actions build jobs. Sets GHCR_ROOT and EXTRA_ROOT so both
-# registries share EXTRA_NAMESPACE. Do not print this from a detect job output.
+# registries share EXTRA_NAMESPACE (a variable, not a credential). Apply this
+# at push time; do not put the namespace into detect job outputs.
 repo_lc="$(printf '%s' "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
 owner="${repo_lc%%/*}"
 ns="$(printf '%s' "${EXTRA_NAMESPACE:-}" | sed 's#^/*##; s#/*$##')"
