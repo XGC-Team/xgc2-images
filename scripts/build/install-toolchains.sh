@@ -43,8 +43,8 @@ declare -A UV_SHA=(
   [arm64]=b16359904ede857b90b68168f10b0f6bf500858df9bed4e7156dbc59fd3f0747
 )
 declare -A BUN_SHA=(
-  [amd64]=5b91a48f0b00df9fd2da8bff1a795d2659d842da966432969203f25da19d1c74
-  [arm64]=5385e978107ce4934298d8d6afe9bfbb898683f6cc23e6753a0da60bc60c5b81
+  [amd64]=79c0771fa8b92c33aae41e15a0e0d307ea99d0e2f00317c71c6c53237a78e25a
+  [arm64]=70bae41b3908b0a120e1e58c5c8af30e74afae3b8d11b0d3fdd8e787ddfb4b22
 )
 declare -A GH_SHA=(
   [amd64]=c421091ae5800390e6aef1f50bfda59cc1d4f2ef2200bcd4e1a662c05c28c444
@@ -60,7 +60,7 @@ case "${arch}" in
     node_arch=x64
     go_arch=amd64
     uv_arch=x86_64-unknown-linux-musl
-    bun_zip=bun-linux-x64-musl.zip
+    bun_zip=bun-linux-x64.zip
     gh_arch=amd64
     buf_arch=x86_64
     rustup_triple=x86_64-unknown-linux-gnu
@@ -69,7 +69,7 @@ case "${arch}" in
     node_arch=arm64
     go_arch=arm64
     uv_arch=aarch64-unknown-linux-musl
-    bun_zip=bun-linux-aarch64-musl.zip
+    bun_zip=bun-linux-aarch64.zip
     gh_arch=arm64
     buf_arch=aarch64
     rustup_triple=aarch64-unknown-linux-gnu
