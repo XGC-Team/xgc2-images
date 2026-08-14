@@ -15,10 +15,10 @@ jobs:
     name: ${{ matrix.ubuntu }}-${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
     env:
-      XGC_CN_REGISTRY: ${{ secrets.XGC_CN_REGISTRY }}
-      XGC_CN_NAMESPACE: ${{ secrets.XGC_CN_NAMESPACE }}
-      XGC_CN_USERNAME: ${{ secrets.XGC_CN_USERNAME }}
-      XGC_CN_PASSWORD: ${{ secrets.XGC_CN_PASSWORD }}
+      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY || secrets.XGC_CN_REGISTRY }}
+      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE || secrets.XGC_CN_NAMESPACE }}
+      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME || secrets.XGC_CN_USERNAME }}
+      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD || secrets.XGC_CN_PASSWORD }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(inputs.matrix_json) }}
@@ -31,11 +31,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/login-action@v3
-        if: env.XGC_CN_REGISTRY != '' && env.XGC_CN_NAMESPACE != '' && env.XGC_CN_USERNAME != '' && env.XGC_CN_PASSWORD != ''
+        if: env.EXTRA_REGISTRY != '' && env.EXTRA_NAMESPACE != '' && env.EXTRA_USERNAME != '' && env.EXTRA_PASSWORD != ''
         with:
-          registry: ${{ env.XGC_CN_REGISTRY }}
-          username: ${{ env.XGC_CN_USERNAME }}
-          password: ${{ env.XGC_CN_PASSWORD }}
+          registry: ${{ env.EXTRA_REGISTRY }}
+          username: ${{ env.EXTRA_USERNAME }}
+          password: ${{ env.EXTRA_PASSWORD }}
 
       - name: Build ${{ matrix.ubuntu }} ${{ matrix.arch }} chain
         shell: bash
@@ -46,12 +46,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          cn_image_prefix=""
-          if [[ -n "${XGC_CN_REGISTRY}" && -n "${XGC_CN_NAMESPACE}" && -n "${XGC_CN_USERNAME}" && -n "${XGC_CN_PASSWORD}" ]]; then
-            cn_registry="${XGC_CN_REGISTRY%/}"
-            cn_namespace="${XGC_CN_NAMESPACE#/}"
-            cn_namespace="${cn_namespace%/}"
-            cn_image_prefix="${cn_registry}/${cn_namespace}"
+          extra_prefix=""
+          if [[ -n "${EXTRA_REGISTRY}" && -n "${EXTRA_NAMESPACE}" && -n "${EXTRA_USERNAME}" && -n "${EXTRA_PASSWORD}" ]]; then
+            extra_registry="${EXTRA_REGISTRY%/}"
+            extra_namespace="${EXTRA_NAMESPACE#/}"
+            extra_namespace="${extra_namespace%/}"
+            extra_prefix="${extra_registry}/${extra_namespace}"
           fi
 
           push_pids=()
@@ -120,16 +120,16 @@ jobs:
               tags+=(-t "${image}:${version}" -t "${image}:latest")
               push_refs+=("${image}:${version}" "${image}:latest")
             fi
-            if [[ -n "${cn_image_prefix}" ]]; then
-              cn_ref="${cn_image_prefix}/${app}:${version}-${ARCH}"
-              tags+=(-t "${cn_ref}")
-              push_refs+=("${cn_ref}")
+            if [[ -n "${extra_prefix}" ]]; then
+              extra_ref="${extra_prefix}/${app}:${version}-${ARCH}"
+              tags+=(-t "${extra_ref}")
+              push_refs+=("${extra_ref}")
               if [[ "${multiarch}" == "true" ]]; then
-                tags+=(-t "${cn_image_prefix}/${app}:latest-${ARCH}")
-                push_refs+=("${cn_image_prefix}/${app}:latest-${ARCH}")
+                tags+=(-t "${extra_prefix}/${app}:latest-${ARCH}")
+                push_refs+=("${extra_prefix}/${app}:latest-${ARCH}")
               else
-                tags+=(-t "${cn_image_prefix}/${app}:${version}" -t "${cn_image_prefix}/${app}:latest")
-                push_refs+=("${cn_image_prefix}/${app}:${version}" "${cn_image_prefix}/${app}:latest")
+                tags+=(-t "${extra_prefix}/${app}:${version}" -t "${extra_prefix}/${app}:latest")
+                push_refs+=("${extra_prefix}/${app}:${version}" "${extra_prefix}/${app}:latest")
               fi
             fi
 
@@ -174,6 +174,6 @@ jobs:
             done
           done
 
-          echo "::group::Wait for GHCR and ACR pushes"
+          echo "::group::Wait for registry pushes"
           wait_pushes
           echo "::endgroup::"

@@ -77,8 +77,8 @@ jobs:
           echo "Image deletion is intentionally not automated. Remove registry tags manually after confirming no deployment still references them."
 
   # One independent chain per Ubuntu so jammy/noble never wait on bionic/focal.
-  # Within a chain: wait for GHCR :version-<arch>, then overlap :latest-<arch>
-  # and ACR pushes with the next layer compile.
+  # Within a chain: wait for GHCR :version-<arch>, then overlap remaining
+  # tag pushes with the next layer compile.
   # amd64 and arm64 for the same Ubuntu run in parallel.
   build_bionic:
     needs: detect
@@ -177,10 +177,10 @@ jobs:
     if: needs.detect.outputs.build_matrix != '{"include":[]}'
     runs-on: ${{ matrix.runner }}
     env:
-      XGC_CN_REGISTRY: ${{ secrets.XGC_CN_REGISTRY }}
-      XGC_CN_NAMESPACE: ${{ secrets.XGC_CN_NAMESPACE }}
-      XGC_CN_USERNAME: ${{ secrets.XGC_CN_USERNAME }}
-      XGC_CN_PASSWORD: ${{ secrets.XGC_CN_PASSWORD }}
+      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY || secrets.XGC_CN_REGISTRY }}
+      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE || secrets.XGC_CN_NAMESPACE }}
+      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME || secrets.XGC_CN_USERNAME }}
+      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD || secrets.XGC_CN_PASSWORD }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect.outputs.build_matrix) }}
@@ -194,11 +194,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/login-action@v3
-        if: github.event_name != 'pull_request' && env.XGC_CN_REGISTRY != '' && env.XGC_CN_NAMESPACE != '' && env.XGC_CN_USERNAME != '' && env.XGC_CN_PASSWORD != ''
+        if: github.event_name != 'pull_request' && env.EXTRA_REGISTRY != '' && env.EXTRA_NAMESPACE != '' && env.EXTRA_USERNAME != '' && env.EXTRA_PASSWORD != ''
         with:
-          registry: ${{ env.XGC_CN_REGISTRY }}
-          username: ${{ env.XGC_CN_USERNAME }}
-          password: ${{ env.XGC_CN_PASSWORD }}
+          registry: ${{ env.EXTRA_REGISTRY }}
+          username: ${{ env.EXTRA_USERNAME }}
+          password: ${{ env.EXTRA_PASSWORD }}
 
       - id: tags
         shell: bash
@@ -214,17 +214,17 @@ jobs:
             fi
           fi
 
-          if [[ "${{ github.event_name }}" != "pull_request" && -n "${XGC_CN_REGISTRY}" && -n "${XGC_CN_NAMESPACE}" && -n "${XGC_CN_USERNAME}" && -n "${XGC_CN_PASSWORD}" ]]; then
-            cn_registry="${XGC_CN_REGISTRY%/}"
-            cn_namespace="${XGC_CN_NAMESPACE#/}"
-            cn_namespace="${cn_namespace%/}"
-            cn_image="${cn_registry}/${cn_namespace}/${{ matrix.app }}"
+          if [[ "${{ github.event_name }}" != "pull_request" && -n "${EXTRA_REGISTRY}" && -n "${EXTRA_NAMESPACE}" && -n "${EXTRA_USERNAME}" && -n "${EXTRA_PASSWORD}" ]]; then
+            extra_registry="${EXTRA_REGISTRY%/}"
+            extra_namespace="${EXTRA_NAMESPACE#/}"
+            extra_namespace="${extra_namespace%/}"
+            extra_image="${extra_registry}/${extra_namespace}/${{ matrix.app }}"
             if [[ "${{ matrix.version_only }}" == "true" && "${{ matrix.multiarch }}" != "true" ]]; then
-              tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}"
+              tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}"
             else
-              tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}-${{ matrix.arch }}"$'\n'"${cn_image}:latest-${{ matrix.arch }}"
+              tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}-${{ matrix.arch }}"$'\n'"${extra_image}:latest-${{ matrix.arch }}"
               if [[ "${{ matrix.multiarch }}" != "true" ]]; then
-                tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}"$'\n'"${cn_image}:latest"
+                tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}"$'\n'"${extra_image}:latest"
               fi
             fi
           fi
@@ -272,10 +272,10 @@ jobs:
     if: github.event_name != 'pull_request' && needs.detect.outputs.manifest_matrix != '{"include":[]}'
     runs-on: ubuntu-latest
     env:
-      XGC_CN_REGISTRY: ${{ secrets.XGC_CN_REGISTRY }}
-      XGC_CN_NAMESPACE: ${{ secrets.XGC_CN_NAMESPACE }}
-      XGC_CN_USERNAME: ${{ secrets.XGC_CN_USERNAME }}
-      XGC_CN_PASSWORD: ${{ secrets.XGC_CN_PASSWORD }}
+      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY || secrets.XGC_CN_REGISTRY }}
+      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE || secrets.XGC_CN_NAMESPACE }}
+      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME || secrets.XGC_CN_USERNAME }}
+      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD || secrets.XGC_CN_PASSWORD }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect.outputs.manifest_matrix) }}
@@ -287,11 +287,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/login-action@v3
-        if: env.XGC_CN_REGISTRY != '' && env.XGC_CN_NAMESPACE != '' && env.XGC_CN_USERNAME != '' && env.XGC_CN_PASSWORD != ''
+        if: env.EXTRA_REGISTRY != '' && env.EXTRA_NAMESPACE != '' && env.EXTRA_USERNAME != '' && env.EXTRA_PASSWORD != ''
         with:
-          registry: ${{ env.XGC_CN_REGISTRY }}
-          username: ${{ env.XGC_CN_USERNAME }}
-          password: ${{ env.XGC_CN_PASSWORD }}
+          registry: ${{ env.EXTRA_REGISTRY }}
+          username: ${{ env.EXTRA_USERNAME }}
+          password: ${{ env.EXTRA_PASSWORD }}
       - name: Publish multi-architecture manifests
         shell: bash
         run: |
@@ -313,13 +313,13 @@ jobs:
           create_manifest "${{ matrix.image }}" "${{ matrix.version }}" "${arches[@]}"
           create_manifest "${{ matrix.image }}" "latest" "${arches[@]}"
 
-          if [[ -n "${XGC_CN_REGISTRY}" && -n "${XGC_CN_NAMESPACE}" && -n "${XGC_CN_USERNAME}" && -n "${XGC_CN_PASSWORD}" ]]; then
-            cn_registry="${XGC_CN_REGISTRY%/}"
-            cn_namespace="${XGC_CN_NAMESPACE#/}"
-            cn_namespace="${cn_namespace%/}"
-            cn_image="${cn_registry}/${cn_namespace}/${{ matrix.app }}"
-            create_manifest "${cn_image}" "${{ matrix.version }}" "${arches[@]}"
-            create_manifest "${cn_image}" "latest" "${arches[@]}"
+          if [[ -n "${EXTRA_REGISTRY}" && -n "${EXTRA_NAMESPACE}" && -n "${EXTRA_USERNAME}" && -n "${EXTRA_PASSWORD}" ]]; then
+            extra_registry="${EXTRA_REGISTRY%/}"
+            extra_namespace="${EXTRA_NAMESPACE#/}"
+            extra_namespace="${extra_namespace%/}"
+            extra_image="${extra_registry}/${extra_namespace}/${{ matrix.app }}"
+            create_manifest "${extra_image}" "${{ matrix.version }}" "${arches[@]}"
+            create_manifest "${extra_image}" "latest" "${arches[@]}"
           fi
 
   dependent_build:
@@ -336,10 +336,10 @@ jobs:
       }}
     runs-on: ${{ matrix.runner }}
     env:
-      XGC_CN_REGISTRY: ${{ secrets.XGC_CN_REGISTRY }}
-      XGC_CN_NAMESPACE: ${{ secrets.XGC_CN_NAMESPACE }}
-      XGC_CN_USERNAME: ${{ secrets.XGC_CN_USERNAME }}
-      XGC_CN_PASSWORD: ${{ secrets.XGC_CN_PASSWORD }}
+      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY || secrets.XGC_CN_REGISTRY }}
+      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE || secrets.XGC_CN_NAMESPACE }}
+      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME || secrets.XGC_CN_USERNAME }}
+      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD || secrets.XGC_CN_PASSWORD }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect.outputs.dependent_build_matrix) }}
@@ -353,11 +353,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/login-action@v3
-        if: github.event_name != 'pull_request' && env.XGC_CN_REGISTRY != '' && env.XGC_CN_NAMESPACE != '' && env.XGC_CN_USERNAME != '' && env.XGC_CN_PASSWORD != ''
+        if: github.event_name != 'pull_request' && env.EXTRA_REGISTRY != '' && env.EXTRA_NAMESPACE != '' && env.EXTRA_USERNAME != '' && env.EXTRA_PASSWORD != ''
         with:
-          registry: ${{ env.XGC_CN_REGISTRY }}
-          username: ${{ env.XGC_CN_USERNAME }}
-          password: ${{ env.XGC_CN_PASSWORD }}
+          registry: ${{ env.EXTRA_REGISTRY }}
+          username: ${{ env.EXTRA_USERNAME }}
+          password: ${{ env.EXTRA_PASSWORD }}
 
       - id: tags
         shell: bash
@@ -373,17 +373,17 @@ jobs:
             fi
           fi
 
-          if [[ "${{ github.event_name }}" != "pull_request" && -n "${XGC_CN_REGISTRY}" && -n "${XGC_CN_NAMESPACE}" && -n "${XGC_CN_USERNAME}" && -n "${XGC_CN_PASSWORD}" ]]; then
-            cn_registry="${XGC_CN_REGISTRY%/}"
-            cn_namespace="${XGC_CN_NAMESPACE#/}"
-            cn_namespace="${cn_namespace%/}"
-            cn_image="${cn_registry}/${cn_namespace}/${{ matrix.app }}"
+          if [[ "${{ github.event_name }}" != "pull_request" && -n "${EXTRA_REGISTRY}" && -n "${EXTRA_NAMESPACE}" && -n "${EXTRA_USERNAME}" && -n "${EXTRA_PASSWORD}" ]]; then
+            extra_registry="${EXTRA_REGISTRY%/}"
+            extra_namespace="${EXTRA_NAMESPACE#/}"
+            extra_namespace="${extra_namespace%/}"
+            extra_image="${extra_registry}/${extra_namespace}/${{ matrix.app }}"
             if [[ "${{ matrix.version_only }}" == "true" && "${{ matrix.multiarch }}" != "true" ]]; then
-              tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}"
+              tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}"
             else
-              tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}-${{ matrix.arch }}"$'\n'"${cn_image}:latest-${{ matrix.arch }}"
+              tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}-${{ matrix.arch }}"$'\n'"${extra_image}:latest-${{ matrix.arch }}"
               if [[ "${{ matrix.multiarch }}" != "true" ]]; then
-                tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}"$'\n'"${cn_image}:latest"
+                tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}"$'\n'"${extra_image}:latest"
               fi
             fi
           fi
@@ -431,10 +431,10 @@ jobs:
     if: github.event_name != 'pull_request' && needs.detect.outputs.dependent_manifest_matrix != '{"include":[]}'
     runs-on: ubuntu-latest
     env:
-      XGC_CN_REGISTRY: ${{ secrets.XGC_CN_REGISTRY }}
-      XGC_CN_NAMESPACE: ${{ secrets.XGC_CN_NAMESPACE }}
-      XGC_CN_USERNAME: ${{ secrets.XGC_CN_USERNAME }}
-      XGC_CN_PASSWORD: ${{ secrets.XGC_CN_PASSWORD }}
+      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY || secrets.XGC_CN_REGISTRY }}
+      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE || secrets.XGC_CN_NAMESPACE }}
+      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME || secrets.XGC_CN_USERNAME }}
+      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD || secrets.XGC_CN_PASSWORD }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect.outputs.dependent_manifest_matrix) }}
@@ -446,11 +446,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/login-action@v3
-        if: env.XGC_CN_REGISTRY != '' && env.XGC_CN_NAMESPACE != '' && env.XGC_CN_USERNAME != '' && env.XGC_CN_PASSWORD != ''
+        if: env.EXTRA_REGISTRY != '' && env.EXTRA_NAMESPACE != '' && env.EXTRA_USERNAME != '' && env.EXTRA_PASSWORD != ''
         with:
-          registry: ${{ env.XGC_CN_REGISTRY }}
-          username: ${{ env.XGC_CN_USERNAME }}
-          password: ${{ env.XGC_CN_PASSWORD }}
+          registry: ${{ env.EXTRA_REGISTRY }}
+          username: ${{ env.EXTRA_USERNAME }}
+          password: ${{ env.EXTRA_PASSWORD }}
       - name: Publish dependent multi-architecture manifests
         shell: bash
         run: |
@@ -472,13 +472,13 @@ jobs:
           create_manifest "${{ matrix.image }}" "${{ matrix.version }}" "${arches[@]}"
           create_manifest "${{ matrix.image }}" "latest" "${arches[@]}"
 
-          if [[ -n "${XGC_CN_REGISTRY}" && -n "${XGC_CN_NAMESPACE}" && -n "${XGC_CN_USERNAME}" && -n "${XGC_CN_PASSWORD}" ]]; then
-            cn_registry="${XGC_CN_REGISTRY%/}"
-            cn_namespace="${XGC_CN_NAMESPACE#/}"
-            cn_namespace="${cn_namespace%/}"
-            cn_image="${cn_registry}/${cn_namespace}/${{ matrix.app }}"
-            create_manifest "${cn_image}" "${{ matrix.version }}" "${arches[@]}"
-            create_manifest "${cn_image}" "latest" "${arches[@]}"
+          if [[ -n "${EXTRA_REGISTRY}" && -n "${EXTRA_NAMESPACE}" && -n "${EXTRA_USERNAME}" && -n "${EXTRA_PASSWORD}" ]]; then
+            extra_registry="${EXTRA_REGISTRY%/}"
+            extra_namespace="${EXTRA_NAMESPACE#/}"
+            extra_namespace="${extra_namespace%/}"
+            extra_image="${extra_registry}/${extra_namespace}/${{ matrix.app }}"
+            create_manifest "${extra_image}" "${{ matrix.version }}" "${arches[@]}"
+            create_manifest "${extra_image}" "latest" "${arches[@]}"
           fi
 
   mirror:
@@ -486,10 +486,10 @@ jobs:
     if: needs.detect.outputs.mirror_matrix != '{"include":[]}'
     runs-on: ubuntu-latest
     env:
-      XGC_CN_REGISTRY: ${{ secrets.XGC_CN_REGISTRY }}
-      XGC_CN_NAMESPACE: ${{ secrets.XGC_CN_NAMESPACE }}
-      XGC_CN_USERNAME: ${{ secrets.XGC_CN_USERNAME }}
-      XGC_CN_PASSWORD: ${{ secrets.XGC_CN_PASSWORD }}
+      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY || secrets.XGC_CN_REGISTRY }}
+      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE || secrets.XGC_CN_NAMESPACE }}
+      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME || secrets.XGC_CN_USERNAME }}
+      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD || secrets.XGC_CN_PASSWORD }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect.outputs.mirror_matrix) }}
@@ -501,11 +501,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/login-action@v3
-        if: github.event_name != 'pull_request' && env.XGC_CN_REGISTRY != '' && env.XGC_CN_NAMESPACE != '' && env.XGC_CN_USERNAME != '' && env.XGC_CN_PASSWORD != ''
+        if: github.event_name != 'pull_request' && env.EXTRA_REGISTRY != '' && env.EXTRA_NAMESPACE != '' && env.EXTRA_USERNAME != '' && env.EXTRA_PASSWORD != ''
         with:
-          registry: ${{ env.XGC_CN_REGISTRY }}
-          username: ${{ env.XGC_CN_USERNAME }}
-          password: ${{ env.XGC_CN_PASSWORD }}
+          registry: ${{ env.EXTRA_REGISTRY }}
+          username: ${{ env.EXTRA_USERNAME }}
+          password: ${{ env.EXTRA_PASSWORD }}
       - name: Mirror external image
         shell: bash
         run: |
@@ -546,12 +546,12 @@ jobs:
           fi
 
           tags="${{ matrix.image }}:${{ matrix.version }}"$'\n'"${{ matrix.image }}:latest"
-          if [[ -n "${XGC_CN_REGISTRY}" && -n "${XGC_CN_NAMESPACE}" && -n "${XGC_CN_USERNAME}" && -n "${XGC_CN_PASSWORD}" ]]; then
-            cn_registry="${XGC_CN_REGISTRY%/}"
-            cn_namespace="${XGC_CN_NAMESPACE#/}"
-            cn_namespace="${cn_namespace%/}"
-            cn_image="${cn_registry}/${cn_namespace}/${{ matrix.app }}"
-            tags="${tags}"$'\n'"${cn_image}:${{ matrix.version }}"$'\n'"${cn_image}:latest"
+          if [[ -n "${EXTRA_REGISTRY}" && -n "${EXTRA_NAMESPACE}" && -n "${EXTRA_USERNAME}" && -n "${EXTRA_PASSWORD}" ]]; then
+            extra_registry="${EXTRA_REGISTRY%/}"
+            extra_namespace="${EXTRA_NAMESPACE#/}"
+            extra_namespace="${extra_namespace%/}"
+            extra_image="${extra_registry}/${extra_namespace}/${{ matrix.app }}"
+            tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}"$'\n'"${extra_image}:latest"
           fi
 
           while IFS= read -r tag; do

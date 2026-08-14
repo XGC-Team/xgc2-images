@@ -65,5 +65,5 @@ jobs:
             cat gc-report.txt
             echo '```'
             echo
-            echo "Aliyun ACR cleanup is intentionally not automated by this workflow. Use this report to remove matching domestic registry tags after confirming deployments no longer reference them."
+            echo "This workflow only reports or deletes GHCR package versions."
           } >> "$GITHUB_STEP_SUMMARY"

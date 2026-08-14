@@ -61,6 +61,4 @@ docker run --rm xgc2-ros1-central-sim:local \
   /usr/local/bin/xgc2-central-sim-smoke
 ```
 
-The repository build workflow pushes versioned and `latest` tags to GHCR. When
-all domestic-registry secrets are configured, the same workflow also pushes
-the same tags to the configured domestic registry.
+The repository build workflow pushes versioned and `latest` tags to GHCR.

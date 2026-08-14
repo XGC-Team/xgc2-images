@@ -64,7 +64,7 @@ Every build image is amd64 and arm64.
 
 CI runs one chain per Ubuntu × architecture in parallel (eight jobs when the
 full matrix is dirty). Each chain is `base` → `dev` → `ros` → `full` on the
-same runner. After a layer is loaded locally, GHCR and Aliyun ACR pushes run
+same runner. After a layer is loaded locally, registry pushes run
 in the background in parallel with the next layer's compile; the child `FROM`s
 the local parent, not a registry round-trip. The job waits for those pushes
 before it succeeds. Unrelated distros never wait on each other. Multi-arch
@@ -88,7 +88,7 @@ Only app definitions changed by a commit are built or mirrored. The detector loo
 `scripts/build/` or the layered build workflows rebuild every `type: build`
 image. `type: build` images run as independent Ubuntu × architecture chains
 (`base → dev → ros → full` on the same runner) so a child `FROM`s the parent
-just loaded locally. GHCR and Aliyun ACR pushes for that layer run in the
+just loaded locally. Registry pushes for that layer run in the
 background and do not block the next compile. Unrelated distros never wait on
 each other. Multi-arch `:version` / `:latest` manifests are published on
 `master` per Ubuntu after that distro's amd64 and arm64 tags exist.
@@ -122,40 +122,6 @@ ghcr.io/lxk36/xgc2-app-store/<app-key>:<version>-amd64
 ghcr.io/lxk36/xgc2-app-store/<app-key>:<version>-arm64
 ```
 
-If domestic registry secrets are configured, CI also pushes the same image tags
-to that registry:
-
-```text
-<XGC_CN_REGISTRY>/<XGC_CN_NAMESPACE>/<app-key>:latest
-<XGC_CN_REGISTRY>/<XGC_CN_NAMESPACE>/<app-key>:<version>
-```
-
-The recommended first domestic target is an Aliyun ACR namespace dedicated to
-XGC app images, for example:
-
-```text
-registry.cn-hangzhou.aliyuncs.com/xgc2-app-store
-```
-
-Keep this namespace public if deployment hosts should pull without `docker
-login`. Keep it private only when every deployment host can be preconfigured
-with registry credentials.
-
-### Domestic Registry Secrets
-
-Add these repository secrets under GitHub repository Settings -> Secrets and
-variables -> Actions -> Repository secrets:
-
-| Secret | Example | Purpose |
-| --- | --- | --- |
-| `XGC_CN_REGISTRY` | `registry.cn-hangzhou.aliyuncs.com` | Registry host. Do not include a namespace. |
-| `XGC_CN_NAMESPACE` | `xgc2-app-store` | Registry namespace/project for XGC app images. |
-| `XGC_CN_USERNAME` | `xgc2-ci` | Registry username or service account. |
-| `XGC_CN_PASSWORD` | `***` | Registry password or access token. |
-
-The workflow does not print these values. If any domestic registry setting is
-missing, the GHCR push still works and the domestic push is skipped.
-
 ## Image Garbage Collection
 
 Stale image deletion is separated from the normal build workflow. Pushes and
@@ -181,9 +147,7 @@ Set `delete=true` only after confirming deployments no longer reference the old
 app key. `keep_last` can retain the newest package versions for rollback during
 a transition.
 
-The workflow only deletes GHCR package versions. Aliyun ACR cleanup is reported
-as an operator follow-up because it requires separate registry permissions and
-should be confirmed against active deployments.
+The workflow only deletes GHCR package versions.
 
 The same dry-run can be started locally when the `gh` token has `read:packages`:
 
