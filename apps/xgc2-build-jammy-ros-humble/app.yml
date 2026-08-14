@@ -1,7 +1,7 @@
 key: xgc2-build-jammy-ros-humble
 name: XGC2 jammy humble CI ros
 version: 1.0.0
-image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-jammy-ros-humble:1.0.0
+image: ghcr.io/xgc-team/xgc2-images/xgc2-build-jammy-ros-humble:1.0.0
 dependsOnApp: xgc2-build-jammy-dev
 description: Ubuntu jammy + official ROS humble CI image for compiling product sources. No XGC2 APT packages.
 type: build

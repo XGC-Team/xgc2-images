@@ -18,7 +18,7 @@ on:
       owner_type:
         description: GitHub package owner type, user or org
         required: false
-        default: user
+        default: org
 
 permissions:
   contents: read

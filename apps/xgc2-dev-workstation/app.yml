@@ -1,7 +1,7 @@
 key: xgc2-dev-workstation
 name: XGC2 Development Workstation
 version: 1.0.0
-image: ghcr.io/lxk36/xgc2-app-store/xgc2-dev-workstation:1.0.0
+image: ghcr.io/xgc-team/xgc2-images/xgc2-dev-workstation:1.0.0
 description: ROS 2 Jazzy development workstation with Qt development packages and Docker CLI for source-level XGC2 work.
 type: development
 tags:

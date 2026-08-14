@@ -14,10 +14,11 @@ jobs:
   build:
     runs-on: ${{ matrix.runner }}
     env:
-      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY || secrets.XGC_CN_REGISTRY }}
-      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE || secrets.XGC_CN_NAMESPACE }}
-      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME || secrets.XGC_CN_USERNAME }}
-      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD || secrets.XGC_CN_PASSWORD }}
+      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY }}
+      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE }}
+      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME }}
+      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD }}
+      LATEST_ONLY: ${{ github.event_name == 'schedule' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(inputs.matrix_json) }}
@@ -40,18 +41,34 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tags="${{ matrix.image }}:${{ matrix.version }}-${{ matrix.arch }}"
-          if [[ "${{ matrix.multiarch }}" != "true" ]]; then
-            tags="${tags}"$'\n'"${{ matrix.image }}:${{ matrix.version }}"$'\n'"${{ matrix.image }}:latest"
+          if [[ "${LATEST_ONLY}" == "true" ]]; then
+            tags="${{ matrix.image }}:latest-${{ matrix.arch }}"
+            if [[ "${{ matrix.multiarch }}" != "true" ]]; then
+              tags="${tags}"$'\n'"${{ matrix.image }}:latest"
+            fi
+          else
+            tags="${{ matrix.image }}:${{ matrix.version }}-${{ matrix.arch }}"
+            tags="${tags}"$'\n'"${{ matrix.image }}:latest-${{ matrix.arch }}"
+            if [[ "${{ matrix.multiarch }}" != "true" ]]; then
+              tags="${tags}"$'\n'"${{ matrix.image }}:${{ matrix.version }}"$'\n'"${{ matrix.image }}:latest"
+            fi
           fi
           if [[ -n "${EXTRA_REGISTRY}" && -n "${EXTRA_NAMESPACE}" && -n "${EXTRA_USERNAME}" && -n "${EXTRA_PASSWORD}" ]]; then
             extra_registry="${EXTRA_REGISTRY%/}"
             extra_namespace="${EXTRA_NAMESPACE#/}"
             extra_namespace="${extra_namespace%/}"
             extra_image="${extra_registry}/${extra_namespace}/${{ matrix.app }}"
-            tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}-${{ matrix.arch }}"
-            if [[ "${{ matrix.multiarch }}" != "true" ]]; then
-              tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}"$'\n'"${extra_image}:latest"
+            if [[ "${LATEST_ONLY}" == "true" ]]; then
+              tags="${tags}"$'\n'"${extra_image}:latest-${{ matrix.arch }}"
+              if [[ "${{ matrix.multiarch }}" != "true" ]]; then
+                tags="${tags}"$'\n'"${extra_image}:latest"
+              fi
+            else
+              tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}-${{ matrix.arch }}"
+              tags="${tags}"$'\n'"${extra_image}:latest-${{ matrix.arch }}"
+              if [[ "${{ matrix.multiarch }}" != "true" ]]; then
+                tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}"$'\n'"${extra_image}:latest"
+              fi
             fi
           fi
           {

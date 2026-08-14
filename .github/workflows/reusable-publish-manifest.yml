@@ -14,10 +14,11 @@ jobs:
   manifest:
     runs-on: ubuntu-latest
     env:
-      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY || secrets.XGC_CN_REGISTRY }}
-      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE || secrets.XGC_CN_NAMESPACE }}
-      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME || secrets.XGC_CN_USERNAME }}
-      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD || secrets.XGC_CN_PASSWORD }}
+      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY }}
+      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE }}
+      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME }}
+      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD }}
+      LATEST_ONLY: ${{ github.event_name == 'schedule' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(inputs.matrix_json) }}
@@ -52,7 +53,9 @@ jobs:
           }
 
           mapfile -t arches < <(jq -r '.[]' <<< '${{ toJson(matrix.arches) }}')
-          create_manifest "${{ matrix.image }}" "${{ matrix.version }}" "${arches[@]}"
+          if [[ "${LATEST_ONLY}" != "true" ]]; then
+            create_manifest "${{ matrix.image }}" "${{ matrix.version }}" "${arches[@]}"
+          fi
           create_manifest "${{ matrix.image }}" "latest" "${arches[@]}"
 
           if [[ -n "${EXTRA_REGISTRY}" && -n "${EXTRA_NAMESPACE}" && -n "${EXTRA_USERNAME}" && -n "${EXTRA_PASSWORD}" ]]; then
@@ -60,6 +63,8 @@ jobs:
             extra_namespace="${EXTRA_NAMESPACE#/}"
             extra_namespace="${extra_namespace%/}"
             extra_image="${extra_registry}/${extra_namespace}/${{ matrix.app }}"
-            create_manifest "${extra_image}" "${{ matrix.version }}" "${arches[@]}"
+            if [[ "${LATEST_ONLY}" != "true" ]]; then
+              create_manifest "${extra_image}" "${{ matrix.version }}" "${arches[@]}"
+            fi
             create_manifest "${extra_image}" "latest" "${arches[@]}"
           fi

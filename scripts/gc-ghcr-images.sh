@@ -4,7 +4,7 @@ set -euo pipefail
 owner="${GITHUB_REPOSITORY_OWNER:-}"
 repo="${GITHUB_REPOSITORY_NAME:-}"
 catalog="catalog/index.yml"
-owner_type="user"
+owner_type="org"
 app_filter="all"
 keep_last=0
 delete=false
@@ -13,12 +13,12 @@ usage() {
   cat <<'EOF'
 Usage: scripts/gc-ghcr-images.sh [options]
 
-List or delete stale GHCR app image packages for the current app-store catalog.
+List or delete stale GHCR app image packages for the current catalog.
 
 Options:
   --owner OWNER          GitHub user or organization that owns the packages.
-  --repo REPO            Repository/package namespace, for example xgc2-app-store.
-  --owner-type TYPE      user or org. Default: user.
+  --repo REPO            Repository/package namespace, for example xgc2-images.
+  --owner-type TYPE      user or org. Default: org.
   --catalog PATH         Catalog file. Default: catalog/index.yml.
   --app APP              Restrict to one stale app key. Default: all.
   --keep-last N          Keep the newest N package versions for stale packages. Default: 0.
@@ -135,7 +135,7 @@ if ! packages_json="$(
   echo "Failed to list GHCR packages for ${owner_type} ${owner}." >&2
   cat "$api_error_file" >&2
   rm -f "$api_error_file"
-  echo "For user-owned GHCR cleanup, configure a GHCR_GC_TOKEN repository secret with read:packages and delete:packages scopes, then rerun the workflow." >&2
+  echo "Configure a GHCR_GC_TOKEN repository secret with read:packages and delete:packages scopes, then rerun the workflow." >&2
   exit 1
 fi
 rm -f "$api_error_file"

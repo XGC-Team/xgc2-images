@@ -5,7 +5,7 @@ apps:
     name: ROS1 Simulation Kit
     version: 1.2.3
     type: simulation
-    image: ghcr.io/lxk36/xgc2-app-store/xgc-ros1-runtime:1.2.3
+    image: ghcr.io/xgc-team/xgc2-images/xgc-ros1-runtime:1.2.3
     app: ../apps/xgc-ros1-runtime/app.yml
     data: ../apps/xgc-ros1-runtime/data.yml
     compose: ../apps/xgc-ros1-runtime/docker-compose.yml
@@ -18,7 +18,7 @@ apps:
     name: XGC2 ROS1 Central Simulation
     version: 1.2.3
     type: simulation
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-ros1-central-sim:1.2.3
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-ros1-central-sim:1.2.3
     app: ../apps/xgc2-ros1-central-sim/app.yml
     data: ../apps/xgc2-ros1-central-sim/data.yml
     compose: ../apps/xgc2-ros1-central-sim/docker-compose.yml
@@ -33,7 +33,7 @@ apps:
     name: XGC1 Focal Noetic Qt Builder
     version: 1.0.4
     type: development
-    image: ghcr.io/lxk36/xgc2-app-store/xgc1-focal-noetic-qt-builder:1.0.4
+    image: ghcr.io/xgc-team/xgc2-images/xgc1-focal-noetic-qt-builder:1.0.4
     app: ../apps/xgc1-focal-noetic-qt-builder/app.yml
     data: ../apps/xgc1-focal-noetic-qt-builder/data.yml
     compose: ../apps/xgc1-focal-noetic-qt-builder/docker-compose.yml
@@ -45,7 +45,7 @@ apps:
     name: PX4 SITL Gazebo
     version: 1.0.4
     type: simulation
-    image: ghcr.io/lxk36/xgc2-app-store/px4-sitl-gazebo:1.0.4
+    image: ghcr.io/xgc-team/xgc2-images/px4-sitl-gazebo:1.0.4
     app: ../apps/px4-sitl-gazebo/app.yml
     data: ../apps/px4-sitl-gazebo/data.yml
     compose: ../apps/px4-sitl-gazebo/docker-compose.yml
@@ -58,7 +58,7 @@ apps:
     name: ROS Noetic Desktop Full
     version: 1.0.0
     type: development
-    image: ghcr.io/lxk36/xgc2-app-store/ros-noetic-desktop-full:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/ros-noetic-desktop-full:1.0.0
     app: ../apps/ros-noetic-desktop-full/app.yml
     data: ../apps/ros-noetic-desktop-full/data.yml
     compose: ../apps/ros-noetic-desktop-full/docker-compose.yml
@@ -69,7 +69,7 @@ apps:
     name: ROS Noetic Robot Focal
     version: 1.0.0
     type: deployment
-    image: ghcr.io/lxk36/xgc2-app-store/ros-noetic-robot-focal:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/ros-noetic-robot-focal:1.0.0
     app: ../apps/ros-noetic-robot-focal/app.yml
     data: ../apps/ros-noetic-robot-focal/data.yml
     compose: ../apps/ros-noetic-robot-focal/docker-compose.yml
@@ -79,7 +79,7 @@ apps:
     name: ROS2 Jazzy Development Base
     version: 1.0.0
     type: development
-    image: ghcr.io/lxk36/xgc2-app-store/ros2-jazzy-dev-base:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/ros2-jazzy-dev-base:1.0.0
     app: ../apps/ros2-jazzy-dev-base/app.yml
     data: ../apps/ros2-jazzy-dev-base/data.yml
     compose: ../apps/ros2-jazzy-dev-base/docker-compose.yml
@@ -92,7 +92,7 @@ apps:
     name: Gazebo Harmonic ROS2 Bridge
     version: 1.0.2
     type: simulation
-    image: ghcr.io/lxk36/xgc2-app-store/gazebo-harmonic-ros2:1.0.2
+    image: ghcr.io/xgc-team/xgc2-images/gazebo-harmonic-ros2:1.0.2
     app: ../apps/gazebo-harmonic-ros2/app.yml
     data: ../apps/gazebo-harmonic-ros2/data.yml
     compose: ../apps/gazebo-harmonic-ros2/docker-compose.yml
@@ -104,7 +104,7 @@ apps:
     name: PX4 ROS2 SITL with QGC
     version: 1.0.2
     type: simulation
-    image: ghcr.io/lxk36/xgc2-app-store/px4-ros2-sitl-qgc:1.0.2
+    image: ghcr.io/xgc-team/xgc2-images/px4-ros2-sitl-qgc:1.0.2
     app: ../apps/px4-ros2-sitl-qgc/app.yml
     data: ../apps/px4-ros2-sitl-qgc/data.yml
     compose: ../apps/px4-ros2-sitl-qgc/docker-compose.yml
@@ -117,7 +117,7 @@ apps:
     name: XGC2 Development Workstation
     version: 1.0.0
     type: development
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-dev-workstation:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-dev-workstation:1.0.0
     app: ../apps/xgc2-dev-workstation/app.yml
     data: ../apps/xgc2-dev-workstation/data.yml
     compose: ../apps/xgc2-dev-workstation/docker-compose.yml
@@ -129,7 +129,7 @@ apps:
     name: ROS Jazzy Desktop Full
     version: 1.0.0
     type: development
-    image: ghcr.io/lxk36/xgc2-app-store/ros-jazzy-desktop-full:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/ros-jazzy-desktop-full:1.0.0
     app: ../apps/ros-jazzy-desktop-full/app.yml
     data: ../apps/ros-jazzy-desktop-full/data.yml
     compose: ../apps/ros-jazzy-desktop-full/docker-compose.yml
@@ -140,7 +140,7 @@ apps:
     name: ROS Jazzy Base Noble
     version: 1.0.0
     type: deployment
-    image: ghcr.io/lxk36/xgc2-app-store/ros-jazzy-ros-base-noble:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/ros-jazzy-ros-base-noble:1.0.0
     app: ../apps/ros-jazzy-ros-base-noble/app.yml
     data: ../apps/ros-jazzy-ros-base-noble/data.yml
     compose: ../apps/ros-jazzy-ros-base-noble/docker-compose.yml
@@ -150,7 +150,7 @@ apps:
     name: XGC2 bionic CI base
     version: 1.0.0
     type: build
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-bionic-base:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-bionic-base:1.0.0
     app: ../apps/xgc2-build-bionic-base/app.yml
     data: ../apps/xgc2-build-bionic-base/data.yml
     compose: ../apps/xgc2-build-bionic-base/docker-compose.yml
@@ -162,7 +162,7 @@ apps:
     name: XGC2 bionic CI dev
     version: 1.0.0
     type: build
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-bionic-dev:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-bionic-dev:1.0.0
     app: ../apps/xgc2-build-bionic-dev/app.yml
     data: ../apps/xgc2-build-bionic-dev/data.yml
     compose: ../apps/xgc2-build-bionic-dev/docker-compose.yml
@@ -174,7 +174,7 @@ apps:
     name: XGC2 bionic melodic CI ros
     version: 1.0.0
     type: build
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-bionic-ros-melodic:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-bionic-ros-melodic:1.0.0
     app: ../apps/xgc2-build-bionic-ros-melodic/app.yml
     data: ../apps/xgc2-build-bionic-ros-melodic/data.yml
     compose: ../apps/xgc2-build-bionic-ros-melodic/docker-compose.yml
@@ -187,7 +187,7 @@ apps:
     name: XGC2 bionic melodic CI full
     version: 1.0.0
     type: build
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-bionic-full-melodic:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-bionic-full-melodic:1.0.0
     app: ../apps/xgc2-build-bionic-full-melodic/app.yml
     data: ../apps/xgc2-build-bionic-full-melodic/data.yml
     compose: ../apps/xgc2-build-bionic-full-melodic/docker-compose.yml
@@ -200,7 +200,7 @@ apps:
     name: XGC2 focal CI base
     version: 1.0.0
     type: build
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-focal-base:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-focal-base:1.0.0
     app: ../apps/xgc2-build-focal-base/app.yml
     data: ../apps/xgc2-build-focal-base/data.yml
     compose: ../apps/xgc2-build-focal-base/docker-compose.yml
@@ -212,7 +212,7 @@ apps:
     name: XGC2 focal CI dev
     version: 1.0.0
     type: build
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-focal-dev:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-focal-dev:1.0.0
     app: ../apps/xgc2-build-focal-dev/app.yml
     data: ../apps/xgc2-build-focal-dev/data.yml
     compose: ../apps/xgc2-build-focal-dev/docker-compose.yml
@@ -224,7 +224,7 @@ apps:
     name: XGC2 focal noetic CI ros
     version: 1.0.0
     type: build
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-focal-ros-noetic:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-focal-ros-noetic:1.0.0
     app: ../apps/xgc2-build-focal-ros-noetic/app.yml
     data: ../apps/xgc2-build-focal-ros-noetic/data.yml
     compose: ../apps/xgc2-build-focal-ros-noetic/docker-compose.yml
@@ -237,7 +237,7 @@ apps:
     name: XGC2 focal noetic CI full
     version: 1.0.0
     type: build
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-focal-full-noetic:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-focal-full-noetic:1.0.0
     app: ../apps/xgc2-build-focal-full-noetic/app.yml
     data: ../apps/xgc2-build-focal-full-noetic/data.yml
     compose: ../apps/xgc2-build-focal-full-noetic/docker-compose.yml
@@ -250,7 +250,7 @@ apps:
     name: XGC2 jammy CI base
     version: 1.0.0
     type: build
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-jammy-base:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-jammy-base:1.0.0
     app: ../apps/xgc2-build-jammy-base/app.yml
     data: ../apps/xgc2-build-jammy-base/data.yml
     compose: ../apps/xgc2-build-jammy-base/docker-compose.yml
@@ -262,7 +262,7 @@ apps:
     name: XGC2 jammy CI dev
     version: 1.0.0
     type: build
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-jammy-dev:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-jammy-dev:1.0.0
     app: ../apps/xgc2-build-jammy-dev/app.yml
     data: ../apps/xgc2-build-jammy-dev/data.yml
     compose: ../apps/xgc2-build-jammy-dev/docker-compose.yml
@@ -274,7 +274,7 @@ apps:
     name: XGC2 jammy humble CI ros
     version: 1.0.0
     type: build
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-jammy-ros-humble:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-jammy-ros-humble:1.0.0
     app: ../apps/xgc2-build-jammy-ros-humble/app.yml
     data: ../apps/xgc2-build-jammy-ros-humble/data.yml
     compose: ../apps/xgc2-build-jammy-ros-humble/docker-compose.yml
@@ -287,7 +287,7 @@ apps:
     name: XGC2 jammy humble CI full
     version: 1.0.0
     type: build
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-jammy-full-humble:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-jammy-full-humble:1.0.0
     app: ../apps/xgc2-build-jammy-full-humble/app.yml
     data: ../apps/xgc2-build-jammy-full-humble/data.yml
     compose: ../apps/xgc2-build-jammy-full-humble/docker-compose.yml
@@ -300,7 +300,7 @@ apps:
     name: XGC2 noble CI base
     version: 1.0.0
     type: build
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-noble-base:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-noble-base:1.0.0
     app: ../apps/xgc2-build-noble-base/app.yml
     data: ../apps/xgc2-build-noble-base/data.yml
     compose: ../apps/xgc2-build-noble-base/docker-compose.yml
@@ -312,7 +312,7 @@ apps:
     name: XGC2 noble CI dev
     version: 1.0.0
     type: build
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-noble-dev:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-noble-dev:1.0.0
     app: ../apps/xgc2-build-noble-dev/app.yml
     data: ../apps/xgc2-build-noble-dev/data.yml
     compose: ../apps/xgc2-build-noble-dev/docker-compose.yml
@@ -324,7 +324,7 @@ apps:
     name: XGC2 noble jazzy CI ros
     version: 1.0.0
     type: build
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-noble-ros-jazzy:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-noble-ros-jazzy:1.0.0
     app: ../apps/xgc2-build-noble-ros-jazzy/app.yml
     data: ../apps/xgc2-build-noble-ros-jazzy/data.yml
     compose: ../apps/xgc2-build-noble-ros-jazzy/docker-compose.yml
@@ -337,7 +337,7 @@ apps:
     name: XGC2 noble jazzy CI full
     version: 1.0.0
     type: build
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-noble-full-jazzy:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-noble-full-jazzy:1.0.0
     app: ../apps/xgc2-build-noble-full-jazzy/app.yml
     data: ../apps/xgc2-build-noble-full-jazzy/data.yml
     compose: ../apps/xgc2-build-noble-full-jazzy/docker-compose.yml

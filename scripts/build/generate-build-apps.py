@@ -7,7 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 APPS = ROOT / "apps"
 VERSION = "1.0.0"
-REGISTRY = "ghcr.io/lxk36/xgc2-app-store"
+REGISTRY = "ghcr.io/xgc-team/xgc2-images"
 
 TREES = [
     {

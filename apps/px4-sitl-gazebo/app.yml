@@ -1,7 +1,7 @@
 key: px4-sitl-gazebo
 name: PX4 SITL Gazebo
 version: 1.0.4
-image: ghcr.io/lxk36/xgc2-app-store/px4-sitl-gazebo:1.0.4
+image: ghcr.io/xgc-team/xgc2-images/px4-sitl-gazebo:1.0.4
 description: PX4 software-in-the-loop simulation toolkit for Gazebo Classic and ROS Noetic.
 type: simulation
 tags:

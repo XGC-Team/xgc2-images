@@ -15,10 +15,11 @@ jobs:
     name: ${{ matrix.ubuntu }}-${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
     env:
-      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY || secrets.XGC_CN_REGISTRY }}
-      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE || secrets.XGC_CN_NAMESPACE }}
-      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME || secrets.XGC_CN_USERNAME }}
-      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD || secrets.XGC_CN_PASSWORD }}
+      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY }}
+      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE }}
+      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME }}
+      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD }}
+      LATEST_ONLY: ${{ github.event_name == 'schedule' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(inputs.matrix_json) }}
@@ -111,25 +112,41 @@ jobs:
             healthcheck="$(ruby -ryaml -e 'doc = YAML.safe_load_file(ARGV[0]); puts doc.dig("entrypoints", "healthcheck").to_s' "apps/${app}/app.yml")"
 
             local_ref="${image}:${version}-${ARCH}"
-            push_refs=("${local_ref}")
+            latest_arch_ref="${image}:latest-${ARCH}"
             tags=(-t "${local_ref}")
+            push_refs=()
             if [[ "${multiarch}" == "true" ]]; then
-              tags+=(-t "${image}:latest-${ARCH}")
-              push_refs+=("${image}:latest-${ARCH}")
+              tags+=(-t "${latest_arch_ref}")
+              if [[ "${LATEST_ONLY}" == "true" ]]; then
+                push_refs+=("${latest_arch_ref}")
+              else
+                push_refs+=("${local_ref}" "${latest_arch_ref}")
+              fi
             else
               tags+=(-t "${image}:${version}" -t "${image}:latest")
-              push_refs+=("${image}:${version}" "${image}:latest")
+              if [[ "${LATEST_ONLY}" == "true" ]]; then
+                push_refs+=("${image}:latest")
+              else
+                push_refs+=("${local_ref}" "${image}:${version}" "${image}:latest")
+              fi
             fi
             if [[ -n "${extra_prefix}" ]]; then
-              extra_ref="${extra_prefix}/${app}:${version}-${ARCH}"
-              tags+=(-t "${extra_ref}")
-              push_refs+=("${extra_ref}")
+              extra_version_arch="${extra_prefix}/${app}:${version}-${ARCH}"
+              extra_latest_arch="${extra_prefix}/${app}:latest-${ARCH}"
               if [[ "${multiarch}" == "true" ]]; then
-                tags+=(-t "${extra_prefix}/${app}:latest-${ARCH}")
-                push_refs+=("${extra_prefix}/${app}:latest-${ARCH}")
+                tags+=(-t "${extra_latest_arch}")
+                push_refs+=("${extra_latest_arch}")
+                if [[ "${LATEST_ONLY}" != "true" ]]; then
+                  tags+=(-t "${extra_version_arch}")
+                  push_refs+=("${extra_version_arch}")
+                fi
               else
-                tags+=(-t "${extra_prefix}/${app}:${version}" -t "${extra_prefix}/${app}:latest")
-                push_refs+=("${extra_prefix}/${app}:${version}" "${extra_prefix}/${app}:latest")
+                tags+=(-t "${extra_prefix}/${app}:latest")
+                push_refs+=("${extra_prefix}/${app}:latest")
+                if [[ "${LATEST_ONLY}" != "true" ]]; then
+                  tags+=(-t "${extra_version_arch}" -t "${extra_prefix}/${app}:${version}")
+                  push_refs+=("${extra_version_arch}" "${extra_prefix}/${app}:${version}")
+                fi
               fi
             fi
 
@@ -159,15 +176,16 @@ jobs:
               echo "::endgroup::"
             fi
 
-            # Push GHCR :version-<arch> first and wait. Two tags of the same
-            # image pushed in parallel can 409/unknown blob on GHCR, which
-            # then aborts the rest of the chain before full is built.
-            echo "::group::Push ${app} ${ARCH} GHCR ${version}"
-            docker_push "${local_ref}"
+            # Push one GHCR tag first and wait. Two tags of the same image
+            # pushed in parallel can 409/unknown blob on GHCR, which then
+            # aborts the rest of the chain before full is built.
+            primary_push="${push_refs[0]}"
+            echo "::group::Push ${app} ${ARCH} ${primary_push}"
+            docker_push "${primary_push}"
             echo "::endgroup::"
 
             for ref in "${push_refs[@]}"; do
-              if [[ "${ref}" == "${local_ref}" ]]; then
+              if [[ "${ref}" == "${primary_push}" ]]; then
                 continue
               fi
               bg_push "${ref}"

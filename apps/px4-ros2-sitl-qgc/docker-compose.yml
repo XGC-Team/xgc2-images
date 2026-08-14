@@ -1,6 +1,6 @@
 services:
   px4-ros2-sitl-qgc:
-    image: ghcr.io/lxk36/xgc2-app-store/px4-ros2-sitl-qgc:1.0.2
+    image: ghcr.io/xgc-team/xgc2-images/px4-ros2-sitl-qgc:1.0.2
     container_name: ${CONTAINER_NAME}
     privileged: true
     network_mode: host

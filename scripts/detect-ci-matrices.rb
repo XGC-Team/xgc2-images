@@ -7,6 +7,7 @@ require "yaml"
 apps = JSON.parse(ARGV[0])
 repository = ENV.fetch("GITHUB_REPOSITORY").downcase
 output_path = ENV.fetch("GITHUB_OUTPUT")
+force_no_cache = ENV["GITHUB_EVENT_NAME"] == "schedule"
 
 LAYERS = %w[base dev ros full].freeze
 UBUNTUS = %w[bionic focal jammy noble].freeze
@@ -128,7 +129,7 @@ expanded.each do |app|
       "version" => version,
       "image" => image,
       "multiarch" => multiarch,
-      "no_cache" => doc["noCache"] == true,
+      "no_cache" => force_no_cache || doc["noCache"] == true,
       "context" => ".",
       "file" => "apps/#{app}/Dockerfile",
       "from_image" => doc["fromImage"],
@@ -155,7 +156,7 @@ expanded.each do |app|
       "version" => version,
       "image" => image,
       "multiarch" => multiarch,
-      "no_cache" => doc["noCache"] == true,
+      "no_cache" => force_no_cache || doc["noCache"] == true,
       "version_only" => doc["publishVersionOnly"] == true,
       "context" => "apps/#{app}",
       "file" => "apps/#{app}/Dockerfile",

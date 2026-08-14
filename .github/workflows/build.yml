@@ -6,6 +6,8 @@ on:
       - master
       - main
   pull_request:
+  schedule:
+    - cron: "0 16 * * *"
   workflow_dispatch:
     inputs:
       app:
@@ -50,7 +52,7 @@ jobs:
 
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.app }}" != "all" ]]; then
             result='{"apps":["${{ github.event.inputs.app }}"],"deleted":[]}'
-          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "schedule" ]]; then
             apps="$(find apps -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | jq -R . | jq -cs .)"
             result="$(jq -n --argjson apps "${apps}" '{apps: $apps, deleted: []}')"
           elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
@@ -177,10 +179,10 @@ jobs:
     if: needs.detect.outputs.build_matrix != '{"include":[]}'
     runs-on: ${{ matrix.runner }}
     env:
-      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY || secrets.XGC_CN_REGISTRY }}
-      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE || secrets.XGC_CN_NAMESPACE }}
-      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME || secrets.XGC_CN_USERNAME }}
-      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD || secrets.XGC_CN_PASSWORD }}
+      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY }}
+      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE }}
+      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME }}
+      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect.outputs.build_matrix) }}
@@ -205,28 +207,42 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "${{ matrix.version_only }}" == "true" && "${{ matrix.multiarch }}" != "true" ]]; then
-            tags="${{ matrix.image }}:${{ matrix.version }}"
-          else
-            tags="${{ matrix.image }}:${{ matrix.version }}-${{ matrix.arch }}"$'\n'"${{ matrix.image }}:latest-${{ matrix.arch }}"
-            if [[ "${{ matrix.multiarch }}" != "true" ]]; then
-              tags="${tags}"$'\n'"${{ matrix.image }}:${{ matrix.version }}"$'\n'"${{ matrix.image }}:latest"
-            fi
+          latest_only=false
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            latest_only=true
           fi
+
+          add_tags() {
+            local image="$1"
+            if [[ "${{ matrix.version_only }}" == "true" && "${{ matrix.multiarch }}" != "true" ]]; then
+              if [[ "${latest_only}" == "true" ]]; then
+                printf '%s\n' "${image}:latest"
+              else
+                printf '%s\n' "${image}:${{ matrix.version }}"
+              fi
+            elif [[ "${latest_only}" == "true" ]]; then
+              printf '%s\n' "${image}:latest-${{ matrix.arch }}"
+              if [[ "${{ matrix.multiarch }}" != "true" ]]; then
+                printf '%s\n' "${image}:latest"
+              fi
+            else
+              printf '%s\n' "${image}:${{ matrix.version }}-${{ matrix.arch }}"
+              printf '%s\n' "${image}:latest-${{ matrix.arch }}"
+              if [[ "${{ matrix.multiarch }}" != "true" ]]; then
+                printf '%s\n' "${image}:${{ matrix.version }}"
+                printf '%s\n' "${image}:latest"
+              fi
+            fi
+          }
+
+          tags="$(add_tags "${{ matrix.image }}")"
 
           if [[ "${{ github.event_name }}" != "pull_request" && -n "${EXTRA_REGISTRY}" && -n "${EXTRA_NAMESPACE}" && -n "${EXTRA_USERNAME}" && -n "${EXTRA_PASSWORD}" ]]; then
             extra_registry="${EXTRA_REGISTRY%/}"
             extra_namespace="${EXTRA_NAMESPACE#/}"
             extra_namespace="${extra_namespace%/}"
             extra_image="${extra_registry}/${extra_namespace}/${{ matrix.app }}"
-            if [[ "${{ matrix.version_only }}" == "true" && "${{ matrix.multiarch }}" != "true" ]]; then
-              tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}"
-            else
-              tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}-${{ matrix.arch }}"$'\n'"${extra_image}:latest-${{ matrix.arch }}"
-              if [[ "${{ matrix.multiarch }}" != "true" ]]; then
-                tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}"$'\n'"${extra_image}:latest"
-              fi
-            fi
+            tags="${tags}"$'\n'"$(add_tags "${extra_image}")"
           fi
 
           {
@@ -272,10 +288,10 @@ jobs:
     if: github.event_name != 'pull_request' && needs.detect.outputs.manifest_matrix != '{"include":[]}'
     runs-on: ubuntu-latest
     env:
-      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY || secrets.XGC_CN_REGISTRY }}
-      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE || secrets.XGC_CN_NAMESPACE }}
-      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME || secrets.XGC_CN_USERNAME }}
-      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD || secrets.XGC_CN_PASSWORD }}
+      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY }}
+      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE }}
+      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME }}
+      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect.outputs.manifest_matrix) }}
@@ -310,7 +326,9 @@ jobs:
           }
 
           mapfile -t arches < <(jq -r '.[]' <<< '${{ toJson(matrix.arches) }}')
-          create_manifest "${{ matrix.image }}" "${{ matrix.version }}" "${arches[@]}"
+          if [[ "${{ github.event_name }}" != "schedule" ]]; then
+            create_manifest "${{ matrix.image }}" "${{ matrix.version }}" "${arches[@]}"
+          fi
           create_manifest "${{ matrix.image }}" "latest" "${arches[@]}"
 
           if [[ -n "${EXTRA_REGISTRY}" && -n "${EXTRA_NAMESPACE}" && -n "${EXTRA_USERNAME}" && -n "${EXTRA_PASSWORD}" ]]; then
@@ -318,7 +336,9 @@ jobs:
             extra_namespace="${EXTRA_NAMESPACE#/}"
             extra_namespace="${extra_namespace%/}"
             extra_image="${extra_registry}/${extra_namespace}/${{ matrix.app }}"
-            create_manifest "${extra_image}" "${{ matrix.version }}" "${arches[@]}"
+            if [[ "${{ github.event_name }}" != "schedule" ]]; then
+              create_manifest "${extra_image}" "${{ matrix.version }}" "${arches[@]}"
+            fi
             create_manifest "${extra_image}" "latest" "${arches[@]}"
           fi
 
@@ -336,10 +356,10 @@ jobs:
       }}
     runs-on: ${{ matrix.runner }}
     env:
-      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY || secrets.XGC_CN_REGISTRY }}
-      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE || secrets.XGC_CN_NAMESPACE }}
-      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME || secrets.XGC_CN_USERNAME }}
-      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD || secrets.XGC_CN_PASSWORD }}
+      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY }}
+      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE }}
+      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME }}
+      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect.outputs.dependent_build_matrix) }}
@@ -364,28 +384,42 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "${{ matrix.version_only }}" == "true" && "${{ matrix.multiarch }}" != "true" ]]; then
-            tags="${{ matrix.image }}:${{ matrix.version }}"
-          else
-            tags="${{ matrix.image }}:${{ matrix.version }}-${{ matrix.arch }}"$'\n'"${{ matrix.image }}:latest-${{ matrix.arch }}"
-            if [[ "${{ matrix.multiarch }}" != "true" ]]; then
-              tags="${tags}"$'\n'"${{ matrix.image }}:${{ matrix.version }}"$'\n'"${{ matrix.image }}:latest"
-            fi
+          latest_only=false
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            latest_only=true
           fi
+
+          add_tags() {
+            local image="$1"
+            if [[ "${{ matrix.version_only }}" == "true" && "${{ matrix.multiarch }}" != "true" ]]; then
+              if [[ "${latest_only}" == "true" ]]; then
+                printf '%s\n' "${image}:latest"
+              else
+                printf '%s\n' "${image}:${{ matrix.version }}"
+              fi
+            elif [[ "${latest_only}" == "true" ]]; then
+              printf '%s\n' "${image}:latest-${{ matrix.arch }}"
+              if [[ "${{ matrix.multiarch }}" != "true" ]]; then
+                printf '%s\n' "${image}:latest"
+              fi
+            else
+              printf '%s\n' "${image}:${{ matrix.version }}-${{ matrix.arch }}"
+              printf '%s\n' "${image}:latest-${{ matrix.arch }}"
+              if [[ "${{ matrix.multiarch }}" != "true" ]]; then
+                printf '%s\n' "${image}:${{ matrix.version }}"
+                printf '%s\n' "${image}:latest"
+              fi
+            fi
+          }
+
+          tags="$(add_tags "${{ matrix.image }}")"
 
           if [[ "${{ github.event_name }}" != "pull_request" && -n "${EXTRA_REGISTRY}" && -n "${EXTRA_NAMESPACE}" && -n "${EXTRA_USERNAME}" && -n "${EXTRA_PASSWORD}" ]]; then
             extra_registry="${EXTRA_REGISTRY%/}"
             extra_namespace="${EXTRA_NAMESPACE#/}"
             extra_namespace="${extra_namespace%/}"
             extra_image="${extra_registry}/${extra_namespace}/${{ matrix.app }}"
-            if [[ "${{ matrix.version_only }}" == "true" && "${{ matrix.multiarch }}" != "true" ]]; then
-              tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}"
-            else
-              tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}-${{ matrix.arch }}"$'\n'"${extra_image}:latest-${{ matrix.arch }}"
-              if [[ "${{ matrix.multiarch }}" != "true" ]]; then
-                tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}"$'\n'"${extra_image}:latest"
-              fi
-            fi
+            tags="${tags}"$'\n'"$(add_tags "${extra_image}")"
           fi
 
           {
@@ -431,10 +465,10 @@ jobs:
     if: github.event_name != 'pull_request' && needs.detect.outputs.dependent_manifest_matrix != '{"include":[]}'
     runs-on: ubuntu-latest
     env:
-      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY || secrets.XGC_CN_REGISTRY }}
-      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE || secrets.XGC_CN_NAMESPACE }}
-      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME || secrets.XGC_CN_USERNAME }}
-      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD || secrets.XGC_CN_PASSWORD }}
+      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY }}
+      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE }}
+      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME }}
+      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect.outputs.dependent_manifest_matrix) }}
@@ -469,7 +503,9 @@ jobs:
           }
 
           mapfile -t arches < <(jq -r '.[]' <<< '${{ toJson(matrix.arches) }}')
-          create_manifest "${{ matrix.image }}" "${{ matrix.version }}" "${arches[@]}"
+          if [[ "${{ github.event_name }}" != "schedule" ]]; then
+            create_manifest "${{ matrix.image }}" "${{ matrix.version }}" "${arches[@]}"
+          fi
           create_manifest "${{ matrix.image }}" "latest" "${arches[@]}"
 
           if [[ -n "${EXTRA_REGISTRY}" && -n "${EXTRA_NAMESPACE}" && -n "${EXTRA_USERNAME}" && -n "${EXTRA_PASSWORD}" ]]; then
@@ -477,7 +513,9 @@ jobs:
             extra_namespace="${EXTRA_NAMESPACE#/}"
             extra_namespace="${extra_namespace%/}"
             extra_image="${extra_registry}/${extra_namespace}/${{ matrix.app }}"
-            create_manifest "${extra_image}" "${{ matrix.version }}" "${arches[@]}"
+            if [[ "${{ github.event_name }}" != "schedule" ]]; then
+              create_manifest "${extra_image}" "${{ matrix.version }}" "${arches[@]}"
+            fi
             create_manifest "${extra_image}" "latest" "${arches[@]}"
           fi
 
@@ -486,10 +524,10 @@ jobs:
     if: needs.detect.outputs.mirror_matrix != '{"include":[]}'
     runs-on: ubuntu-latest
     env:
-      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY || secrets.XGC_CN_REGISTRY }}
-      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE || secrets.XGC_CN_NAMESPACE }}
-      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME || secrets.XGC_CN_USERNAME }}
-      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD || secrets.XGC_CN_PASSWORD }}
+      EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY }}
+      EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE }}
+      EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME }}
+      EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect.outputs.mirror_matrix) }}
@@ -545,13 +583,21 @@ jobs:
             exit 0
           fi
 
-          tags="${{ matrix.image }}:${{ matrix.version }}"$'\n'"${{ matrix.image }}:latest"
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            tags="${{ matrix.image }}:latest"
+          else
+            tags="${{ matrix.image }}:${{ matrix.version }}"$'\n'"${{ matrix.image }}:latest"
+          fi
           if [[ -n "${EXTRA_REGISTRY}" && -n "${EXTRA_NAMESPACE}" && -n "${EXTRA_USERNAME}" && -n "${EXTRA_PASSWORD}" ]]; then
             extra_registry="${EXTRA_REGISTRY%/}"
             extra_namespace="${EXTRA_NAMESPACE#/}"
             extra_namespace="${extra_namespace%/}"
             extra_image="${extra_registry}/${extra_namespace}/${{ matrix.app }}"
-            tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}"$'\n'"${extra_image}:latest"
+            if [[ "${{ github.event_name }}" == "schedule" ]]; then
+              tags="${tags}"$'\n'"${extra_image}:latest"
+            else
+              tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}"$'\n'"${extra_image}:latest"
+            fi
           fi
 
           while IFS= read -r tag; do

@@ -1,6 +1,6 @@
 services:
   ros-noetic-robot-focal:
-    image: ghcr.io/lxk36/xgc2-app-store/ros-noetic-robot-focal:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/ros-noetic-robot-focal:1.0.0
     container_name: ${CONTAINER_NAME}
     network_mode: host
     restart: unless-stopped

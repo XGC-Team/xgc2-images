@@ -1,7 +1,7 @@
 key: ros2-jazzy-dev-base
 name: ROS2 Jazzy Development Base
 version: 1.0.0
-image: ghcr.io/lxk36/xgc2-app-store/ros2-jazzy-dev-base:1.0.0
+image: ghcr.io/xgc-team/xgc2-images/ros2-jazzy-dev-base:1.0.0
 description: ROS 2 Jazzy desktop base with MAVROS, PlotJuggler, VRPN client and common ground-station development tools.
 type: development
 tags:

@@ -1,7 +1,7 @@
 key: xgc-ros1-runtime
 name: ROS1 Simulation Kit
 version: 1.2.3
-image: ghcr.io/lxk36/xgc2-app-store/xgc-ros1-runtime:1.2.3
+image: ghcr.io/xgc-team/xgc2-images/xgc-ros1-runtime:1.2.3
 description: Curated ROS Noetic simulation toolkit with MAVROS, VRPN, Gazebo Classic and core robot visualization dependencies.
 type: simulation
 tags:

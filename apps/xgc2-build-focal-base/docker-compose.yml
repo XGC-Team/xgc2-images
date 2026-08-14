@@ -1,6 +1,6 @@
 services:
   xgc2-build-focal-base:
-    image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-focal-base:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-focal-base:1.0.0
     container_name: ${CONTAINER_NAME}
     working_dir: /work
     volumes:

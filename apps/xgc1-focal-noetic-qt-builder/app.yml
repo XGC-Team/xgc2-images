@@ -1,7 +1,7 @@
 key: xgc1-focal-noetic-qt-builder
 name: XGC1 Focal Noetic Qt Builder
 version: 1.0.4
-image: ghcr.io/lxk36/xgc2-app-store/xgc1-focal-noetic-qt-builder:1.0.4
+image: ghcr.io/xgc-team/xgc2-images/xgc1-focal-noetic-qt-builder:1.0.4
 dependsOnApp: xgc-ros1-runtime
 description: Multi-architecture ROS Noetic build image with Qt 5.15.2 compiled from source for XGC1 packaging.
 type: development

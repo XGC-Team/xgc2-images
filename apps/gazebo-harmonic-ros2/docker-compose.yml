@@ -1,6 +1,6 @@
 services:
   gazebo-harmonic-ros2:
-    image: ghcr.io/lxk36/xgc2-app-store/gazebo-harmonic-ros2:1.0.2
+    image: ghcr.io/xgc-team/xgc2-images/gazebo-harmonic-ros2:1.0.2
     container_name: ${CONTAINER_NAME}
     network_mode: host
     restart: unless-stopped

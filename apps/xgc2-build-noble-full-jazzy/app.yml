@@ -1,7 +1,7 @@
 key: xgc2-build-noble-full-jazzy
 name: XGC2 noble jazzy CI full
 version: 1.0.0
-image: ghcr.io/lxk36/xgc2-app-store/xgc2-build-noble-full-jazzy:1.0.0
+image: ghcr.io/xgc-team/xgc2-images/xgc2-build-noble-full-jazzy:1.0.0
 dependsOnApp: xgc2-build-noble-ros-jazzy
 description: Ubuntu noble + official ROS jazzy full CI image including simulation and vision stacks. No XGC2 APT packages.
 type: build
