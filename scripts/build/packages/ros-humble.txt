@@ -14,6 +14,7 @@ rosidl-runtime-cpp
 rosidl-typesupport-introspection-cpp
 rosidl-default-generators
 rosidl-default-runtime
+rosidl-generator-dds-idl
 std-msgs
 std-srvs
 sensor-msgs

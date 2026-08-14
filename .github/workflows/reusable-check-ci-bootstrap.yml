@@ -1,0 +1,26 @@
+name: Check CI bootstrap
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run CI bootstrap gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f scripts/ci/check-workflow-bootstrap.py ]]; then
+            python3 scripts/ci/check-workflow-bootstrap.py .
+            exit 0
+          fi
+          mkdir -p .ci/xgc2-images
+          curl -fsSL --retry 5 \
+            "https://raw.githubusercontent.com/XGC-Team/xgc2-images/master/scripts/ci/check-workflow-bootstrap.py" \
+            -o .ci/xgc2-images/check-workflow-bootstrap.py
+          python3 .ci/xgc2-images/check-workflow-bootstrap.py .

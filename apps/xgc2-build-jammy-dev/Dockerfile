@@ -3,12 +3,16 @@ ARG PARENT_IMAGE=ghcr.io/xgc-team/xgc2-images/xgc2-build-jammy-base:1.0.0
 FROM ${PARENT_IMAGE}
 
 LABEL org.opencontainers.image.title="XGC2 jammy CI dev"
-LABEL org.opencontainers.image.description="Ubuntu jammy CI compile and Debian packaging image. No ROS and no XGC2 APT packages."
+LABEL org.opencontainers.image.description="Ubuntu jammy CI compile and Debian packaging image with compilers, Node, pnpm, uv, Go, Rust, and packaging tools. No ROS and no XGC2 APT packages."
 LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-images"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=en_US.UTF-8
 ENV LC_ALL=en_US.UTF-8
+ENV PATH="/usr/local/go/bin:/usr/local/cargo/bin:/usr/local/bin:${PATH}"
+ENV RUSTUP_HOME=/usr/local/rustup
+ENV CARGO_HOME=/usr/local/cargo
+ENV UV_PYTHON_INSTALL_DIR=/usr/local/share/uv/python
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY scripts/build/ /tmp/xgc2-build/
@@ -19,6 +23,7 @@ RUN chmod +x /tmp/xgc2-build/*.sh /usr/local/bin/xgc2-build-healthcheck \
  && chmod +x /usr/local/bin/xgc2-build-assert-no-xgc2-apt.sh \
  && printf 'Acquire::Retries "5";\n' >/etc/apt/apt.conf.d/99-xgc2-retries \
  && /tmp/xgc2-build/install-packages.sh /tmp/xgc2-build/packages/dev.txt /tmp/xgc2-build/packages/dev-jammy.txt \
+ && /tmp/xgc2-build/install-toolchains.sh \
  && /tmp/xgc2-build/assert-no-xgc2-apt.sh \
  && rm -rf /tmp/xgc2-build /var/lib/apt/lists/*
 

@@ -1,0 +1,21 @@
+name: CI bootstrap gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run CI bootstrap gate
+        run: python3 scripts/ci/check-workflow-bootstrap.py .
+      - name: Checker unit fixtures
+        run: bash scripts/ci/test-check-workflow-bootstrap.sh

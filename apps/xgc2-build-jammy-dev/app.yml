@@ -3,7 +3,7 @@ name: XGC2 jammy CI dev
 version: 1.0.0
 image: ghcr.io/xgc-team/xgc2-images/xgc2-build-jammy-dev:1.0.0
 dependsOnApp: xgc2-build-jammy-base
-description: Ubuntu jammy CI compile and Debian packaging image. No ROS and no XGC2 APT packages.
+description: Ubuntu jammy CI compile and Debian packaging image with compilers, Node, pnpm, uv, Go, Rust, and packaging tools. No ROS and no XGC2 APT packages.
 type: build
 buildLayer: dev
 tags:

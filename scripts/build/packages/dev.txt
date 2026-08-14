@@ -20,6 +20,8 @@ file
 rsync
 diffutils
 procps
+jq
+libportaudio2
 dpkg-dev
 fakeroot
 python3

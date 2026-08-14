@@ -44,11 +44,11 @@ Every build image is amd64 and arm64.
 | App | Layer | FROM / contains |
 | --- | --- | --- |
 | `xgc2-build-bionic-base` | `base` | `ubuntu:18.04` + apt hygiene |
-| `xgc2-build-bionic-dev` | `dev` | compilers, CMake, dpkg, common C++/Python libs |
+| `xgc2-build-bionic-dev` | `dev` | compilers, CMake, Node 16, pnpm 8, uv, Go 1.26, Rust, gh, buf, jq, ripgrep. No Bun, no skopeo, no Node 22 (18.04 glibc). |
 | `xgc2-build-bionic-ros-melodic` | `ros` | official ROS Melodic core |
 | `xgc2-build-bionic-full-melodic` | `full` | Gazebo 9, RViz, PCL, OpenCV |
 | `xgc2-build-focal-base` | `base` | `ubuntu:20.04` + apt hygiene |
-| `xgc2-build-focal-dev` | `dev` | compilers, packaging, protobuf/grpc, desktop smoke libs |
+| `xgc2-build-focal-dev` | `dev` | compilers, Node 22, pnpm 11, yarn 3, uv, Go 1.26, Rust, Bun, skopeo, gh, buf, xvfb, protobuf/grpc |
 | `xgc2-build-focal-ros-noetic` | `ros` | official ROS Noetic core |
 | `xgc2-build-focal-full-noetic` | `full` | Gazebo 11, RViz, PCL, OpenCV, MAVROS |
 | `xgc2-build-jammy-base` | `base` | `ubuntu:22.04` + apt hygiene |
@@ -59,6 +59,12 @@ Every build image is amd64 and arm64.
 | `xgc2-build-noble-dev` | `dev` | same toolchain family as jammy |
 | `xgc2-build-noble-ros-jazzy` | `ros` | official ROS 2 Jazzy core |
 | `xgc2-build-noble-full-jazzy` | `full` | RViz2, ros-gz, PCL, OpenCV |
+
+Product CI must `container:` (or `docker run`) one of these images and must not
+apt/pip/`setup-*` a toolchain. Lockfile installs (`pnpm install`, `npm ci`,
+`uv sync`) stay in the product workflow. A workflow gate lives at
+`scripts/ci/check-workflow-bootstrap.py` and
+`.github/workflows/reusable-check-ci-bootstrap.yml`.
 
 CI runs one chain per Ubuntu × architecture in parallel (eight jobs when the
 full matrix is dirty). Each chain is `base` → `dev` → `ros` → `full` on the

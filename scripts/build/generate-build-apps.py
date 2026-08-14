@@ -71,7 +71,7 @@ def description(ubuntu: str, layer: str, ros: str | None) -> str:
     if layer == "base":
         return f"Ubuntu {ubuntu} CI base with apt hygiene only. No compilers, ROS, or XGC2 APT packages."
     if layer == "dev":
-        return f"Ubuntu {ubuntu} CI compile and Debian packaging image. No ROS and no XGC2 APT packages."
+        return f"Ubuntu {ubuntu} CI compile and Debian packaging image with compilers, Node, pnpm, uv, Go, Rust, and packaging tools. No ROS and no XGC2 APT packages."
     if layer == "ros":
         return f"Ubuntu {ubuntu} + official ROS {ros} CI image for compiling product sources. No XGC2 APT packages."
     return f"Ubuntu {ubuntu} + official ROS {ros} full CI image including simulation and vision stacks. No XGC2 APT packages."
@@ -91,6 +91,15 @@ def dockerfile(ubuntu: str, layer: str, ros: str | None, from_os: str, parent: s
         env.append(f"ENV ROS_DISTRO={ros}")
         if ros in {"melodic", "noetic"}:
             env.append("ENV DISABLE_ROS1_EOL_WARNINGS=1")
+    if layer != "base":
+        env.extend(
+            [
+                'ENV PATH="/usr/local/go/bin:/usr/local/cargo/bin:/usr/local/bin:${PATH}"',
+                "ENV RUSTUP_HOME=/usr/local/rustup",
+                "ENV CARGO_HOME=/usr/local/cargo",
+                "ENV UV_PYTHON_INSTALL_DIR=/usr/local/share/uv/python",
+            ]
+        )
     run_parts = [
         "chmod +x /tmp/xgc2-build/*.sh /usr/local/bin/xgc2-build-healthcheck",
         "cp /tmp/xgc2-build/assert-no-xgc2-apt.sh /usr/local/bin/xgc2-build-assert-no-xgc2-apt.sh",
@@ -110,6 +119,7 @@ def dockerfile(ubuntu: str, layer: str, ros: str | None, from_os: str, parent: s
             "/tmp/xgc2-build/packages/dev.txt "
             f"/tmp/xgc2-build/packages/dev-{ubuntu}.txt"
         )
+        run_parts.append("/tmp/xgc2-build/install-toolchains.sh")
     elif layer == "ros":
         run_parts.extend(
             [
@@ -177,8 +187,27 @@ def healthcheck(ubuntu: str, layer: str, ros: str | None) -> str:
             "command -v g++ >/dev/null",
             "command -v cmake >/dev/null",
             "command -v dpkg-buildpackage >/dev/null",
+            "command -v jq >/dev/null",
+            "command -v node >/dev/null",
+            "command -v pnpm >/dev/null",
+            "command -v uv >/dev/null",
+            "command -v rustc >/dev/null",
+            "command -v cargo >/dev/null",
+            "command -v go >/dev/null",
+            "command -v gh >/dev/null",
+            "command -v buf >/dev/null",
+            "command -v rg >/dev/null",
             "python3 -c 'import yaml,numpy'",
         ]
+        if ubuntu == "bionic":
+            lines += ["node -v | grep -q '^v16'"]
+        else:
+            lines += [
+                "node -v | grep -q '^v22'",
+                "command -v skopeo >/dev/null",
+                "command -v bun >/dev/null",
+                "command -v yarn >/dev/null",
+            ]
     elif layer == "ros":
         lines += [
             "set +u",

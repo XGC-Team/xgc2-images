@@ -550,9 +550,6 @@ jobs:
           # shellcheck source=scripts/ci-registry-roots.sh
           source scripts/ci-registry-roots.sh
 
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends skopeo
-
           source_image="${{ matrix.source_image }}"
           if [[ -z "${source_image}" ]]; then
             echo "No source image configured for apps/${{ matrix.app }}" >&2
@@ -600,9 +597,10 @@ jobs:
 
           while IFS= read -r tag; do
             [[ -z "${tag}" ]] && continue
-            timeout 45m skopeo copy \
-              --all \
-              --authfile "${HOME}/.docker/config.json" \
+            timeout 45m docker run --rm \
+              -v "${HOME}/.docker/config.json:/auth.json:ro" \
+              quay.io/skopeo/stable:v1.17 \
+              copy --all --authfile /auth.json \
               "docker://${source_image}" \
               "docker://${tag}"
           done <<<"${tags}"

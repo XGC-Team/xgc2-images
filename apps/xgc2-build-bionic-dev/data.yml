@@ -7,9 +7,9 @@ additionalProperties:
     - Build
     - CI
     - Bionic
-  shortDescEn: Ubuntu bionic CI compile and Debian packaging image. No ROS and no XGC2 APT packages.
+  shortDescEn: Ubuntu bionic CI compile and Debian packaging image with compilers, Node, pnpm, uv, Go, Rust, and packaging tools. No ROS and no XGC2 APT packages.
   description:
-    en: Ubuntu bionic CI compile and Debian packaging image. No ROS and no XGC2 APT packages.
+    en: Ubuntu bionic CI compile and Debian packaging image with compilers, Node, pnpm, uv, Go, Rust, and packaging tools. No ROS and no XGC2 APT packages.
   type: build
   crossVersionUpdate: true
   limit: 0
