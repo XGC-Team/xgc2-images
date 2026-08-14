@@ -2,6 +2,7 @@
 set -euo pipefail
 . /etc/os-release
 test "${VERSION_CODENAME}" = "noble"
+test -x /opt/xgc2-stt/venv/bin/python
 command -v ruff >/dev/null
 command -v pytest >/dev/null
 command -v node >/dev/null

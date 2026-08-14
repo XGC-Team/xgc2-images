@@ -23,15 +23,13 @@ RUN chmod +x /usr/local/bin/xgc2-stt-runtime-healthcheck \
       sox \
       libsox-fmt-all \
  && rm -rf /var/lib/apt/lists/* \
- && python3 -m pip install --no-cache-dir "qwen-asr[vllm]==0.0.6" \
- && python3 -m pip install --no-cache-dir \
+ && python3 -m pip install --no-cache-dir --ignore-installed \
+      "qwen-asr[vllm]==0.0.6" \
       "av>=16,<19" \
       "nvidia-ml-py>=13,<14" \
       "opencc-python-reimplemented>=0.1.7,<0.2" \
       "pydantic-settings==2.15.0" \
-      "python-multipart==0.0.32" \
-      "uvicorn[standard]==0.52.1" \
-      "websockets>=15,<18"
+      "python-multipart==0.0.32"
 
 WORKDIR /work
 CMD ["bash"]

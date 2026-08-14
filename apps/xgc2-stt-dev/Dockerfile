@@ -6,8 +6,9 @@ LABEL org.opencontainers.image.description="Noble STT product CI image with froz
 LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-images"
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV VIRTUAL_ENV=/opt/xgc2-stt/venv
 ENV NODE_PATH=/opt/xgc2-stt/web/node_modules
-ENV PATH="/opt/xgc2-stt/web/node_modules/.bin:${PATH}"
+ENV PATH="/opt/xgc2-stt/venv/bin:/opt/xgc2-stt/web/node_modules/.bin:${PATH}"
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY lock/requirements-dev.txt /tmp/stt-requirements-dev.txt
@@ -26,7 +27,8 @@ RUN chmod +x /usr/local/bin/xgc2-stt-dev-healthcheck \
       python3-pyaudio \
       python3-xlib \
  && rm -rf /var/lib/apt/lists/* \
- && uv pip install --system --no-cache-dir -r /tmp/stt-requirements-dev.txt \
+ && uv venv --system-site-packages /opt/xgc2-stt/venv \
+ && uv pip install --python /opt/xgc2-stt/venv/bin/python --no-cache-dir -r /tmp/stt-requirements-dev.txt \
  && install -d /opt/xgc2-stt/web \
  && cp /tmp/stt-web/package.json /tmp/stt-web/package-lock.json /tmp/stt-web/.npmrc /opt/xgc2-stt/web/ \
  && npm --prefix /opt/xgc2-stt/web ci --omit=dev=false \
