@@ -46,6 +46,8 @@ jobs:
         with:
           fetch-depth: 0
       - id: detect
+        env:
+          EXTRA_NAMESPACE: ${{ secrets.EXTRA_NAMESPACE }}
         shell: bash
         run: |
           set -euo pipefail
