@@ -7,7 +7,9 @@ npm -g, curl|sh, and stock ubuntu:/ros: build containers.
 
 Allowed: repo lockfile installs (pnpm install, npm ci, yarn install, bun install,
 uv sync, go test) inside an image that already has the toolchain.
-Allowed apt: installing a locally built .deb under test, and apt-get -f.
+Allowed apt: a locally built .deb under test, apt-get -f, and already-published
+XGC2 products (`xgc2-*`, `libxgc2-*`, `ros-*-xgc2-*`). High-level controllers
+and estimators may install those; images and intermediate libraries may not.
 
 xgc2-images Dockerfiles and scripts/build/ are not scanned; only
 .github/workflows/*.yml. Those image build scripts are the place to apt.
@@ -129,6 +131,13 @@ def _apt_packages(line: str) -> list[str]:
     return pkgs
 
 
+def _is_published_xgc2_product(pkg: str) -> bool:
+    name = pkg.split("=", 1)[0].lower()
+    if name.startswith("xgc2-") or name.startswith("libxgc2-"):
+        return True
+    return name.startswith("ros-") and "-xgc2-" in name
+
+
 def apt_install_allowed(line: str) -> bool:
     pkgs = _apt_packages(line)
     if not pkgs:
@@ -139,6 +148,7 @@ def apt_install_allowed(line: str) -> bool:
         or "*.deb" in p
         or "/debs/" in p
         or p.startswith("debs/")
+        or _is_published_xgc2_product(p)
         for p in pkgs
     )
 
@@ -205,7 +215,14 @@ def main() -> int:
             "Allowed: pnpm install / npm ci / yarn install / bun install / uv sync of the repo lockfile.",
             file=sys.stderr,
         )
-        print("Forbidden: apt, pip, setup-node/python/go/uv/bun, rustup, npm -g, curl|sh.", file=sys.stderr)
+        print(
+            "Forbidden: apt of toolchain/distro packages, pip, setup-node/python/go/uv/bun, rustup, npm -g, curl|sh.",
+            file=sys.stderr,
+        )
+        print(
+            "Allowed apt: local .deb under test, and published xgc2-* / libxgc2-* / ros-*-xgc2-*.",
+            file=sys.stderr,
+        )
         for item in findings:
             print(item, file=sys.stderr)
         return 1

@@ -65,9 +65,12 @@ Every build image is amd64 and arm64.
 | `xgc2-build-noble-full-jazzy` | `full` | RViz2, ros-gz, PCL, OpenCV |
 
 Product CI must `container:` (or `docker run`) one of these images and must not
-apt/pip/`setup-*` a toolchain. Product-specific Python, Node, or APT libraries
-belong in a dedicated image (for example `xgc2-stt-dev`); do not `uv sync`,
-`npm ci`, or `apt-get` them in the product repository. A workflow gate lives at
+apt/pip/`setup-*` a toolchain. High-level controllers and estimators may
+`apt install` already-published `xgc2-*` / `libxgc2-*` / `ros-*-xgc2-*`
+products. Images and intermediate libraries must not. Product-specific
+Python, Node, or APT libraries belong in a dedicated image (for example
+`xgc2-stt-dev`); do not `uv sync`, `npm ci`, or `apt-get` them in the
+product repository. A workflow gate lives at
 `scripts/ci/check-workflow-bootstrap.py` and
 `.github/workflows/reusable-check-ci-bootstrap.yml`.
 

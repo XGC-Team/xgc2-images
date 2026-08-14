@@ -26,6 +26,7 @@ jobs:
       - run: uv sync --frozen
       - run: apt-get install -y ./debs/xgc2-foo_*.deb
       - run: apt-get install -f
+      - run: apt-get install -y --no-install-recommends xgc2-acados libxgc2-math-dev ros-noetic-xgc2-ros1-utils
 EOF
 
 cat >"${fail_dir}/ci.yml" <<'EOF'
@@ -37,6 +38,8 @@ jobs:
     steps:
       - uses: actions/setup-node@v4
       - run: sudo apt-get install -y cmake
+      - run: apt-get install -y xgc2-acados cmake
+      - run: apt-get install -y ros-noetic-roscpp
       - run: curl --proto "=https" -sSf https://sh.rustup.rs | sh -s -- -y
 EOF
 
