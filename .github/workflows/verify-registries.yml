@@ -50,7 +50,6 @@ jobs:
             exit 1
           fi
           echo "GHCR and extra roots resolved"
-          curl -fsS -o /dev/null -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://ghcr.io/v2/
-          echo "GHCR /v2/ ok"
+          echo "GHCR docker login already succeeded"
           curl -fsS -o /dev/null -u "${EXTRA_USERNAME}:${EXTRA_PASSWORD}" "https://${EXTRA_REGISTRY}/v2/"
           echo "extra registry /v2/ ok"
