@@ -12,36 +12,44 @@ jobs:
     runs-on: ubuntu-latest
     env:
       EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY }}
-      EXTRA_NAMESPACE: ${{ vars.EXTRA_NAMESPACE || secrets.EXTRA_NAMESPACE }}
+      EXTRA_NAMESPACE: ${{ vars.EXTRA_NAMESPACE }}
       EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME }}
       EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - name: Check extra registry config
+        id: extra
         run: |
           set -euo pipefail
-          missing=0
+          present=0
           for key in EXTRA_REGISTRY EXTRA_USERNAME EXTRA_PASSWORD; do
-            if [[ -z "${!key}" ]]; then
-              echo "${key} is empty"
-              missing=1
-            else
+            if [[ -n "${!key}" ]]; then
               echo "${key} is set"
+              present=$((present + 1))
+            else
+              echo "${key} is empty"
             fi
           done
-          if [[ -z "${EXTRA_NAMESPACE}" ]]; then
-            echo "EXTRA_NAMESPACE is empty"
-            missing=1
-          else
+          if [[ -n "${EXTRA_NAMESPACE}" ]]; then
             echo "EXTRA_NAMESPACE is set"
+          else
+            echo "EXTRA_NAMESPACE is empty"
           fi
-          exit "${missing}"
+          if [[ "${present}" -eq 3 && -n "${EXTRA_NAMESPACE}" ]]; then
+            echo "extra=1" >> "${GITHUB_OUTPUT}"
+          elif [[ "${present}" -eq 0 ]]; then
+            echo "extra=0" >> "${GITHUB_OUTPUT}"
+          else
+            echo "extra registry is partially configured" >&2
+            exit 1
+          fi
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/login-action@v3
+        if: steps.extra.outputs.extra == '1'
         with:
           registry: ${{ env.EXTRA_REGISTRY }}
           username: ${{ env.EXTRA_USERNAME }}
@@ -51,11 +59,18 @@ jobs:
           set -euo pipefail
           # shellcheck source=scripts/ci-registry-roots.sh
           source scripts/ci-registry-roots.sh
-          if [[ -z "${GHCR_ROOT}" || -z "${EXTRA_ROOT}" ]]; then
-            echo "registry roots were not resolved" >&2
+          if [[ -z "${GHCR_ROOT}" ]]; then
+            echo "GHCR root was not resolved" >&2
             exit 1
           fi
-          echo "GHCR and extra roots resolved"
           echo "GHCR docker login already succeeded"
+          if [[ "${{ steps.extra.outputs.extra }}" != "1" ]]; then
+            echo "extra registry not configured; skipping extra probe"
+            exit 0
+          fi
+          if [[ -z "${EXTRA_ROOT}" ]]; then
+            echo "extra registry root was not resolved" >&2
+            exit 1
+          fi
           curl -fsS -o /dev/null -u "${EXTRA_USERNAME}:${EXTRA_PASSWORD}" "https://${EXTRA_REGISTRY}/v2/"
           echo "extra registry /v2/ ok"

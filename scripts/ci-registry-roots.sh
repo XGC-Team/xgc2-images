@@ -15,8 +15,15 @@ else
   GHCR_ROOT="${DEFAULT_GHCR_ROOT}"
 fi
 EXTRA_ROOT=""
-if [[ -n "${EXTRA_REGISTRY:-}" && -n "${ns}" && -n "${EXTRA_USERNAME:-}" && -n "${EXTRA_PASSWORD:-}" ]]; then
+extra_secrets=0
+for key in EXTRA_REGISTRY EXTRA_USERNAME EXTRA_PASSWORD; do
+  [[ -n "${!key:-}" ]] && extra_secrets=$((extra_secrets + 1))
+done
+if [[ "${extra_secrets}" -eq 3 && -n "${ns}" ]]; then
   EXTRA_ROOT="${EXTRA_REGISTRY%/}/${ns}"
+elif [[ "${extra_secrets}" -ne 0 ]]; then
+  echo "extra registry is partially configured" >&2
+  exit 1
 fi
 rewrite_ghcr() {
   printf '%s' "${1/#${DEFAULT_GHCR_ROOT}/${GHCR_ROOT}}"

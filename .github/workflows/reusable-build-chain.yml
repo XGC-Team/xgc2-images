@@ -16,7 +16,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     env:
       EXTRA_REGISTRY: ${{ secrets.EXTRA_REGISTRY }}
-      EXTRA_NAMESPACE: ${{ vars.EXTRA_NAMESPACE || secrets.EXTRA_NAMESPACE }}
+      EXTRA_NAMESPACE: ${{ vars.EXTRA_NAMESPACE }}
       EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME }}
       EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD }}
       LATEST_ONLY: ${{ github.event_name == 'schedule' }}
