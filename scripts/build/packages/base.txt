@@ -1,5 +1,7 @@
-# Ubuntu hygiene only. No compilers, no ROS, no XGC2.
+# Ubuntu hygiene plus ripgrep. No compilers, no ROS, no XGC2.
+# curl is required so bionic can vendor rg (18.04 has no apt ripgrep).
 ca-certificates
+curl
 locales
 tzdata
 netbase

@@ -3,7 +3,7 @@ name: XGC2 bionic CI base
 version: 1.0.0
 image: ghcr.io/xgc-team/xgc2-images/xgc2-build-bionic-base:1.0.0
 fromImage: ubuntu:18.04
-description: Ubuntu bionic CI base with apt hygiene only. No compilers, ROS, or XGC2 APT packages.
+description: Ubuntu bionic CI base with apt hygiene and ripgrep. No compilers, ROS, or XGC2 APT packages.
 type: build
 buildLayer: base
 tags:

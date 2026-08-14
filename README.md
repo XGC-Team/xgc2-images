@@ -43,19 +43,19 @@ Every build image is amd64 and arm64.
 
 | App | Layer | FROM / contains |
 | --- | --- | --- |
-| `xgc2-build-bionic-base` | `base` | `ubuntu:18.04` + apt hygiene |
-| `xgc2-build-bionic-dev` | `dev` | compilers, CMake, Node 16, pnpm 8, uv, Go 1.26, Rust, gh, buf, jq, ripgrep. No Bun, no skopeo, no Node 22 (18.04 glibc). |
+| `xgc2-build-bionic-base` | `base` | `ubuntu:18.04` + apt hygiene + ripgrep (`rg`; pinned GitHub binary, 18.04 has no apt package) |
+| `xgc2-build-bionic-dev` | `dev` | compilers, CMake, Node 16, pnpm 8, uv, Go 1.26, Rust, gh, buf, jq. No Bun, no skopeo, no Node 22 (18.04 glibc). |
 | `xgc2-build-bionic-ros-melodic` | `ros` | official ROS Melodic core |
 | `xgc2-build-bionic-full-melodic` | `full` | Gazebo 9, RViz, PCL, OpenCV |
-| `xgc2-build-focal-base` | `base` | `ubuntu:20.04` + apt hygiene |
+| `xgc2-build-focal-base` | `base` | `ubuntu:20.04` + apt hygiene + ripgrep |
 | `xgc2-build-focal-dev` | `dev` | compilers, Node 22, pnpm 11, yarn 3, uv, Go 1.26, Rust, Bun, skopeo, gh, buf, xvfb, protobuf/grpc |
 | `xgc2-build-focal-ros-noetic` | `ros` | official ROS Noetic core |
 | `xgc2-build-focal-full-noetic` | `full` | Gazebo 11, RViz, PCL, OpenCV, MAVROS |
-| `xgc2-build-jammy-base` | `base` | `ubuntu:22.04` + apt hygiene |
+| `xgc2-build-jammy-base` | `base` | `ubuntu:22.04` + apt hygiene + ripgrep |
 | `xgc2-build-jammy-dev` | `dev` | same toolchain family as focal |
 | `xgc2-build-jammy-ros-humble` | `ros` | official ROS 2 Humble core |
 | `xgc2-build-jammy-full-humble` | `full` | RViz2, ros-gz, PCL, OpenCV |
-| `xgc2-build-noble-base` | `base` | `ubuntu:24.04` + apt hygiene |
+| `xgc2-build-noble-base` | `base` | `ubuntu:24.04` + apt hygiene + ripgrep |
 | `xgc2-build-noble-dev` | `dev` | same toolchain family as jammy |
 | `xgc2-build-noble-ros-jazzy` | `ros` | official ROS 2 Jazzy core |
 | `xgc2-build-noble-full-jazzy` | `full` | RViz2, ros-gz, PCL, OpenCV |

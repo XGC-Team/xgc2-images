@@ -7,9 +7,9 @@ additionalProperties:
     - Build
     - CI
     - Focal
-  shortDescEn: Ubuntu focal CI base with apt hygiene only. No compilers, ROS, or XGC2 APT packages.
+  shortDescEn: Ubuntu focal CI base with apt hygiene and ripgrep. No compilers, ROS, or XGC2 APT packages.
   description:
-    en: Ubuntu focal CI base with apt hygiene only. No compilers, ROS, or XGC2 APT packages.
+    en: Ubuntu focal CI base with apt hygiene and ripgrep. No compilers, ROS, or XGC2 APT packages.
   type: build
   crossVersionUpdate: true
   limit: 0

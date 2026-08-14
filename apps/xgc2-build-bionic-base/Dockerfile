@@ -3,7 +3,7 @@ ARG PARENT_IMAGE=ubuntu:18.04
 FROM ${PARENT_IMAGE}
 
 LABEL org.opencontainers.image.title="XGC2 bionic CI base"
-LABEL org.opencontainers.image.description="Ubuntu bionic CI base with apt hygiene only. No compilers, ROS, or XGC2 APT packages."
+LABEL org.opencontainers.image.description="Ubuntu bionic CI base with apt hygiene and ripgrep. No compilers, ROS, or XGC2 APT packages."
 LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-images"
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -18,8 +18,9 @@ RUN chmod +x /tmp/xgc2-build/*.sh /usr/local/bin/xgc2-build-healthcheck \
  && cp /tmp/xgc2-build/assert-no-xgc2-apt.sh /usr/local/bin/xgc2-build-assert-no-xgc2-apt.sh \
  && chmod +x /usr/local/bin/xgc2-build-assert-no-xgc2-apt.sh \
  && printf 'Acquire::Retries "5";\n' >/etc/apt/apt.conf.d/99-xgc2-retries \
- && /tmp/xgc2-build/install-packages.sh /tmp/xgc2-build/packages/base.txt \
+ && /tmp/xgc2-build/install-packages.sh /tmp/xgc2-build/packages/base.txt /tmp/xgc2-build/packages/base-bionic.txt \
  && locale-gen en_US.UTF-8 \
+ && /tmp/xgc2-build/install-ripgrep.sh \
  && /tmp/xgc2-build/assert-no-xgc2-apt.sh \
  && rm -rf /tmp/xgc2-build /var/lib/apt/lists/*
 

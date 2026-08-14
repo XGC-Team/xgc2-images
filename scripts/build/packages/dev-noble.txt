@@ -26,7 +26,6 @@ clang-format
 clang-tidy
 cppcheck
 shellcheck
-ripgrep
 skopeo
 gstreamer1.0-tools
 gstreamer1.0-plugins-base

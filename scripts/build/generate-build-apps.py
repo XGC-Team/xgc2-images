@@ -69,7 +69,7 @@ def title(ubuntu: str, layer: str, ros: str | None) -> str:
 
 def description(ubuntu: str, layer: str, ros: str | None) -> str:
     if layer == "base":
-        return f"Ubuntu {ubuntu} CI base with apt hygiene only. No compilers, ROS, or XGC2 APT packages."
+        return f"Ubuntu {ubuntu} CI base with apt hygiene and ripgrep. No compilers, ROS, or XGC2 APT packages."
     if layer == "dev":
         return f"Ubuntu {ubuntu} CI compile and Debian packaging image with compilers, Node, pnpm, uv, Go, Rust, and packaging tools. No ROS and no XGC2 APT packages."
     if layer == "ros":
@@ -109,8 +109,11 @@ def dockerfile(ubuntu: str, layer: str, ros: str | None, from_os: str, parent: s
     if layer == "base":
         run_parts.extend(
             [
-                "/tmp/xgc2-build/install-packages.sh /tmp/xgc2-build/packages/base.txt",
+                "/tmp/xgc2-build/install-packages.sh "
+                "/tmp/xgc2-build/packages/base.txt "
+                f"/tmp/xgc2-build/packages/base-{ubuntu}.txt",
                 "locale-gen en_US.UTF-8",
+                "/tmp/xgc2-build/install-ripgrep.sh",
             ]
         )
     elif layer == "dev":
@@ -181,6 +184,7 @@ def healthcheck(ubuntu: str, layer: str, ros: str | None) -> str:
         lines += [
             "test -f /etc/apt/apt.conf.d/99-xgc2-retries",
             "command -v locale-gen >/dev/null",
+            "command -v rg >/dev/null",
         ]
     elif layer == "dev":
         lines += [

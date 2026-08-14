@@ -2,7 +2,7 @@
 # Install pinned CI toolchains into /usr/local. Apt packages belong in
 # packages/*.txt; this script covers binaries Ubuntu does not ship at the
 # versions product CI needs (Node, pnpm/yarn via corepack, uv, Go, Rust,
-# Bun, gh, buf, and ripgrep on distros without it).
+# Bun, gh, and buf). Ripgrep is installed in the base layer.
 set -euo pipefail
 
 if [[ "$(id -u)" != "0" ]]; then
@@ -24,7 +24,6 @@ UV_VERSION="0.9.24"
 BUN_VERSION="1.3.13"
 GH_VERSION="2.74.2"
 BUF_VERSION="1.47.2"
-RG_VERSION="14.1.1"
 PYTHON_UV_VERSION="3.12"
 
 declare -A NODE22_SHA=(
@@ -55,10 +54,6 @@ declare -A BUF_SHA=(
   [amd64]=3a0c4da8d46eea8136affa63db202c76a44f8112384160b73c3fffb1cf14b5d8
   [arm64]=47ddd7ac0bb2a29f8c92aa420dd113bed3b6857190976402eec93ab9847270b4
 )
-declare -A RG_SHA=(
-  [amd64]=4cf9f2741e6c465ffdb7c26f38056a59e2a2544b51f7cc128ef28337eeae4d8e
-  [arm64]=c827481c4ff4ea10c9dc7a4022c8de5db34a5737cb74484d62eb94a95841ab2f
-)
 
 case "${arch}" in
   amd64)
@@ -68,7 +63,6 @@ case "${arch}" in
     bun_zip=bun-linux-x64-musl.zip
     gh_arch=amd64
     buf_arch=x86_64
-    rg_triple=x86_64-unknown-linux-musl
     rustup_triple=x86_64-unknown-linux-gnu
     ;;
   arm64)
@@ -78,7 +72,6 @@ case "${arch}" in
     bun_zip=bun-linux-aarch64-musl.zip
     gh_arch=arm64
     buf_arch=aarch64
-    rg_triple=aarch64-unknown-linux-gnu
     rustup_triple=aarch64-unknown-linux-gnu
     ;;
   *)
@@ -210,22 +203,6 @@ install_buf() {
   buf --version
 }
 
-install_ripgrep() {
-  if command -v rg >/dev/null 2>&1; then
-    rg --version
-    return 0
-  fi
-  local tarball="ripgrep-${RG_VERSION}-${rg_triple}.tar.gz"
-  fetch_verify \
-    "https://github.com/BurntSushi/ripgrep/releases/download/${RG_VERSION}/${tarball}" \
-    "/tmp/${tarball}" \
-    "${RG_SHA[${arch}]}"
-  tar -xzf "/tmp/${tarball}" -C /tmp
-  install -m 0755 "/tmp/ripgrep-${RG_VERSION}-${rg_triple}/rg" /usr/local/bin/rg
-  rm -rf "/tmp/${tarball}" "/tmp/ripgrep-${RG_VERSION}-${rg_triple}"
-  rg --version
-}
-
 write_profile() {
   cat >/etc/profile.d/xgc2-dev-toolchain.sh <<'EOF'
 export PATH="/usr/local/go/bin:/usr/local/cargo/bin:/usr/local/bin:${PATH}"
@@ -244,5 +221,4 @@ install_rust
 install_bun
 install_gh
 install_buf
-install_ripgrep
 write_profile

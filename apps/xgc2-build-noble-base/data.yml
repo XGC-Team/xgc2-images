@@ -7,9 +7,9 @@ additionalProperties:
     - Build
     - CI
     - Noble
-  shortDescEn: Ubuntu noble CI base with apt hygiene only. No compilers, ROS, or XGC2 APT packages.
+  shortDescEn: Ubuntu noble CI base with apt hygiene and ripgrep. No compilers, ROS, or XGC2 APT packages.
   description:
-    en: Ubuntu noble CI base with apt hygiene only. No compilers, ROS, or XGC2 APT packages.
+    en: Ubuntu noble CI base with apt hygiene and ripgrep. No compilers, ROS, or XGC2 APT packages.
   type: build
   crossVersionUpdate: true
   limit: 0

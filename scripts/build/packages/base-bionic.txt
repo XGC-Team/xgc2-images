@@ -1,0 +1,1 @@
+# Bionic has no apt ripgrep. install-ripgrep.sh vendors a pinned binary.

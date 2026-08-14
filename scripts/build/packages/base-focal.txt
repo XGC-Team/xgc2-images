@@ -1,0 +1,2 @@
+# Focal ships ripgrep in universe; base enables universe via install-packages.sh.
+ripgrep
