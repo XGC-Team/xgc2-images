@@ -1,0 +1,30 @@
+name: XGC2 STT client Jammy
+title: XGC2 STT client Jammy
+additionalProperties:
+  key: xgc2-stt-client-jammy
+  name: XGC2 STT client Jammy
+  tags:
+    - Development
+    - CI
+    - STT
+    - Jammy
+  shortDescEn: Jammy STT desktop-client smoke image with GTK, PyAudio, websocket, and sounddevice Depends preinstalled.
+  description:
+    en: Used by xgc2-stt-service client Deb CI to smoke-test the built .deb. Product CI must not apt-get.
+  type: development
+  crossVersionUpdate: true
+  limit: 0
+  website: https://github.com/XGC-Team/xgc2-images
+  github: https://github.com/XGC-Team/xgc2-images
+  document: https://github.com/XGC-Team/xgc2-images/tree/master/apps/xgc2-stt-client-jammy
+  architectures:
+    - amd64
+    - arm64/v8
+  batchInstallSupport: false
+  formFields:
+    - default: xgc2-stt-client-jammy
+      envKey: CONTAINER_NAME
+      label:
+        en: Container name
+      required: true
+      type: text

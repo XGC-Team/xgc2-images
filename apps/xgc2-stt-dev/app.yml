@@ -1,0 +1,22 @@
+key: xgc2-stt-dev
+name: XGC2 STT CI
+version: 1.0.0
+image: ghcr.io/xgc-team/xgc2-images/xgc2-stt-dev:1.0.0
+description: Noble STT product CI image. Preinstalls the frozen Python extras, WebUI node_modules, and desktop-client APT Depends so stt-service workflows never uv sync, npm ci, or apt-get.
+type: development
+tags:
+  - Development
+  - CI
+  - STT
+  - Noble
+architectures:
+  - amd64
+  - arm64/v8
+license: Apache-2.0
+source: https://github.com/XGC-Team/xgc2-images
+upstreamReferences:
+  - ghcr.io/xgc-team/xgc2-images/xgc2-build-noble-dev:1.0.0
+  - XGC-Team/xgc2-stt-service lockfiles
+entrypoints:
+  shell: /bin/bash
+  healthcheck: /usr/local/bin/xgc2-stt-dev-healthcheck

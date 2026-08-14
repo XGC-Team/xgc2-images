@@ -1,0 +1,21 @@
+key: xgc2-stt-client-jammy
+name: XGC2 STT client Jammy
+version: 1.0.0
+image: ghcr.io/xgc-team/xgc2-images/xgc2-stt-client-jammy:1.0.0
+description: Jammy image for xgc2-stt-client Deb smoke. Desktop client APT Depends are preinstalled so product CI only dpkg -i the built package.
+type: development
+tags:
+  - Development
+  - CI
+  - STT
+  - Jammy
+architectures:
+  - amd64
+  - arm64/v8
+license: Apache-2.0
+source: https://github.com/XGC-Team/xgc2-images
+upstreamReferences:
+  - ghcr.io/xgc-team/xgc2-images/xgc2-build-jammy-dev:1.0.0
+entrypoints:
+  shell: /bin/bash
+  healthcheck: /usr/local/bin/xgc2-stt-client-healthcheck

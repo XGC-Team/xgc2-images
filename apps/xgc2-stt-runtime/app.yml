@@ -1,0 +1,20 @@
+key: xgc2-stt-runtime
+name: XGC2 STT runtime
+version: 1.0.0
+image: ghcr.io/xgc-team/xgc2-images/xgc2-stt-runtime:1.0.0
+description: GPU STT runtime base. Official vLLM plus sox, tini, qwen-asr, and the frozen service third-party Python set. Product images FROM this and install only the service package.
+type: deployment
+tags:
+  - Deployment
+  - STT
+  - vLLM
+architectures:
+  - amd64
+license: Apache-2.0
+source: https://github.com/XGC-Team/xgc2-images
+upstreamReferences:
+  - vllm/vllm-openai:v0.14.0
+  - qwen-asr[vllm]==0.0.6
+entrypoints:
+  shell: /bin/bash
+  healthcheck: /usr/local/bin/xgc2-stt-runtime-healthcheck

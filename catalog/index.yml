@@ -1,5 +1,5 @@
 name: XGC2 Images
-updatedAt: "2026-08-13"
+updatedAt: "2026-08-15"
 apps:
   - key: xgc-ros1-runtime
     name: ROS1 Simulation Kit
@@ -125,6 +125,53 @@ apps:
       - Jazzy
       - Qt
       - QGroundControl
+  - key: xgc2-stt-dev
+    name: XGC2 STT CI
+    version: 1.0.0
+    type: development
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-stt-dev:1.0.0
+    app: ../apps/xgc2-stt-dev/app.yml
+    data: ../apps/xgc2-stt-dev/data.yml
+    compose: ../apps/xgc2-stt-dev/docker-compose.yml
+    tags:
+      - CI
+      - STT
+      - Noble
+  - key: xgc2-stt-runtime
+    name: XGC2 STT runtime
+    version: 1.0.0
+    type: deployment
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-stt-runtime:1.0.0
+    app: ../apps/xgc2-stt-runtime/app.yml
+    data: ../apps/xgc2-stt-runtime/data.yml
+    compose: ../apps/xgc2-stt-runtime/docker-compose.yml
+    tags:
+      - STT
+      - vLLM
+  - key: xgc2-stt-client-focal
+    name: XGC2 STT client Focal
+    version: 1.0.0
+    type: development
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-stt-client-focal:1.0.0
+    app: ../apps/xgc2-stt-client-focal/app.yml
+    data: ../apps/xgc2-stt-client-focal/data.yml
+    compose: ../apps/xgc2-stt-client-focal/docker-compose.yml
+    tags:
+      - CI
+      - STT
+      - Focal
+  - key: xgc2-stt-client-jammy
+    name: XGC2 STT client Jammy
+    version: 1.0.0
+    type: development
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-stt-client-jammy:1.0.0
+    app: ../apps/xgc2-stt-client-jammy/app.yml
+    data: ../apps/xgc2-stt-client-jammy/data.yml
+    compose: ../apps/xgc2-stt-client-jammy/docker-compose.yml
+    tags:
+      - CI
+      - STT
+      - Jammy
   - key: ros-jazzy-desktop-full
     name: ROS Jazzy Desktop Full
     version: 1.0.0

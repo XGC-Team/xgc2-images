@@ -1,0 +1,30 @@
+name: XGC2 STT CI
+title: XGC2 STT CI
+additionalProperties:
+  key: xgc2-stt-dev
+  name: XGC2 STT CI
+  tags:
+    - Development
+    - CI
+    - STT
+    - Noble
+  shortDescEn: Noble STT product CI image with frozen Python extras, WebUI node_modules, and desktop-client APT Depends.
+  description:
+    en: Product CI for xgc2-stt-service. Dependencies are installed here. The product repository must not uv sync, npm ci, or apt-get.
+  type: development
+  crossVersionUpdate: true
+  limit: 0
+  website: https://github.com/XGC-Team/xgc2-images
+  github: https://github.com/XGC-Team/xgc2-images
+  document: https://github.com/XGC-Team/xgc2-images/tree/master/apps/xgc2-stt-dev
+  architectures:
+    - amd64
+    - arm64/v8
+  batchInstallSupport: false
+  formFields:
+    - default: xgc2-stt-dev
+      envKey: CONTAINER_NAME
+      label:
+        en: Container name
+      required: true
+      type: text

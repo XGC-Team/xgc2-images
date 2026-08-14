@@ -1,0 +1,15 @@
+services:
+  xgc2-stt-client-jammy:
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-stt-client-jammy:1.0.0
+    container_name: ${CONTAINER_NAME}
+    working_dir: /work
+    volumes:
+      - ${PWD}:/work
+    stdin_open: true
+    tty: true
+    command: ["bash"]
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/xgc2-stt-client-healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 2

@@ -1,0 +1,28 @@
+name: XGC2 STT runtime
+title: XGC2 STT runtime
+additionalProperties:
+  key: xgc2-stt-runtime
+  name: XGC2 STT runtime
+  tags:
+    - Deployment
+    - STT
+    - vLLM
+  shortDescEn: GPU STT runtime base with vLLM, sox, tini, qwen-asr, and frozen service Python deps.
+  description:
+    en: Base image for xgc2-stt-service release images. All third-party runtime dependencies are installed here. The product Dockerfile must not apt-get or pip-install extra libraries.
+  type: deployment
+  crossVersionUpdate: true
+  limit: 0
+  website: https://github.com/XGC-Team/xgc2-images
+  github: https://github.com/XGC-Team/xgc2-images
+  document: https://github.com/XGC-Team/xgc2-images/tree/master/apps/xgc2-stt-runtime
+  architectures:
+    - amd64
+  batchInstallSupport: false
+  formFields:
+    - default: xgc2-stt-runtime
+      envKey: CONTAINER_NAME
+      label:
+        en: Container name
+      required: true
+      type: text

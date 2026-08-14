@@ -1,0 +1,30 @@
+name: XGC2 STT client Focal
+title: XGC2 STT client Focal
+additionalProperties:
+  key: xgc2-stt-client-focal
+  name: XGC2 STT client Focal
+  tags:
+    - Development
+    - CI
+    - STT
+    - Focal
+  shortDescEn: Focal STT desktop-client smoke image with GTK, PyAudio, and websocket Depends preinstalled.
+  description:
+    en: Used by xgc2-stt-service client Deb CI to smoke-test the built .deb. Product CI must not apt-get.
+  type: development
+  crossVersionUpdate: true
+  limit: 0
+  website: https://github.com/XGC-Team/xgc2-images
+  github: https://github.com/XGC-Team/xgc2-images
+  document: https://github.com/XGC-Team/xgc2-images/tree/master/apps/xgc2-stt-client-focal
+  architectures:
+    - amd64
+    - arm64/v8
+  batchInstallSupport: false
+  formFields:
+    - default: xgc2-stt-client-focal
+      envKey: CONTAINER_NAME
+      label:
+        en: Container name
+      required: true
+      type: text

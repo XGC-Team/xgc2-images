@@ -27,6 +27,10 @@ App categories:
 | `ros-noetic-desktop-full` | `development` | `ghcr.io/xgc-team/xgc2-images/ros-noetic-desktop-full` | Official OSRF ROS Noetic desktop-full image mirrored for amd64 development use. |
 | `ros2-jazzy-dev-base` | `development` | `ghcr.io/xgc-team/xgc2-images/ros2-jazzy-dev-base` | ROS 2 Jazzy desktop base with ground-station development tools. |
 | `xgc2-dev-workstation` | `development` | `ghcr.io/xgc-team/xgc2-images/xgc2-dev-workstation` | ROS 2 Jazzy workstation with Qt development packages and Docker CLI. |
+| `xgc2-stt-dev` | `development` | `ghcr.io/xgc-team/xgc2-images/xgc2-stt-dev` | Noble STT product CI image. Frozen Python extras, WebUI `node_modules`, and desktop-client APT Depends. |
+| `xgc2-stt-runtime` | `deployment` | `ghcr.io/xgc-team/xgc2-images/xgc2-stt-runtime` | GPU STT runtime base: vLLM, sox, tini, qwen-asr, and the frozen service third-party Python set. |
+| `xgc2-stt-client-focal` | `development` | `ghcr.io/xgc-team/xgc2-images/xgc2-stt-client-focal` | Focal desktop-client smoke image with GTK / PyAudio Depends preinstalled. |
+| `xgc2-stt-client-jammy` | `development` | `ghcr.io/xgc-team/xgc2-images/xgc2-stt-client-jammy` | Jammy desktop-client smoke image with GTK / PyAudio Depends preinstalled. |
 | `ros-jazzy-desktop-full` | `development` | `ghcr.io/xgc-team/xgc2-images/ros-jazzy-desktop-full` | Official OSRF ROS 2 Jazzy desktop-full image mirrored for amd64 development use. |
 | `ros-jazzy-ros-base-noble` | `deployment` | `ghcr.io/xgc-team/xgc2-images/ros-jazzy-ros-base-noble` | Official ROS 2 Jazzy ros-base image mirrored for amd64 and arm64 deployments. |
 
@@ -61,8 +65,9 @@ Every build image is amd64 and arm64.
 | `xgc2-build-noble-full-jazzy` | `full` | RViz2, ros-gz, PCL, OpenCV |
 
 Product CI must `container:` (or `docker run`) one of these images and must not
-apt/pip/`setup-*` a toolchain. Lockfile installs (`pnpm install`, `npm ci`,
-`uv sync`) stay in the product workflow. A workflow gate lives at
+apt/pip/`setup-*` a toolchain. Product-specific Python, Node, or APT libraries
+belong in a dedicated image (for example `xgc2-stt-dev`); do not `uv sync`,
+`npm ci`, or `apt-get` them in the product repository. A workflow gate lives at
 `scripts/ci/check-workflow-bootstrap.py` and
 `.github/workflows/reusable-check-ci-bootstrap.yml`.
 
