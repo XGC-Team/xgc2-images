@@ -1,10 +1,8 @@
-# XGC2 App Store
+# XGC2 Images
 
-Open app definitions and container images for XGC2.
+Container images for XGC2 simulation, deployment, development, and CI builds.
 
-This repository is intentionally small at the first stage. GitHub is used as the
-app catalog server, and GitHub Container Registry is used for image hosting. No
-public deployment server is required until XGC needs remote, unattended CD.
+GitHub hosts the catalog; GitHub Container Registry hosts the images.
 
 ## Apps
 
@@ -152,7 +150,7 @@ The workflow only deletes GHCR package versions.
 The same dry-run can be started locally when the `gh` token has `read:packages`:
 
 ```bash
-scripts/gc-ghcr-images.sh --owner lxk36 --repo xgc2-app-store
+scripts/gc-ghcr-images.sh --owner XGC-Team --repo xgc2-images
 ```
 
 ## Local Smoke
