@@ -2,7 +2,7 @@
 # Install pinned CI toolchains into /usr/local. Apt packages belong in
 # packages/*.txt; this script covers binaries Ubuntu does not ship at the
 # versions product CI needs (Node, pnpm/yarn via corepack, uv, Go, Rust,
-# Bun, gh, and buf). Ripgrep is installed in the base layer.
+# Bun, gh, buf, and skopeo on focal). Ripgrep is installed in the base layer.
 set -euo pipefail
 
 if [[ "$(id -u)" != "0" ]]; then
@@ -24,6 +24,7 @@ UV_VERSION="0.9.24"
 BUN_VERSION="1.3.13"
 GH_VERSION="2.74.2"
 BUF_VERSION="1.47.2"
+SKOPEO_VERSION="1.20.0"
 PYTHON_UV_VERSION="3.12"
 
 declare -A NODE22_SHA=(
@@ -54,6 +55,13 @@ declare -A BUF_SHA=(
   [amd64]=3a0c4da8d46eea8136affa63db202c76a44f8112384160b73c3fffb1cf14b5d8
   [arm64]=47ddd7ac0bb2a29f8c92aa420dd113bed3b6857190976402eec93ab9847270b4
 )
+# Static skopeo for Ubuntu 20.04: focal archives do not ship the package.
+# Binaries from https://github.com/felipecrs/skopeo-bin (official skopeo
+# does not publish Linux assets). jammy/noble install skopeo via apt.
+declare -A SKOPEO_SHA=(
+  [amd64]=3a07877b6f69ca4d2e8325c41b5d546c4c4a1a9f8337e6021cda9c9485cba232
+  [arm64]=53cb7a20907b869322f3c01aa3d0568a11004fd12151db42057a1cd88d58fc19
+)
 
 case "${arch}" in
   amd64)
@@ -63,6 +71,7 @@ case "${arch}" in
     bun_zip=bun-linux-x64.zip
     gh_arch=amd64
     buf_arch=x86_64
+    skopeo_bin=skopeo.linux-amd64
     rustup_triple=x86_64-unknown-linux-gnu
     ;;
   arm64)
@@ -72,6 +81,7 @@ case "${arch}" in
     bun_zip=bun-linux-aarch64.zip
     gh_arch=arm64
     buf_arch=aarch64
+    skopeo_bin=skopeo.linux-arm64
     rustup_triple=aarch64-unknown-linux-gnu
     ;;
   *)
@@ -203,6 +213,23 @@ install_buf() {
   buf --version
 }
 
+install_skopeo() {
+  if [[ "${codename}" != "focal" ]]; then
+    return 0
+  fi
+  fetch_verify \
+    "https://github.com/felipecrs/skopeo-bin/releases/download/v${SKOPEO_VERSION}/${skopeo_bin}" \
+    "/tmp/${skopeo_bin}" \
+    "${SKOPEO_SHA[${arch}]}"
+  install -m 0755 "/tmp/${skopeo_bin}" /usr/local/bin/skopeo
+  rm -f "/tmp/${skopeo_bin}"
+  mkdir -p /etc/containers
+  if [[ ! -f /etc/containers/policy.json ]]; then
+    printf '%s\n' '{"default":[{"type":"insecureAcceptAnything"}]}' >/etc/containers/policy.json
+  fi
+  skopeo --version
+}
+
 write_profile() {
   cat >/etc/profile.d/xgc2-dev-toolchain.sh <<'EOF'
 export PATH="/usr/local/go/bin:/usr/local/cargo/bin:/usr/local/bin:${PATH}"
@@ -221,4 +248,5 @@ install_rust
 install_bun
 install_gh
 install_buf
+install_skopeo
 write_profile
