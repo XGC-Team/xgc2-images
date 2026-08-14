@@ -8,7 +8,7 @@ additionalProperties:
     - CI
     - STT
     - Jammy
-  shortDescEn: Jammy STT desktop-client smoke image with GTK, PyAudio, websocket, and sounddevice Depends preinstalled.
+  shortDescEn: Jammy STT desktop-client smoke image with GTK, PyAudio, and websocket Depends preinstalled.
   description:
     en: Used by xgc2-stt-service client Deb CI to smoke-test the built .deb. Product CI must not apt-get.
   type: development

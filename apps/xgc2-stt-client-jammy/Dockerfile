@@ -21,7 +21,6 @@ RUN chmod +x /usr/local/bin/xgc2-stt-client-healthcheck \
       python3-websocket \
       python3-pyaudio \
       python3-xlib \
-      python3-sounddevice \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /work

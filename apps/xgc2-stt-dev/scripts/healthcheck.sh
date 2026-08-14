@@ -15,6 +15,7 @@ import gi
 import pyaudio
 import pytest
 import ruff
+import sounddevice
 import websocket
 import Xlib
 PY

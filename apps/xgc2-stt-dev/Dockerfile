@@ -25,7 +25,6 @@ RUN chmod +x /usr/local/bin/xgc2-stt-dev-healthcheck \
       python3-websocket \
       python3-pyaudio \
       python3-xlib \
-      python3-sounddevice \
  && rm -rf /var/lib/apt/lists/* \
  && uv pip install --system --no-cache-dir -r /tmp/stt-requirements-dev.txt \
  && install -d /opt/xgc2-stt/web \

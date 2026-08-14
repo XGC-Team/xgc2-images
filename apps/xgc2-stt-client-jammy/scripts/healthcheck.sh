@@ -6,7 +6,6 @@ command -v xvfb-run >/dev/null
 python3 - <<'PY'
 import gi
 import pyaudio
-import sounddevice
 import websocket
 import Xlib
 PY
