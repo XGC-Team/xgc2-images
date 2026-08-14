@@ -8,7 +8,11 @@ import importlib.metadata
 import av
 import fastapi
 import huggingface_hub
+import pynvml
+import uvicorn
+import websockets
 
 importlib.metadata.version("qwen-asr")
 importlib.metadata.version("vllm")
+importlib.metadata.version("opencc-python-reimplemented")
 PY
