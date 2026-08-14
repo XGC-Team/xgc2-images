@@ -3,7 +3,7 @@ FROM osrf/ros:jazzy-desktop-full
 
 LABEL org.opencontainers.image.title="PX4 ROS2 SITL with QGC"
 LABEL org.opencontainers.image.description="PX4 ROS 2 SITL development image with Micro XRCE-DDS Agent and QGroundControl AppImage included."
-LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-app-store"
+LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-images"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ROS_DISTRO=jazzy

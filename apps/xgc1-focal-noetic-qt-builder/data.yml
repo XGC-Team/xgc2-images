@@ -14,8 +14,8 @@ additionalProperties:
   crossVersionUpdate: true
   limit: 0
   website: https://www.qt.io/
-  github: https://github.com/XGC-Team/xgc2-app-store
-  document: https://github.com/XGC-Team/xgc2-app-store/tree/master/apps/xgc1-focal-noetic-qt-builder
+  github: https://github.com/XGC-Team/xgc2-images
+  document: https://github.com/XGC-Team/xgc2-images/tree/master/apps/xgc1-focal-noetic-qt-builder
   architectures:
     - amd64
     - arm64/v8

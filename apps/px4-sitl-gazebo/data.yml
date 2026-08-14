@@ -15,8 +15,8 @@ additionalProperties:
   crossVersionUpdate: true
   limit: 0
   website: https://docs.px4.io
-  github: https://github.com/XGC-Team/xgc2-app-store
-  document: https://github.com/XGC-Team/xgc2-app-store/tree/master/apps/px4-sitl-gazebo
+  github: https://github.com/XGC-Team/xgc2-images
+  document: https://github.com/XGC-Team/xgc2-images/tree/master/apps/px4-sitl-gazebo
   architectures:
     - amd64
   batchInstallSupport: true

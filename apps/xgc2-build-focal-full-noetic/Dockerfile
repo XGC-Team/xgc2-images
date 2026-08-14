@@ -4,7 +4,7 @@ FROM ${PARENT_IMAGE}
 
 LABEL org.opencontainers.image.title="XGC2 focal noetic CI full"
 LABEL org.opencontainers.image.description="Ubuntu focal + official ROS noetic full CI image including simulation and vision stacks. No XGC2 APT packages."
-LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-app-store"
+LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-images"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=en_US.UTF-8

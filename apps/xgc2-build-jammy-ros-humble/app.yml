@@ -15,7 +15,7 @@ architectures:
   - amd64
   - arm64/v8
 license: Apache-2.0
-source: https://github.com/XGC-Team/xgc2-app-store
+source: https://github.com/XGC-Team/xgc2-images
 entrypoints:
   shell: /bin/bash
   healthcheck: /usr/local/bin/xgc2-build-healthcheck

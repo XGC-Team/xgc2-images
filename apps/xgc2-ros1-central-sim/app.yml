@@ -20,7 +20,7 @@ rebuildDependency: false
 noCache: true
 publishVersionOnly: true
 license: Apache-2.0
-source: https://github.com/XGC-Team/xgc2-app-store
+source: https://github.com/XGC-Team/xgc2-images
 upstreamReferences:
   - xgc-ros1-runtime:1.2.3
   - https://xgc2.apt.xiaokang.ink

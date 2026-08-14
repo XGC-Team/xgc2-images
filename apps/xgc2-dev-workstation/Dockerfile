@@ -3,7 +3,7 @@ FROM osrf/ros:jazzy-desktop-full
 
 LABEL org.opencontainers.image.title="XGC2 Development Workstation"
 LABEL org.opencontainers.image.description="ROS 2 Jazzy development workstation with Qt development packages and Docker CLI."
-LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-app-store"
+LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-images"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ROS_DISTRO=jazzy

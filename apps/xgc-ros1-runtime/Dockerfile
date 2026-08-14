@@ -2,7 +2,7 @@ FROM ros:noetic-ros-base-focal
 
 LABEL org.opencontainers.image.title="ROS1 Simulation Kit"
 LABEL org.opencontainers.image.description="Curated ROS Noetic simulation toolkit with MAVROS, VRPN, Gazebo Classic and core robot visualization dependencies."
-LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-app-store"
+LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-images"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ROS_DISTRO=noetic

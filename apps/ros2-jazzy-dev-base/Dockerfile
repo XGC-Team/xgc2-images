@@ -3,7 +3,7 @@ FROM osrf/ros:jazzy-desktop-full
 
 LABEL org.opencontainers.image.title="ROS2 Jazzy Development Base"
 LABEL org.opencontainers.image.description="ROS 2 Jazzy desktop base with MAVROS, PlotJuggler, VRPN client and common ground-station development tools."
-LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-app-store"
+LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-images"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ROS_DISTRO=jazzy

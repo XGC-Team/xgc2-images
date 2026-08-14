@@ -4,7 +4,7 @@ FROM ${PARENT_IMAGE}
 
 LABEL org.opencontainers.image.title="XGC2 jammy humble CI ros"
 LABEL org.opencontainers.image.description="Ubuntu jammy + official ROS humble CI image for compiling product sources. No XGC2 APT packages."
-LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-app-store"
+LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-images"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=en_US.UTF-8

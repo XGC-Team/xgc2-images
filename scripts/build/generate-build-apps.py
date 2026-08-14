@@ -143,7 +143,7 @@ FROM ${{PARENT_IMAGE}}
 
 LABEL org.opencontainers.image.title="{title(ubuntu, layer, ros)}"
 LABEL org.opencontainers.image.description="{description(ubuntu, layer, ros)}"
-LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-app-store"
+LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-images"
 
 {chr(10).join(env)}
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -230,7 +230,7 @@ architectures:
   - amd64
   - arm64/v8
 license: Apache-2.0
-source: https://github.com/XGC-Team/xgc2-app-store
+source: https://github.com/XGC-Team/xgc2-images
 entrypoints:
   shell: /bin/bash
   healthcheck: /usr/local/bin/xgc2-build-healthcheck
@@ -255,9 +255,9 @@ additionalProperties:
   type: build
   crossVersionUpdate: true
   limit: 0
-  website: https://github.com/XGC-Team/xgc2-app-store
-  github: https://github.com/XGC-Team/xgc2-app-store
-  document: https://github.com/XGC-Team/xgc2-app-store/tree/master/apps/{key}
+  website: https://github.com/XGC-Team/xgc2-images
+  github: https://github.com/XGC-Team/xgc2-images
+  document: https://github.com/XGC-Team/xgc2-images/tree/master/apps/{key}
   architectures:
     - amd64
     - arm64/v8

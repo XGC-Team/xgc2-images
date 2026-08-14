@@ -3,7 +3,7 @@ FROM osrf/ros:jazzy-desktop-full
 
 LABEL org.opencontainers.image.title="Gazebo Harmonic ROS2 Bridge"
 LABEL org.opencontainers.image.description="Gazebo Harmonic with ROS 2 Jazzy integration for simulation workloads."
-LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-app-store"
+LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-images"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ROS_DISTRO=jazzy

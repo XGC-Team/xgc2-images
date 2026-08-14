@@ -15,8 +15,8 @@ additionalProperties:
   crossVersionUpdate: true
   limit: 0
   website: https://docs.ros.org/en/jazzy/
-  github: https://github.com/XGC-Team/xgc2-app-store
-  document: https://github.com/XGC-Team/xgc2-app-store/tree/master/apps/ros2-jazzy-dev-base
+  github: https://github.com/XGC-Team/xgc2-images
+  document: https://github.com/XGC-Team/xgc2-images/tree/master/apps/ros2-jazzy-dev-base
   architectures:
     - amd64
   batchInstallSupport: true

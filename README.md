@@ -77,7 +77,7 @@ matrix. A change to one layer rebuilds that layer and its descendants.
 XGC can sync the static catalog from:
 
 ```text
-https://raw.githubusercontent.com/XGC-Team/xgc2-app-store/master/catalog/index.yml
+https://raw.githubusercontent.com/XGC-Team/xgc2-images/master/catalog/index.yml
 ```
 
 The catalog points to app files in this repository and GHCR images built by CI.
