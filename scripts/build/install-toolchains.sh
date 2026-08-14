@@ -288,7 +288,14 @@ install_casadi() {
       exit 1
       ;;
   esac
-  python3 -m pip install --no-cache-dir "casadi==${casadi_version}" "Deprecated==1.2.14"
+  if [[ "${codename}" == "bionic" ]]; then
+    python3 -m pip install --no-cache-dir \
+      "casadi==${casadi_version}" "Deprecated==1.2.14" \
+      "dataclasses==0.8" "typing_extensions==4.1.1"
+  else
+    python3 -m pip install --no-cache-dir \
+      "casadi==${casadi_version}" "Deprecated==1.2.14"
+  fi
   python3 -c "import casadi, deprecated; print('casadi', casadi.__version__)"
 }
 
