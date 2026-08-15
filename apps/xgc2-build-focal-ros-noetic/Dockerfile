@@ -10,6 +10,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=en_US.UTF-8
 ENV LC_ALL=en_US.UTF-8
 ENV ROS_DISTRO=noetic
+ENV ROS_MASTER_URI=http://localhost:11311
 ENV DISABLE_ROS1_EOL_WARNINGS=1
 ENV PATH="/usr/local/go/bin:/usr/local/cargo/bin:/usr/local/bin:${PATH}"
 ENV RUSTUP_HOME=/usr/local/rustup
