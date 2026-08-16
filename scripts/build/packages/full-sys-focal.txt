@@ -2,6 +2,7 @@ gazebo11
 libgazebo11-dev
 libpcl-dev
 libopencv-dev
+libffmpeg-nvenc-dev
 libogre-1.9-dev
 libglew-dev
 libjpeg-dev
