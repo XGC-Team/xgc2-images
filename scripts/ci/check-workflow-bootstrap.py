@@ -11,6 +11,12 @@ Allowed apt: a locally built .deb under test, apt-get -f, and already-published
 XGC2 products (`xgc2-*`, `libxgc2-*`, `ros-*-xgc2-*`). High-level controllers
 and estimators may install those; images and intermediate libraries may not.
 
+Explicit upstream-integration exceptions are keyed centrally by product id,
+exact build-wrapper path, and operation. PX4 may run its pinned Ubuntu setup;
+Lichtblick may fetch its checksum-pinned portable FPM. Both still use an XGC2
+base image. The exception does not allow stock images or direct pip/toolchain
+bootstrap in arbitrary product code.
+
 xgc2-images Dockerfiles and scripts/build/ are not scanned. Product workflows,
 reachable build helpers, and image lock/manifest files are scanned. The image
 repository is the place to add missing distro/toolchain packages.
@@ -53,6 +59,24 @@ ALLOWED_IMAGE_RE = re.compile(
     re.IGNORECASE,
 )
 
+UPSTREAM_INTEGRATION_EXCEPTIONS: dict[str, dict[str, frozenset[str]]] = {
+    product_id: {
+        ".xgc2/scripts/build_runtime_deb_in_docker.sh": frozenset(
+            {"apt", "upstream-setup"}
+        )
+    }
+    for product_id in (
+        "xgc2-px4-sitl-112",
+        "xgc2-px4-sitl-114",
+        "xgc2-px4-sitl-116",
+    )
+}
+UPSTREAM_INTEGRATION_EXCEPTIONS["xgc2-lichtblick"] = {
+    ".xgc2/scripts/build_deb_in_docker.sh": frozenset(
+        {"apt", "pinned-fpm-download"}
+    )
+}
+
 HOST_B_RE = re.compile(
     r"\[self-hosted[^\]]*(?:xgc-team-b|\bxgc\b[^\]]*org[^\]]*docker)",
     re.IGNORECASE,
@@ -69,9 +93,12 @@ CURL_SH_RE = re.compile(r"curl\b[^|\n]*\|\s*(?:sudo\s+)?(?:bash|sh)\b", re.IGNOR
 TOOLCHAIN_DOWNLOAD_RE = re.compile(
     r"(?:go\.dev/dl/go|nodejs\.org/dist/|static\.rust-lang\.org/rustup|"
     r"sh\.rustup\.rs|\bgem\s+install\s+fpm\b|\bcargo\s+install\b|"
-    r"\bnpm\s+(?:i|install)\s+(?:-[^\s]*\s+)*-g\b|"
-    r"Tools/setup/ubuntu\.sh)",
+    r"\bnpm\s+(?:i|install)\s+(?:-[^\s]*\s+)*-g\b)",
     re.IGNORECASE,
+)
+UPSTREAM_SETUP_RE = re.compile(r"Tools/setup/ubuntu\.sh", re.IGNORECASE)
+PINNED_FPM_DOWNLOAD_RE = re.compile(
+    r"electron-builder-binaries/releases/download/fpm%40", re.IGNORECASE
 )
 APT_INSTALL_RE = re.compile(
     r"\b(?:apt-get|apt)\s+(?:-[^\s]+\s+)*install\b",
@@ -183,7 +210,30 @@ def apt_install_allowed(line: str) -> bool:
     )
 
 
-def scan_file(path: Path) -> list[str]:
+def product_id(root: Path) -> str:
+    metadata = root / ".xgc2" / "product.yml"
+    if not metadata.is_file():
+        return ""
+    match = re.search(
+        r"(?m)^id:\s*['\"]?([^'\"#\s]+)",
+        metadata.read_text(encoding="utf-8", errors="replace"),
+    )
+    return match.group(1) if match else ""
+
+
+def upstream_integration_allows(
+    root: Path, current_product_id: str, path: Path, operation: str
+) -> bool:
+    try:
+        relative_path = path.relative_to(root).as_posix()
+    except ValueError:
+        return False
+    return operation in UPSTREAM_INTEGRATION_EXCEPTIONS.get(
+        current_product_id, {}
+    ).get(relative_path, frozenset())
+
+
+def scan_file(root: Path, current_product_id: str, path: Path) -> list[str]:
     text = path.read_text(encoding="utf-8", errors="replace")
     findings: list[str] = []
     rel = str(path)
@@ -198,10 +248,13 @@ def scan_file(path: Path) -> list[str]:
             findings.append(
                 f"{rel}:{lineno}: public CI must not use Host B self-hosted runners"
             )
-        if PIP_RE.search(line) and not re.search(
-            r"\bpip(?:3)?\s+install\s+(?:--no-deps\s+)?\.\s+(?:--no-deps\b|$)",
-            line,
-            re.IGNORECASE,
+        if (
+            PIP_RE.search(line)
+            and not re.search(
+                r"\bpip(?:3)?\s+install\s+(?:--no-deps\s+)?\.\s+(?:--no-deps\b|$)",
+                line,
+                re.IGNORECASE,
+            )
         ):
             findings.append(f"{rel}:{lineno}: pip/python -m pip is toolchain bootstrap")
         if NPM_GLOBAL_RE.search(line):
@@ -214,7 +267,27 @@ def scan_file(path: Path) -> list[str]:
             findings.append(f"{rel}:{lineno}: curl|sh toolchain bootstrap")
         if TOOLCHAIN_DOWNLOAD_RE.search(line):
             findings.append(f"{rel}:{lineno}: downloaded toolchain/upstream bootstrap")
-        if APT_INSTALL_RE.search(line) and not apt_install_allowed(line):
+        if UPSTREAM_SETUP_RE.search(line) and not upstream_integration_allows(
+            root, current_product_id, path, "upstream-setup"
+        ):
+            findings.append(
+                f"{rel}:{lineno}: upstream setup is not registered for this product/path"
+            )
+        if PINNED_FPM_DOWNLOAD_RE.search(
+            line
+        ) and not upstream_integration_allows(
+            root, current_product_id, path, "pinned-fpm-download"
+        ):
+            findings.append(
+                f"{rel}:{lineno}: portable FPM download is not registered for this product/path"
+            )
+        if (
+            APT_INSTALL_RE.search(line)
+            and not apt_install_allowed(line)
+            and not upstream_integration_allows(
+                root, current_product_id, path, "apt"
+            )
+        ):
             findings.append(f"{rel}:{lineno}: apt install of distro/toolchain packages")
         if FORBIDDEN_CONTAINER_RE.search(line) and not ALLOWED_IMAGE_RE.search(line):
             if re.search(r"\b(?:container:|docker\s+run|ubuntu_image:|image:)\b", line) or "ubuntu:" in line or "ros:" in line:
@@ -262,8 +335,9 @@ def main() -> int:
         print(f"no product automation under {root}; nothing to check")
         return 0
     findings: list[str] = []
+    current_product_id = product_id(root)
     for path in files:
-        findings.extend(scan_file(path))
+        findings.extend(scan_file(root, current_product_id, path))
     if not any(
         ALLOWED_IMAGE_RE.search(path.read_text(encoding="utf-8", errors="replace"))
         for path in files
@@ -287,6 +361,10 @@ def main() -> int:
         )
         print(
             "Allowed apt: local .deb under test, and published xgc2-* / libxgc2-* / ros-*-xgc2-*.",
+            file=sys.stderr,
+        )
+        print(
+            "PX4/Lichtblick upstream preparation is allowed only for the centrally registered product id, wrapper, and operation.",
             file=sys.stderr,
         )
         for item in findings:

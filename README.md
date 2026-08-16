@@ -74,6 +74,14 @@ product repository. A workflow gate lives at
 `scripts/ci/check-workflow-bootstrap.py` and
 `.github/workflows/reusable-check-ci-bootstrap.yml`.
 
+The centrally registered upstream-integration exceptions are PX4 SITL and
+Lichtblick packaging. They must still start from a versioned XGC2 build image,
+but their exact build wrappers may prepare dependencies from the pinned
+upstream source or download a version-and-checksum-locked packaging helper.
+The allowlist is keyed by product id, wrapper path, and operation; it is not a
+general exemption for stock images, host setup actions, direct pip bootstrap,
+or unpinned toolchain downloads.
+
 CI runs one chain per Ubuntu × architecture in parallel (eight jobs when the
 full matrix is dirty). Each chain is `base` → `dev` → `ros` → `full` on the
 same runner. After a layer is loaded locally, registry pushes run
@@ -192,4 +200,3 @@ docker run --rm xgc2-ros1-central-sim:local \
 ## License
 
 See `LICENSE`.
-

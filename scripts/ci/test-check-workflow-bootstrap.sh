@@ -10,11 +10,14 @@ trap 'rm -rf "${tmpdir}"' EXIT
 
 pass_dir="${tmpdir}/pass/.github/workflows"
 fail_dir="${tmpdir}/fail/.github/workflows"
+upstream_dir="${tmpdir}/upstream/.github/workflows"
 mkdir -p \
   "${pass_dir}" \
   "${fail_dir}" \
+  "${upstream_dir}" \
   "${tmpdir}/pass/.xgc2/scripts" \
   "${tmpdir}/fail/.xgc2/scripts" \
+  "${tmpdir}/upstream/.xgc2/scripts" \
   "${tmpdir}/fail/manifest"
 
 cat >"${pass_dir}/ci.yml" <<'EOF'
@@ -66,12 +69,43 @@ cat >"${tmpdir}/fail/manifest/build.yaml" <<'EOF'
 docker_image: ros:noetic-ros-base-focal
 EOF
 
+cat >"${upstream_dir}/ci.yml" <<'EOF'
+name: upstream
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: ghcr.io/xgc-team/xgc2-images/xgc2-build-noble-full-jazzy:1.0.0
+EOF
+
+cat >"${tmpdir}/upstream/.xgc2/product.yml" <<'EOF'
+schema: xgc2.product.v1
+id: xgc2-px4-sitl-116
+EOF
+
+cat >"${tmpdir}/upstream/.xgc2/scripts/build_runtime_deb_in_docker.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+apt-get install -y build-essential
+bash "${PX4_DIR}/Tools/setup/ubuntu.sh" --no-nuttx
+EOF
+
 if ! python3 "${checker}" "${tmpdir}/pass"; then
   echo "expected pass fixture to succeed" >&2
   fail=1
 fi
 if python3 "${checker}" "${tmpdir}/fail"; then
   echo "expected fail fixture to fail" >&2
+  fail=1
+fi
+if ! python3 "${checker}" "${tmpdir}/upstream"; then
+  echo "expected registered upstream fixture to succeed" >&2
+  fail=1
+fi
+printf '%s\n' 'python3 -m pip install -r Tools/setup/requirements.txt' \
+  >>"${tmpdir}/upstream/.xgc2/scripts/build_runtime_deb_in_docker.sh"
+if python3 "${checker}" "${tmpdir}/upstream"; then
+  echo "expected direct pip bootstrap in registered product to fail" >&2
   fail=1
 fi
 
