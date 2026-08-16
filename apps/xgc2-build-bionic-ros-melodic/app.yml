@@ -3,7 +3,7 @@ name: XGC2 bionic melodic CI ros
 version: 1.0.0
 image: ghcr.io/xgc-team/xgc2-images/xgc2-build-bionic-ros-melodic:1.0.0
 dependsOnApp: xgc2-build-bionic-dev
-description: Ubuntu bionic + official ROS melodic CI image for compiling product sources. No XGC2 APT packages.
+description: Ubuntu bionic + official ROS melodic CI image for compiling product sources, including mavros-msgs. No XGC2 APT packages.
 type: build
 buildLayer: ros
 tags:

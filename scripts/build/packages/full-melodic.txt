@@ -1,4 +1,5 @@
 # Melodic simulation / vision / MAVROS stack. Official packages only.
+# Keep MAVROS here so it matches full-noetic; product CI must not apt it.
 cv-bridge
 image-transport
 pcl-conversions
@@ -10,3 +11,6 @@ joint-state-publisher-gui
 controller-manager
 ddynamic-reconfigure
 diagnostic-updater
+mavros
+mavros-extras
+mavlink

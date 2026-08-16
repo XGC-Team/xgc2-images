@@ -1,5 +1,6 @@
 # Official ROS Melodic core. Short names are prefixed with ros-melodic- at install.
 # Product packages are forbidden in build images.
+# Keep this list aligned with ros-noetic.txt for shared ROS1 compile deps.
 ros-base
 catkin
 roscpp
@@ -32,3 +33,4 @@ rosgraph
 serial
 robot-state-publisher
 joint-state-publisher
+mavros-msgs

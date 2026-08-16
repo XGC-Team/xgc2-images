@@ -3,7 +3,7 @@ name: XGC2 bionic melodic CI full
 version: 1.0.0
 image: ghcr.io/xgc-team/xgc2-images/xgc2-build-bionic-full-melodic:1.0.0
 dependsOnApp: xgc2-build-bionic-ros-melodic
-description: Ubuntu bionic + official ROS melodic full CI image including simulation and vision stacks. No XGC2 APT packages.
+description: Ubuntu bionic + official ROS melodic full CI image including simulation, vision, and MAVROS. No XGC2 APT packages.
 type: build
 buildLayer: full
 tags:
