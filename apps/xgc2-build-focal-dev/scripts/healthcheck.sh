@@ -12,6 +12,8 @@ command -v pnpm >/dev/null
 command -v uv >/dev/null
 command -v rustc >/dev/null
 command -v cargo >/dev/null
+test "$(rustc --version | awk '{print $2}')" = "1.93.0"
+test "$(cargo --version | awk '{print $2}')" = "1.93.0"
 command -v go >/dev/null
 command -v gh >/dev/null
 command -v buf >/dev/null

@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 APPS = ROOT / "apps"
 VERSION = "1.0.0"
 REGISTRY = "ghcr.io/xgc-team/xgc2-images"
+RUST_TOOLCHAIN_VERSION = "1.93.0"
 
 TREES = [
     {
@@ -179,6 +180,11 @@ def healthcheck(ubuntu: str, layer: str, ros: str | None) -> str:
         f'test "${{VERSION_CODENAME}}" = "{ubuntu}"',
         "/usr/local/bin/xgc2-build-assert-no-xgc2-apt.sh",
     ]
+    if layer != "base":
+        lines += [
+            f'test "$(rustc --version | awk \'{{print $2}}\')" = "{RUST_TOOLCHAIN_VERSION}"',
+            f'test "$(cargo --version | awk \'{{print $2}}\')" = "{RUST_TOOLCHAIN_VERSION}"',
+        ]
     # assert script is only in the image during build; copy it to a stable path
     if layer == "base":
         lines += [

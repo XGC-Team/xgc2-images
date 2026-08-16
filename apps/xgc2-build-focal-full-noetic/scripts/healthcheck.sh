@@ -3,6 +3,8 @@ set -euo pipefail
 . /etc/os-release
 test "${VERSION_CODENAME}" = "focal"
 /usr/local/bin/xgc2-build-assert-no-xgc2-apt.sh
+test "$(rustc --version | awk '{print $2}')" = "1.93.0"
+test "$(cargo --version | awk '{print $2}')" = "1.93.0"
 set +u
 source /opt/ros/noetic/setup.bash
 set -u

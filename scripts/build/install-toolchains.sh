@@ -27,6 +27,8 @@ GH_VERSION="2.74.2"
 BUF_VERSION="1.47.2"
 SKOPEO_VERSION="1.20.0"
 PYTHON_UV_VERSION="3.12"
+RUSTUP_VERSION="1.29.0"
+RUST_TOOLCHAIN_VERSION="1.93.0"
 
 declare -A NODE22_SHA=(
   [amd64]=f4cb75bb036f0d0eddf6b79d9596df1aaab9ddccd6a20bf489be5abe9467e84e
@@ -55,6 +57,10 @@ declare -A GH_SHA=(
 declare -A BUF_SHA=(
   [amd64]=3a0c4da8d46eea8136affa63db202c76a44f8112384160b73c3fffb1cf14b5d8
   [arm64]=47ddd7ac0bb2a29f8c92aa420dd113bed3b6857190976402eec93ab9847270b4
+)
+declare -A RUSTUP_SHA=(
+  [amd64]=4acc9acc76d5079515b46346a485974457b5a79893cfb01112423c89aeb5aa10
+  [arm64]=9732d6c5e2a098d3521fca8145d826ae0aaa067ef2385ead08e6feac88fa5792
 )
 # Static skopeo for Ubuntu 20.04: focal archives do not ship the package.
 # Binaries from https://github.com/felipecrs/skopeo-bin (official skopeo
@@ -169,11 +175,13 @@ install_rust() {
   export RUSTUP_HOME=/usr/local/rustup
   export CARGO_HOME=/usr/local/cargo
   mkdir -p "${RUSTUP_HOME}" "${CARGO_HOME}"
-  curl -fsSL --retry 5 --retry-delay 2 \
-    "https://static.rust-lang.org/rustup/dist/${rustup_triple}/rustup-init" \
-    -o /tmp/rustup-init
+  fetch_verify \
+    "https://static.rust-lang.org/rustup/archive/${RUSTUP_VERSION}/${rustup_triple}/rustup-init" \
+    /tmp/rustup-init \
+    "${RUSTUP_SHA[${arch}]}"
   chmod +x /tmp/rustup-init
-  /tmp/rustup-init -y --profile minimal --default-toolchain stable --no-modify-path
+  /tmp/rustup-init -y --profile minimal \
+    --default-toolchain "${RUST_TOOLCHAIN_VERSION}" --no-modify-path
   rm -f /tmp/rustup-init
   chmod -R a+rX "${RUSTUP_HOME}" "${CARGO_HOME}"
   ln -sfn "${CARGO_HOME}/bin/rustc" /usr/local/bin/rustc
@@ -181,6 +189,8 @@ install_rust() {
   ln -sfn "${CARGO_HOME}/bin/rustup" /usr/local/bin/rustup
   rustc --version
   cargo --version
+  test "$(rustc --version | awk '{print $2}')" = "${RUST_TOOLCHAIN_VERSION}"
+  test "$(cargo --version | awk '{print $2}')" = "${RUST_TOOLCHAIN_VERSION}"
 }
 
 install_bun() {
