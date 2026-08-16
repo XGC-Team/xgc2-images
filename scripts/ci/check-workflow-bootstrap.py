@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail if GitHub workflows bootstrap OS/toolchain deps.
+"""Fail if product automation bootstraps OS/toolchain deps.
 
 Product CI must run inside ghcr.io/xgc-team/xgc2-images/xgc2-build-* .
 Forbidden: apt/pip toolchain installs, actions/setup-*, rustup, cargo install,
@@ -11,8 +11,9 @@ Allowed apt: a locally built .deb under test, apt-get -f, and already-published
 XGC2 products (`xgc2-*`, `libxgc2-*`, `ros-*-xgc2-*`). High-level controllers
 and estimators may install those; images and intermediate libraries may not.
 
-xgc2-images Dockerfiles and scripts/build/ are not scanned; only
-.github/workflows/*.yml. Those image build scripts are the place to apt.
+xgc2-images Dockerfiles and scripts/build/ are not scanned. Product workflows,
+reachable build helpers, and image lock/manifest files are scanned. The image
+repository is the place to add missing distro/toolchain packages.
 """
 from __future__ import annotations
 
@@ -36,11 +37,12 @@ FORBIDDEN_USES = (
 FORBIDDEN_CONTAINER_RE = re.compile(
     r"""(?x)
     (?:
-        ubuntu:(?:latest|18\.04|20\.04|22\.04|24\.04|bionic|focal|jammy|noble)
+        ubuntu:(?:latest|18\.04|20\.04|22\.04|24\.04|bionic|focal|jammy|noble|\$\{[A-Za-z_][A-Za-z0-9_]*\})
         | ros:(?:melodic|noetic|humble|jazzy|foxy)
         | althack/ros2
         | ghcr\.io/sloretz/ros
         | osrf/ros
+        | docker\.io/library/ros@sha256:[0-9a-f]{64}
     )
     """,
     re.IGNORECASE,
@@ -64,8 +66,24 @@ NPM_GLOBAL_RE = re.compile(r"npm\s+(?:i|install)\s+(?:-[^\s]*\s+)*-g\b", re.IGNO
 CARGO_INSTALL_RE = re.compile(r"\bcargo\s+install\b", re.IGNORECASE)
 RUSTUP_RE = re.compile(r"sh\.rustup\.rs|\brustup\s+", re.IGNORECASE)
 CURL_SH_RE = re.compile(r"curl\b[^|\n]*\|\s*(?:sudo\s+)?(?:bash|sh)\b", re.IGNORECASE)
+TOOLCHAIN_DOWNLOAD_RE = re.compile(
+    r"(?:go\.dev/dl/go|nodejs\.org/dist/|static\.rust-lang\.org/rustup|"
+    r"sh\.rustup\.rs|\bgem\s+install\s+fpm\b|\bcargo\s+install\b|"
+    r"\bnpm\s+(?:i|install)\s+(?:-[^\s]*\s+)*-g\b|"
+    r"Tools/setup/ubuntu\.sh)",
+    re.IGNORECASE,
+)
 APT_INSTALL_RE = re.compile(
     r"\b(?:apt-get|apt)\s+(?:-[^\s]+\s+)*install\b",
+    re.IGNORECASE,
+)
+AUTOMATION_SCRIPT_RE = re.compile(
+    r"^(?:build|bootstrap|ci(?:_|-)|configure|fetch|install_published|prepare)",
+    re.IGNORECASE,
+)
+LEGACY_XGC2_APT_PACKAGE_RE = re.compile(
+    r"^ros-(?:melodic|noetic|\$\{ROS_DISTRO\})-"
+    r"(?:scout-msgs|swarm-ros-bridge)$",
     re.IGNORECASE,
 )
 
@@ -123,7 +141,15 @@ def _apt_packages(line: str) -> list[str]:
         "2>/dev/null",
     }
     pkgs: list[str] = []
-    for tok in line.replace(",", " ").split():
+    match = APT_INSTALL_RE.search(line)
+    if not match:
+        return []
+    tokens = line[match.start() :].replace(",", " ").split()
+    install_index = next(
+        (index for index, value in enumerate(tokens) if value.lower() == "install"),
+        len(tokens),
+    )
+    for tok in tokens[install_index + 1 :]:
         low = tok.lower()
         if low in skip_exact or low.startswith("-") or low.endswith(":") or "acquire::" in low:
             continue
@@ -132,10 +158,12 @@ def _apt_packages(line: str) -> list[str]:
 
 
 def _is_published_xgc2_product(pkg: str) -> bool:
-    name = pkg.split("=", 1)[0].lower()
+    name = pkg.strip("'\";,()").split("=", 1)[0].lower()
     if name.startswith("xgc2-") or name.startswith("libxgc2-"):
         return True
-    return name.startswith("ros-") and "-xgc2-" in name
+    return (name.startswith("ros-") and "-xgc2-" in name) or bool(
+        LEGACY_XGC2_APT_PACKAGE_RE.fullmatch(name)
+    )
 
 
 def apt_install_allowed(line: str) -> bool:
@@ -143,11 +171,13 @@ def apt_install_allowed(line: str) -> bool:
     if not pkgs:
         return True
     return all(
-        p.startswith("./")
-        or p.endswith(".deb")
+        p.strip("'\";,()").startswith("./")
+        or p.strip("'\";,()").endswith(".deb")
         or "*.deb" in p
         or "/debs/" in p
-        or p.startswith("debs/")
+        or "/workspace/out/" in p
+        or p.strip("'\";,()").startswith("debs/")
+        or ("deb" in p.lower() and p.strip("'\";,()").startswith("$"))
         or _is_published_xgc2_product(p)
         for p in pkgs
     )
@@ -168,7 +198,11 @@ def scan_file(path: Path) -> list[str]:
             findings.append(
                 f"{rel}:{lineno}: public CI must not use Host B self-hosted runners"
             )
-        if PIP_RE.search(line):
+        if PIP_RE.search(line) and not re.search(
+            r"\bpip(?:3)?\s+install\s+(?:--no-deps\s+)?\.\s+(?:--no-deps\b|$)",
+            line,
+            re.IGNORECASE,
+        ):
             findings.append(f"{rel}:{lineno}: pip/python -m pip is toolchain bootstrap")
         if NPM_GLOBAL_RE.search(line):
             findings.append(f"{rel}:{lineno}: npm install -g is toolchain bootstrap")
@@ -178,6 +212,8 @@ def scan_file(path: Path) -> list[str]:
             findings.append(f"{rel}:{lineno}: rustup is toolchain bootstrap")
         if CURL_SH_RE.search(line):
             findings.append(f"{rel}:{lineno}: curl|sh toolchain bootstrap")
+        if TOOLCHAIN_DOWNLOAD_RE.search(line):
+            findings.append(f"{rel}:{lineno}: downloaded toolchain/upstream bootstrap")
         if APT_INSTALL_RE.search(line) and not apt_install_allowed(line):
             findings.append(f"{rel}:{lineno}: apt install of distro/toolchain packages")
         if FORBIDDEN_CONTAINER_RE.search(line) and not ALLOWED_IMAGE_RE.search(line):
@@ -188,23 +224,53 @@ def scan_file(path: Path) -> list[str]:
     return findings
 
 
-def workflow_files(root: Path) -> list[Path]:
+def automation_files(root: Path) -> list[Path]:
+    files: set[Path] = set()
     wf = root / ".github" / "workflows"
-    if not wf.is_dir():
-        return []
-    files = sorted(p for p in wf.iterdir() if p.suffix in {".yml", ".yaml"} and p.is_file())
-    return files
+    if wf.is_dir():
+        files.update(
+            path
+            for path in wf.iterdir()
+            if path.suffix in {".yml", ".yaml"} and path.is_file()
+        )
+    scripts = root / ".xgc2" / "scripts"
+    if scripts.is_dir():
+        files.update(
+            path
+            for path in scripts.rglob("*")
+            if path.is_file()
+            and path.suffix in {".sh", ".bash"}
+            and AUTOMATION_SCRIPT_RE.match(path.name)
+        )
+    manifest = root / "manifest"
+    if manifest.is_dir():
+        files.update(
+            path
+            for path in manifest.rglob("*")
+            if path.is_file() and path.suffix in {".json", ".yml", ".yaml"}
+        )
+    integration_lock = root / ".xgc2" / "integration-lock.json"
+    if integration_lock.is_file():
+        files.add(integration_lock)
+    return sorted(files)
 
 
 def main() -> int:
     root = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
-    files = workflow_files(root)
+    files = automation_files(root)
     if not files:
-        print(f"no GitHub workflows under {root}/.github/workflows; nothing to check")
+        print(f"no product automation under {root}; nothing to check")
         return 0
     findings: list[str] = []
     for path in files:
         findings.extend(scan_file(path))
+    if not any(
+        ALLOWED_IMAGE_RE.search(path.read_text(encoding="utf-8", errors="replace"))
+        for path in files
+    ):
+        findings.append(
+            f"{root}: product automation does not reference an XGC2-owned image"
+        )
     if findings:
         print("CI bootstrap gate failed. Use an XGC2 build image and delete these steps:", file=sys.stderr)
         print(
@@ -226,7 +292,7 @@ def main() -> int:
         for item in findings:
             print(item, file=sys.stderr)
         return 1
-    print(f"CI bootstrap gate passed ({len(files)} workflow file(s)).")
+    print(f"CI bootstrap gate passed ({len(files)} automation file(s)).")
     return 0
 
 
