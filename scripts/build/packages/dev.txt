@@ -1,4 +1,5 @@
 # Cross-distro compile and Debian packaging tools. No ROS, no XGC2.
+# libzmqpp-dev is only in Ubuntu 18.04/20.04; keep it in dev-bionic/dev-focal.
 build-essential
 g++
 gcc
@@ -55,4 +56,3 @@ sudo
 meson
 libusb-1.0-0-dev
 libzmq3-dev
-libzmqpp-dev

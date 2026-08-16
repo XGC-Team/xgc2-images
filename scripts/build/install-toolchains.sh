@@ -276,26 +276,38 @@ install_python_proto_generators() {
   esac
 }
 
+# Official CasADi 3.5.5 cp36 wheels. pip index resolution on bionic-arm64
+# skips 3.5.5 (it only offers 3.6+), so install by pinned URL like Node/Go.
+declare -A CASADI355_WHEEL=(
+  [amd64]=https://files.pythonhosted.org/packages/62/55/61a10cad304f80621836b811d70666c06a9c22863768cc23edd6904bb35f/casadi-3.5.5-cp36-none-manylinux1_x86_64.whl
+  [arm64]=https://files.pythonhosted.org/packages/cc/fe/15ff5bdfa24cc0e420a7d4e807d2b56c4aced9ec5eb25315a7e48271b88d/casadi-3.5.5-cp36-none-manylinux2014_aarch64.whl
+)
+declare -A CASADI355_SHA=(
+  [amd64]=5f6eb8de31735c14ecc777e3ad77b57767b5f2dbea29265909ef696f51e8be92
+  [arm64]=adf20c34ba2cec1840a026023d93cc6d9b3581dfda6a044f434fc75b50c9a2ce
+)
+
 install_casadi() {
   # Shared NMPC / acados / controller codegen pin. Bionic stays on 3.5.5
   # because 18.04's Python 3.6 cannot import CasADi 3.7.
-  local casadi_version
   case "${codename}" in
-    bionic) casadi_version="3.5.5" ;;
-    focal|jammy|noble) casadi_version="3.7.2" ;;
+    bionic)
+      local wheel="/tmp/casadi-3.5.5.whl"
+      fetch_verify "${CASADI355_WHEEL[${arch}]}" "${wheel}" "${CASADI355_SHA[${arch}]}"
+      python3 -m pip install --no-cache-dir \
+        "${wheel}" "Deprecated==1.2.14" \
+        "dataclasses==0.8" "typing_extensions==4.1.1"
+      rm -f "${wheel}"
+      ;;
+    focal|jammy|noble)
+      python3 -m pip install --no-cache-dir \
+        "casadi==3.7.2" "Deprecated==1.2.14"
+      ;;
     *)
       echo "unsupported Ubuntu codename for CasADi: ${codename}" >&2
       exit 1
       ;;
   esac
-  if [[ "${codename}" == "bionic" ]]; then
-    python3 -m pip install --no-cache-dir \
-      "casadi==${casadi_version}" "Deprecated==1.2.14" \
-      "dataclasses==0.8" "typing_extensions==4.1.1"
-  else
-    python3 -m pip install --no-cache-dir \
-      "casadi==${casadi_version}" "Deprecated==1.2.14"
-  fi
   python3 -c "import casadi, deprecated; print('casadi', casadi.__version__)"
 }
 

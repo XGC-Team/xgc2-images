@@ -201,7 +201,11 @@ def healthcheck(ubuntu: str, layer: str, ros: str | None) -> str:
             "command -v gh >/dev/null",
             "command -v buf >/dev/null",
             "command -v rg >/dev/null",
-            "dpkg-query -W libzmq3-dev libzmqpp-dev cmake fakeroot dpkg-dev >/dev/null",
+            (
+                "dpkg-query -W libzmq3-dev libzmqpp-dev cmake fakeroot dpkg-dev >/dev/null"
+                if ubuntu in {"bionic", "focal"}
+                else "dpkg-query -W libzmq3-dev cmake fakeroot dpkg-dev >/dev/null"
+            ),
             "python3 -c 'import yaml,numpy'",
         ]
         if ubuntu == "bionic":
