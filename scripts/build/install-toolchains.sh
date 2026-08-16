@@ -309,6 +309,8 @@ install_casadi() {
     bionic)
       local wheel_url="${CASADI355_WHEEL[${arch}]}"
       local wheel="/tmp/${wheel_url##*/}"
+      # Bionic's pip 9 predates the manylinux2014 tag used by the arm64 wheel.
+      pip_install --upgrade "pip==21.3.1"
       fetch_verify "${wheel_url}" "${wheel}" "${CASADI355_SHA[${arch}]}"
       pip_install \
         "${wheel}" "Deprecated==1.2.14" \
