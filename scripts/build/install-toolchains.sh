@@ -97,6 +97,14 @@ fetch_verify() {
   echo "${sha}  ${dest}" | sha256sum -c -
 }
 
+pip_install() {
+  local args=(--no-cache-dir)
+  if [[ "${codename}" == "noble" ]]; then
+    args+=(--break-system-packages)
+  fi
+  python3 -m pip install "${args[@]}" "$@"
+}
+
 install_node() {
   local version sha tarball url
   if [[ "${codename}" == "bionic" ]]; then
@@ -254,7 +262,7 @@ install_meson() {
   # noble already has 1.3 from apt. bionic stays on archive meson (unused).
   case "${codename}" in
     focal|jammy)
-      python3 -m pip install --no-cache-dir "meson==1.3.2"
+      pip_install "meson==1.3.2"
       ;;
     *)
       return 0
@@ -266,8 +274,15 @@ install_meson() {
 install_python_proto_generators() {
   # xgc2-protobuf generate.sh imports grpc_tools.protoc.
   case "${codename}" in
-    jammy|noble)
-      python3 -m pip install --no-cache-dir "grpcio-tools==1.70.0" "PyYAML==6.0.2"
+    jammy)
+      pip_install "grpcio-tools==1.70.0" "PyYAML==6.0.2"
+      python3 -c "import grpc_tools.protoc, yaml"
+      ;;
+    noble)
+      # Ubuntu owns python3-yaml without pip RECORD metadata. Install the
+      # pinned wheel in /usr/local without attempting to uninstall the Deb.
+      pip_install --ignore-installed "PyYAML==6.0.2"
+      pip_install "grpcio-tools==1.70.0"
       python3 -c "import grpc_tools.protoc, yaml"
       ;;
     *)
@@ -292,15 +307,16 @@ install_casadi() {
   # because 18.04's Python 3.6 cannot import CasADi 3.7.
   case "${codename}" in
     bionic)
-      local wheel="/tmp/casadi-3.5.5.whl"
-      fetch_verify "${CASADI355_WHEEL[${arch}]}" "${wheel}" "${CASADI355_SHA[${arch}]}"
-      python3 -m pip install --no-cache-dir \
+      local wheel_url="${CASADI355_WHEEL[${arch}]}"
+      local wheel="/tmp/${wheel_url##*/}"
+      fetch_verify "${wheel_url}" "${wheel}" "${CASADI355_SHA[${arch}]}"
+      pip_install \
         "${wheel}" "Deprecated==1.2.14" \
         "dataclasses==0.8" "typing_extensions==4.1.1"
       rm -f "${wheel}"
       ;;
     focal|jammy|noble)
-      python3 -m pip install --no-cache-dir \
+      pip_install \
         "casadi==3.7.2" "Deprecated==1.2.14"
       ;;
     *)
