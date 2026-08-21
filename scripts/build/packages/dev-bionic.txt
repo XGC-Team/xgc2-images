@@ -27,4 +27,5 @@ dbus-x11
 python3-nose
 python3-matplotlib
 python3-scipy
+python3-wrapt
 python3-pil

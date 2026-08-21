@@ -57,5 +57,6 @@ xdg-utils
 libarchive-tools
 python3-matplotlib
 python3-scipy
+python3-wrapt
 python3-pil
 python3-opencv
