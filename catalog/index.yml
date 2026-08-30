@@ -282,9 +282,9 @@ apps:
       - Noetic
   - key: xgc2-build-focal-full-noetic
     name: XGC2 focal noetic CI full
-    version: 1.0.0
+    version: 1.0.1
     type: build
-    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-focal-full-noetic:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-focal-full-noetic:1.0.1
     app: ../apps/xgc2-build-focal-full-noetic/app.yml
     data: ../apps/xgc2-build-focal-full-noetic/data.yml
     compose: ../apps/xgc2-build-focal-full-noetic/docker-compose.yml

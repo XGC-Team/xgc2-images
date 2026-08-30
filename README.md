@@ -54,7 +54,7 @@ Every build image is amd64 and arm64.
 | `xgc2-build-focal-base` | `base` | `ubuntu:20.04` + apt hygiene + ripgrep |
 | `xgc2-build-focal-dev` | `dev` | compilers, Node 22, pnpm 11, yarn 4.17, uv, Go 1.26, Rust, Bun, skopeo, gh, buf, xvfb, protobuf/grpc, CasADi 3.7.2 |
 | `xgc2-build-focal-ros-noetic` | `ros` | official ROS Noetic core |
-| `xgc2-build-focal-full-noetic` | `full` | Gazebo 11, RViz, PCL, OpenCV, MAVROS |
+| `xgc2-build-focal-full-noetic` | `full` | Gazebo 11, RViz, PCL, Python OpenCV contrib 4.12, MAVROS |
 | `xgc2-build-jammy-base` | `base` | `ubuntu:22.04` + apt hygiene + ripgrep |
 | `xgc2-build-jammy-dev` | `dev` | same toolchain family as focal |
 | `xgc2-build-jammy-ros-humble` | `ros` | official ROS 2 Humble core |

@@ -19,6 +19,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY scripts/build/ /tmp/xgc2-build/
 COPY apps/xgc2-build-focal-full-noetic/scripts/healthcheck.sh /usr/local/bin/xgc2-build-healthcheck
+COPY apps/xgc2-build-focal-full-noetic/python-vision-requirements.lock.txt /tmp/xgc2-python-vision-requirements.lock.txt
 
 RUN chmod +x /tmp/xgc2-build/*.sh /usr/local/bin/xgc2-build-healthcheck \
  && cp /tmp/xgc2-build/assert-no-xgc2-apt.sh /usr/local/bin/xgc2-build-assert-no-xgc2-apt.sh \
@@ -27,8 +28,11 @@ RUN chmod +x /tmp/xgc2-build/*.sh /usr/local/bin/xgc2-build-healthcheck \
  && /tmp/xgc2-build/install-packages.sh /tmp/xgc2-build/packages/full-sys-focal.txt \
  && /tmp/xgc2-build/install-ros-packages.sh noetic /tmp/xgc2-build/packages/full-noetic.txt \
  && if [[ -x /opt/ros/noetic/lib/mavros/install_geographiclib_datasets.sh ]]; then /opt/ros/noetic/lib/mavros/install_geographiclib_datasets.sh || true; fi \
+ && python3 -m pip install --no-cache-dir --only-binary=:all: --require-hashes \
+      -r /tmp/xgc2-python-vision-requirements.lock.txt \
+ && python3 -c 'import cv2, numpy; assert cv2.__version__ == "4.12.0"; assert numpy.__version__ == "1.24.4"; assert hasattr(cv2.aruco, "ArucoDetector")' \
  && /tmp/xgc2-build/assert-no-xgc2-apt.sh \
- && rm -rf /tmp/xgc2-build /var/lib/apt/lists/*
+ && rm -rf /tmp/xgc2-build /tmp/xgc2-python-vision-requirements.lock.txt /var/lib/apt/lists/*
 
 WORKDIR /work
 CMD ["bash"]

@@ -8,9 +8,9 @@ additionalProperties:
     - CI
     - Focal
     - Noetic
-  shortDescEn: Ubuntu focal + official ROS noetic full CI image including simulation and vision stacks. No XGC2 APT packages.
+  shortDescEn: Ubuntu focal + official ROS noetic full CI image including simulation and pinned Python OpenCV contrib 4.12. No XGC2 APT packages.
   description:
-    en: Ubuntu focal + official ROS noetic full CI image including simulation and vision stacks. No XGC2 APT packages.
+    en: Ubuntu focal + official ROS noetic full CI image including simulation and pinned Python OpenCV contrib 4.12. No XGC2 APT packages.
   type: build
   crossVersionUpdate: true
   limit: 0

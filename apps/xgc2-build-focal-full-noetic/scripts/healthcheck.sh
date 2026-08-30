@@ -15,6 +15,7 @@ dpkg-query -W ros-noetic-pcl-ros ros-noetic-pcl-conversions \
   ros-noetic-eigen-conversions ros-noetic-tf libgflags-dev \
   libgoogle-glog-dev libtbb-dev libyaml-cpp-dev libpcl-dev \
   libffmpeg-nvenc-dev nlohmann-json3-dev >/dev/null
+python3 -c 'import cv2, numpy; assert cv2.__version__ == "4.12.0"; assert numpy.__version__ == "1.24.4"; assert hasattr(cv2.aruco, "ArucoDetector")'
 if dpkg-query -W -f='${Package}\n' | grep -E '^(lib)?xgc2-|ros-[a-z]+-xgc2-'; then
   echo "XGC2 packages leaked into build image" >&2
   exit 1
