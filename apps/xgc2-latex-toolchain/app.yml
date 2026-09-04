@@ -1,0 +1,23 @@
+key: xgc2-latex-toolchain
+name: XGC2 LaTeX toolchain
+version: 1.0.0
+image: ghcr.io/xgc-team/xgc2-images/xgc2-latex-toolchain:1.0.0
+description: Noble no-network XeLaTeX task image. latexmk + XeLaTeX, trimmed TeX Live, no XGC2 APT packages. Compile tasks must run --network=none and must not mount docker.sock.
+type: development
+tags:
+  - Development
+  - TeX
+  - LaTeX
+  - XeLaTeX
+  - Noble
+architectures:
+  - amd64
+  - arm64/v8
+license: Apache-2.0
+source: https://github.com/XGC-Team/xgc2-images
+upstreamReferences:
+  - ghcr.io/xgc-team/xgc2-images/xgc2-build-noble-base:1.0.0
+  - Debian texlive-xetex / latexmk
+entrypoints:
+  shell: /bin/bash
+  healthcheck: /usr/local/bin/xgc2-latex-toolchain-healthcheck

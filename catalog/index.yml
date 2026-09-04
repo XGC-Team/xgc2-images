@@ -1,5 +1,5 @@
 name: XGC2 Images
-updatedAt: "2026-08-15"
+updatedAt: "2026-09-05"
 apps:
   - key: xgc-ros1-runtime
     name: ROS1 Simulation Kit
@@ -172,6 +172,19 @@ apps:
       - CI
       - STT
       - Jammy
+  - key: xgc2-latex-toolchain
+    name: XGC2 LaTeX toolchain
+    version: 1.0.0
+    type: development
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-latex-toolchain:1.0.0
+    app: ../apps/xgc2-latex-toolchain/app.yml
+    data: ../apps/xgc2-latex-toolchain/data.yml
+    compose: ../apps/xgc2-latex-toolchain/docker-compose.yml
+    tags:
+      - TeX
+      - LaTeX
+      - XeLaTeX
+      - Noble
   - key: ros-jazzy-desktop-full
     name: ROS Jazzy Desktop Full
     version: 1.0.0

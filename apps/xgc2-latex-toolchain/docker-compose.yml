@@ -1,0 +1,15 @@
+services:
+  xgc2-latex-toolchain:
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-latex-toolchain:1.0.0
+    container_name: ${CONTAINER_NAME}
+    working_dir: /work
+    volumes:
+      - ${PWD}:/work
+    stdin_open: true
+    tty: true
+    command: ["bash"]
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/xgc2-latex-toolchain-healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 2

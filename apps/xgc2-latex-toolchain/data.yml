@@ -1,0 +1,31 @@
+name: XGC2 LaTeX toolchain
+title: XGC2 LaTeX toolchain
+additionalProperties:
+  key: xgc2-latex-toolchain
+  name: XGC2 LaTeX toolchain
+  tags:
+    - Development
+    - TeX
+    - LaTeX
+    - XeLaTeX
+    - Noble
+  shortDescEn: Noble XeLaTeX task image with latexmk. No XGC2 APT packages.
+  description:
+    en: Task image for restricted latexmk + XeLaTeX builds. Dependencies are installed here. Compile invocations must use --network=none and must not mount docker.sock.
+  type: development
+  crossVersionUpdate: true
+  limit: 0
+  website: https://github.com/XGC-Team/xgc2-images
+  github: https://github.com/XGC-Team/xgc2-images
+  document: https://github.com/XGC-Team/xgc2-images/tree/master/apps/xgc2-latex-toolchain
+  architectures:
+    - amd64
+    - arm64/v8
+  batchInstallSupport: false
+  formFields:
+    - default: xgc2-latex-toolchain
+      envKey: CONTAINER_NAME
+      label:
+        en: Container name
+      required: true
+      type: text
