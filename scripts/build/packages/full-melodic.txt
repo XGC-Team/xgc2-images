@@ -2,6 +2,7 @@
 # Keep MAVROS here so it matches full-noetic; product CI must not apt it.
 cv-bridge
 image-transport
+camera-info-manager
 pcl-conversions
 pcl-ros
 rviz

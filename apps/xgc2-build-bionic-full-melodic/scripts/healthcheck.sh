@@ -9,6 +9,7 @@ set -u
 test "${ROS_DISTRO}" = "melodic"
 command -v rviz >/dev/null
 command -v gazebo >/dev/null
+dpkg -s ros-melodic-camera-info-manager >/dev/null
 if dpkg-query -W -f='${Package}\n' | grep -E '^(lib)?xgc2-|ros-[a-z]+-xgc2-'; then
   echo "XGC2 packages leaked into build image" >&2
   exit 1
