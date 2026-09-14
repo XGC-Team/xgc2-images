@@ -93,6 +93,13 @@ chain_manifest = []
 seen_manifest = {}
 
 expanded.each do |app|
+  # Daily latest rebuilds cannot reinstall retired APT pins. Apps with a
+  # packages.lock only rebuild when that lock or app version changes on push.
+  if force_no_cache && File.exist?("apps/#{app}/packages.lock")
+    warn "skipping scheduled rebuild of APT-locked app #{app}"
+    next
+  end
+
   doc = load_app(app)
   version = doc.fetch("version")
   image = "ghcr.io/#{repository}/#{app}"

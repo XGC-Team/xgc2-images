@@ -1,6 +1,6 @@
 services:
   xgc2-ros1-central-sim:
-    image: ghcr.io/xgc-team/xgc2-images/xgc2-ros1-central-sim:1.2.3
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-ros1-central-sim:1.2.4
     container_name: ${CONTAINER_NAME}
     network_mode: host
     restart: "no"
