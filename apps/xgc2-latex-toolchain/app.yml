@@ -2,13 +2,13 @@ key: xgc2-latex-toolchain
 name: XGC2 LaTeX toolchain
 version: 1.0.0
 image: ghcr.io/xgc-team/xgc2-images/xgc2-latex-toolchain:1.0.0
-description: Noble no-network XeLaTeX task image. latexmk + XeLaTeX, trimmed TeX Live, no XGC2 APT packages. Compile tasks must run --network=none and must not mount docker.sock.
+description: Noble no-network pdfLaTeX task image. latexmk + pdfLaTeX, trimmed TeX Live, no XGC2 APT packages. Compile tasks must run --network=none and must not mount docker.sock.
 type: development
 tags:
   - Development
   - TeX
   - LaTeX
-  - XeLaTeX
+  - pdfLaTeX
   - Noble
 architectures:
   - amd64

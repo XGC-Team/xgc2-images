@@ -3,7 +3,7 @@ ARG PARENT_IMAGE=ghcr.io/xgc-team/xgc2-images/xgc2-build-noble-base:1.0.0
 FROM ${PARENT_IMAGE}
 
 LABEL org.opencontainers.image.title="XGC2 LaTeX toolchain"
-LABEL org.opencontainers.image.description="Noble XeLaTeX task image with latexmk. Trimmed TeX Live. No XGC2 APT packages."
+LABEL org.opencontainers.image.description="Noble pdfLaTeX task image with latexmk. Trimmed TeX Live. No XGC2 APT packages."
 LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-images"
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -16,7 +16,7 @@ COPY scripts/healthcheck.sh /usr/local/bin/xgc2-latex-toolchain-healthcheck
 COPY scripts/assert-no-xgc2-apt.sh /usr/local/bin/xgc2-build-assert-no-xgc2-apt.sh
 
 # Compile tasks must `docker run --network=none` and must not mount the host Docker socket.
-# This image only provides latexmk + xelatex + synctex.
+# This image only provides latexmk + pdflatex + synctex. IEEEtran Times (ptm) resolves under pdfLaTeX.
 RUN chmod +x /usr/local/bin/xgc2-latex-toolchain-healthcheck /usr/local/bin/xgc2-build-assert-no-xgc2-apt.sh \
  && apt-get update \
  && apt-get install -y --no-install-recommends \

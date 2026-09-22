@@ -31,7 +31,7 @@ App categories:
 | `xgc2-stt-runtime` | `deployment` | `ghcr.io/xgc-team/xgc2-images/xgc2-stt-runtime` | GPU STT runtime base: vLLM, sox, tini, qwen-asr, and the frozen service third-party Python set. |
 | `xgc2-stt-client-focal` | `development` | `ghcr.io/xgc-team/xgc2-images/xgc2-stt-client-focal` | Focal desktop-client smoke image with GTK / PyAudio Depends preinstalled. |
 | `xgc2-stt-client-jammy` | `development` | `ghcr.io/xgc-team/xgc2-images/xgc2-stt-client-jammy` | Jammy desktop-client smoke image with GTK / PyAudio Depends preinstalled. |
-| `xgc2-latex-toolchain` | `development` | `ghcr.io/xgc-team/xgc2-images/xgc2-latex-toolchain` | Noble XeLaTeX task image: latexmk, synctex, trimmed TeX Live. No XGC2 APT packages. Compile with `--network=none`; do not mount `docker.sock`. |
+| `xgc2-latex-toolchain` | `development` | `ghcr.io/xgc-team/xgc2-images/xgc2-latex-toolchain` | Noble pdfLaTeX task image: latexmk, synctex, trimmed TeX Live. No XGC2 APT packages. Compile with `--network=none`; do not mount `docker.sock`. |
 | `ros-jazzy-desktop-full` | `development` | `ghcr.io/xgc-team/xgc2-images/ros-jazzy-desktop-full` | Official OSRF ROS 2 Jazzy desktop-full image mirrored for amd64 development use. |
 | `ros-jazzy-ros-base-noble` | `deployment` | `ghcr.io/xgc-team/xgc2-images/ros-jazzy-ros-base-noble` | Official ROS 2 Jazzy ros-base image mirrored for amd64 and arm64 deployments. |
 

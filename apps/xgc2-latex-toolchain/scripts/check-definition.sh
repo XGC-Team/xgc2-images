@@ -3,7 +3,7 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 
 grep -q 'latexmk' "$root/scripts/healthcheck.sh"
-grep -q 'xelatex' "$root/scripts/healthcheck.sh"
+grep -q 'pdflatex' "$root/scripts/healthcheck.sh"
 grep -q 'synctex' "$root/scripts/healthcheck.sh"
 grep -q 'XGC2 product packages must not' "$root/scripts/healthcheck.sh"
 grep -q 'xgc2-build-noble-base' "$root/Dockerfile"

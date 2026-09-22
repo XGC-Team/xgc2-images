@@ -183,7 +183,7 @@ apps:
     tags:
       - TeX
       - LaTeX
-      - XeLaTeX
+      - pdfLaTeX
       - Noble
   - key: ros-jazzy-desktop-full
     name: ROS Jazzy Desktop Full
