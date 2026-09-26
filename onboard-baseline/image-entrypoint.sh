@@ -11,6 +11,16 @@ if [[ -d /run/systemd/system ]]; then
   printf 'onboard-baseline: systemd is running; use systemctl, not this entrypoint\n' >&2
   exit 1
 fi
+# Install only while creating a container that has no Agent yet and was given
+# an explicit local deb. Restart finds the binary and does not run this.
+# A missing deb is not an APT install; the operator runs install-agent for that.
+if [[ ! -x /usr/lib/xgc2/xgc-agent ]]; then
+  if [[ -z "${ONBOARD_BASELINE_AGENT_DEB:-}" ]]; then
+    printf 'onboard-baseline: xgc2-agent is not installed\n' >&2
+    exit 1
+  fi
+  /opt/xgc2/onboard-baseline/onboard-baseline.sh install-agent --profile "${ONBOARD_BASELINE_PROFILE:?}"
+fi
 if [[ ! -x /usr/lib/xgc2/xgc-agent ]]; then
   printf 'onboard-baseline: xgc2-agent is not installed\n' >&2
   exit 1

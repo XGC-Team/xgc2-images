@@ -444,6 +444,7 @@ run_entry() {
   env -u XGC_PROCESS_DEFINITION_PLUGINS -u XGC_AGENT_DISPLAY_NAME \
       -u XGC_ADAPTER_RUNTIME_UDS -u XGC_ADAPTER_DEFINITION_PATHS -u XGC_ADAPTER_RUNTIME_DIR \
       -u XGC_AGENT_DATA_DIR -u XGC_AGENT_MANAGED_ROOT \
+      -u ONBOARD_BASELINE_AGENT_DEB -u ONBOARD_BASELINE_PROFILE \
       -u ROS_MASTER_URI -u ROS_HOME -u ROS_LOG_DIR -u ROS_IP -u ROS_HOSTNAME \
       "${env_args[@]}" \
       ENTRYPOINT_EVIDENCE="$sandbox/evidence" \
@@ -463,6 +464,43 @@ run_entry() {
         mount --bind "$sandbox/fake-agent" /usr/lib/xgc2
         exec bash "$entry"
       ' bash "$sandbox" "$sandbox/image-entrypoint.sh"
+}
+
+# Fresh image: no binary. Deb path calls install-agent once; a second start does not.
+run_entry_install() {
+  local sandbox="$1"
+  shift
+  local -a env_args=()
+  cp "$ENTRY" "$sandbox/image-entrypoint.sh"
+  while [[ $# -gt 0 && "$1" == *=* ]]; do
+    env_args+=("$1")
+    shift
+  done
+  local status=0
+  env -u XGC_PROCESS_DEFINITION_PLUGINS -u XGC_AGENT_DISPLAY_NAME \
+      -u XGC_ADAPTER_RUNTIME_UDS -u XGC_ADAPTER_DEFINITION_PATHS -u XGC_ADAPTER_RUNTIME_DIR \
+      -u XGC_AGENT_DATA_DIR -u XGC_AGENT_MANAGED_ROOT \
+      -u ONBOARD_BASELINE_AGENT_DEB -u ONBOARD_BASELINE_PROFILE \
+      -u ROS_MASTER_URI -u ROS_HOME -u ROS_LOG_DIR -u ROS_IP -u ROS_HOSTNAME \
+      "${env_args[@]}" \
+      ENTRYPOINT_EVIDENCE="$sandbox/evidence" \
+      PATH="$sandbox/bin:/usr/bin:/bin" \
+      ROS_DISTRO=noetic \
+      unshare --user --map-root-user --mount --propagation private -- bash -c '
+        set -euo pipefail
+        sandbox="$1"; entry="$2"
+        shift 2
+        mount --bind "$sandbox/empty-systemd" /run/systemd
+        mount --bind "$sandbox/etc-xgc2" /etc/xgc2
+        mount --bind "$sandbox/tmpfiles" /usr/lib/tmpfiles.d
+        mount --bind "$sandbox/opt" /opt
+        mount --bind "$sandbox/varlib" /var/lib
+        mount --bind "$sandbox/home" /home
+        mkdir -p /usr/lib/xgc2
+        mount --bind "$sandbox/agent-dir" /usr/lib/xgc2
+        bash "$entry"
+      ' bash "$sandbox" "$sandbox/image-entrypoint.sh" || status=$?
+  printf '%s\n' "$status"
 }
 
 sandbox="$work/entry-default-ros"
@@ -659,5 +697,42 @@ grep -q -- "-i $sandbox/agent.deb" "$sandbox/evidence/dpkg.invoked" || fail "loc
 if grep -q 'xgc2-agent=' "$sandbox/evidence/apt-get.invoked"; then
   fail "local deb apply also requested the agent from APT"
 fi
+
+sandbox="$work/entry-deb-create"
+mkdir -p "$sandbox/bin" "$sandbox/etc-xgc2" "$sandbox/tmpfiles" "$sandbox/varlib/xgc2-agent" \
+  "$sandbox/empty-systemd" "$sandbox/home/xgc2" "$sandbox/evidence" "$sandbox/agent-dir" \
+  "$sandbox/opt/xgc2/onboard-baseline" "$sandbox/opt/ros/noetic"
+entry_stubs "$sandbox/bin"
+chmod 1777 "$sandbox/varlib/xgc2-agent" "$sandbox/home/xgc2"
+printf 'XGC_AGENT_ID=agent-01\n' >"$sandbox/etc-xgc2/agent.env"
+printf 'd /run/xgc2/adapter 0750 xgc2 xgc2 -\n' >"$sandbox/tmpfiles/xgc2-agent.conf"
+printf 'export ROS_MASTER_URI=http://localhost:11311\n' >"$sandbox/opt/ros/noetic/setup.bash"
+cat >"$sandbox/opt/xgc2/onboard-baseline/onboard-baseline.sh" <<'EOF'
+#!/bin/bash
+printf '%s\n' "$*" >"${ENTRYPOINT_EVIDENCE:?}/agent-install.invoked"
+if [[ "$*" == *apt-get* || "$*" == *apt\ * ]]; then
+  printf 'entrypoint requested apt\n' >&2
+  exit 1
+fi
+printf '#!/bin/bash\nexit 0\n' >/usr/lib/xgc2/xgc-agent
+chmod 755 /usr/lib/xgc2/xgc-agent
+EOF
+chmod 755 "$sandbox/opt/xgc2/onboard-baseline/onboard-baseline.sh"
+missing="$(run_entry_install "$sandbox")"
+[[ "$missing" == 1 ]] || fail "missing agent without a deb exited ${missing}"
+[[ ! -e "$sandbox/evidence/agent-install.invoked" ]] || fail "missing agent without a deb called install-agent"
+created="$(run_entry_install "$sandbox" \
+  ONBOARD_BASELINE_AGENT_DEB=/run/xgc2-install/xgc2-agent.deb \
+  ONBOARD_BASELINE_PROFILE=fs150-focal-noetic)"
+[[ "$created" == 0 ]] || fail "local deb create exited ${created}"
+[[ "$(cat "$sandbox/evidence/agent-install.invoked")" == "install-agent --profile fs150-focal-noetic" ]] \
+  || fail "local deb create did not call install-agent --profile: $(cat "$sandbox/evidence/agent-install.invoked")"
+rm -f "$sandbox/evidence/agent-install.invoked" "$sandbox/evidence/exec.env"
+restarted="$(run_entry_install "$sandbox" \
+  ONBOARD_BASELINE_AGENT_DEB=/run/xgc2-install/xgc2-agent.deb \
+  ONBOARD_BASELINE_PROFILE=fs150-focal-noetic)"
+[[ "$restarted" == 0 ]] || fail "restart after local deb exited ${restarted}"
+[[ ! -e "$sandbox/evidence/agent-install.invoked" ]] || fail "restart called install-agent again"
+[[ -s "$sandbox/evidence/exec.env" ]] || fail "restart did not exec the agent"
 
 printf 'freeze-check: passed\n'
