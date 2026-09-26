@@ -184,8 +184,9 @@ Image Dockerfiles call `apply`. A machine can call `check` or `apply` for one
 profile. An OS mismatch exits 3 and does not upgrade the system. The script
 does not start a chassis or an experiment. Pin an experiment to one profile
 id: `fs150-focal-noetic`, `scout-bionic-melodic`, `scout-focal-noetic`, or
-`wheeltec-bionic-melodic`. The agent package is `xgc2-agent` `0.1.0-2` from
-XGC2 APT. Image builds stay blocked until that version is in the live index.
+`wheeltec-bionic-melodic`. `apply` installs that base only. `install-agent` is the explicit Agent
+install for a machine or a container create/update. A restart does not run it.
+The container entrypoint only starts an Agent that is already installed.
 
 FS150 `check` requires `/usr/share/GeographicLib/geoids/egm96-5.pgm`. `apply`
 installs it with `geographiclib-get-geoids -p /usr/share/GeographicLib egm96-5`.

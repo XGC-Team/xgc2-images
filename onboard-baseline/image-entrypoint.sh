@@ -11,6 +11,10 @@ if [[ -d /run/systemd/system ]]; then
   printf 'onboard-baseline: systemd is running; use systemctl, not this entrypoint\n' >&2
   exit 1
 fi
+if [[ ! -x /usr/lib/xgc2/xgc-agent ]]; then
+  printf 'onboard-baseline: xgc2-agent is not installed\n' >&2
+  exit 1
+fi
 
 # Same keys as agentprofile.ConfigFromEnvironment, CatalogConfigFromEnvironment,
 # and AdapterRuntimePathsFromEnvironment. Caller values replace the package

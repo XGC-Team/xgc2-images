@@ -16,10 +16,8 @@ ENV DISABLE_ROS1_EOL_WARNINGS=1
 
 COPY --from=runtime-sources /onboard-baseline/ /opt/xgc2/onboard-baseline/
 
-ARG ONBOARD_BASELINE_AGENT_DEB_SHA256
 ARG ONBOARD_APT_MIRROR
-RUN --mount=type=secret,id=onboard_agent_deb,required=false \
-    bash <<'EOF'
+RUN bash <<'EOF'
 set -euo pipefail
 chmod 0755 /opt/xgc2/onboard-baseline/*.sh
 if [ -n "${ONBOARD_APT_MIRROR:-}" ]; then
@@ -34,12 +32,6 @@ if [ -n "${ONBOARD_APT_MIRROR:-}" ]; then
         "$sources"
     fi
   done
-fi
-if [ -s /run/secrets/onboard_agent_deb ]; then
-  export ONBOARD_BASELINE_AGENT_DEB=/run/secrets/onboard_agent_deb
-  if [ -n "${ONBOARD_BASELINE_AGENT_DEB_SHA256:-}" ]; then
-    export ONBOARD_BASELINE_AGENT_DEB_SHA256
-  fi
 fi
 /opt/xgc2/onboard-baseline/onboard-baseline.sh apply --profile scout-bionic-melodic
 EOF

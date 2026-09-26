@@ -10,7 +10,7 @@ OS_RELEASE="${ONBOARD_BASELINE_OS_RELEASE:-/etc/os-release}"
 XGC2_APT_FINGERPRINT="2A8E11B36F56D307ADF626D85E5FDC30979EA43F"
 
 usage() {
-  echo "usage: onboard-baseline.sh check|apply|snapshot --profile <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic>" >&2
+  echo "usage: onboard-baseline.sh check|apply|snapshot|install-agent --profile <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic>" >&2
   echo "       onboard-baseline.sh manualdiff --before SNAPSHOT --after SNAPSHOT" >&2
   exit 2
 }
@@ -64,7 +64,7 @@ while (($#)); do
     *) usage ;;
   esac
 done
-[[ "$mode" == "check" || "$mode" == "apply" || "$mode" == "snapshot" ]] || usage
+[[ "$mode" == "check" || "$mode" == "apply" || "$mode" == "snapshot" || "$mode" == "install-agent" ]] || usage
 [[ -n "$profile" && -f "$BASELINES" ]] || usage
 
 eval "$(python3 - "$BASELINES" "$profile" <<'PY'
@@ -77,7 +77,6 @@ print("ubuntu_codename=" + shlex.quote(profile["ubuntuCodename"]))
 print("ubuntu_version_id=" + shlex.quote(profile["ubuntuVersionId"]))
 print("ros_distro=" + shlex.quote(profile["rosDistro"]))
 print("agent_package=" + shlex.quote(doc["agentPackage"]))
-print("agent_version=" + shlex.quote(doc["agentVersion"]))
 print("packages=(" + " ".join(shlex.quote(item) for item in profile["packages"]) + ")")
 PY
 )" || fail "unknown profile ${profile}" 2
@@ -88,41 +87,18 @@ if [[ "${VERSION_CODENAME:-}" != "$ubuntu_codename" || "${VERSION_ID:-}" != "$ub
   fail "refusing profile ${profile}: host is ${VERSION_CODENAME:-unknown} ${VERSION_ID:-unknown}, not ${ubuntu_codename} ${ubuntu_version_id}" 3
 fi
 
-local_agent_deb="${ONBOARD_BASELINE_AGENT_DEB:-}"
-local_agent_sha="${ONBOARD_BASELINE_AGENT_DEB_SHA256:-}"
-use_local_agent=0
-if [[ -n "$local_agent_deb" ]]; then
-  [[ -f "$local_agent_deb" ]] || fail "local agent deb is not a file: ${local_agent_deb}" 1
-  if [[ -n "$local_agent_sha" ]]; then
-    actual_sha="$(sha256sum "$local_agent_deb" | awk '{print $1}')"
-    [[ "$actual_sha" == "$local_agent_sha" ]] || fail "local agent deb sha256 is ${actual_sha}, want ${local_agent_sha}" 1
-  fi
-  use_local_agent=1
-fi
-
 package_installed() {
-  local package="$1" status version
+  local package="$1" status
   status="$(dpkg-query -W -f='${Status}' "$package" 2>/dev/null || true)"
-  [[ "$status" == "install ok installed" ]] || return 1
-  if [[ "$package" == "$agent_package" ]]; then
-    version="$(dpkg-query -W -f='${Version}' "$package")"
-    [[ "$version" == "$agent_version" ]]
-  fi
+  [[ "$status" == "install ok installed" ]]
 }
 
 missing=()
 install_specs=()
-agent_from_deb=0
 for package in "${packages[@]}"; do
   if ! package_installed "$package"; then
     missing+=("$package")
-    if [[ "$package" == "$agent_package" && "$use_local_agent" == 1 ]]; then
-      agent_from_deb=1
-    elif [[ "$package" == "$agent_package" ]]; then
-      install_specs+=("${agent_package}=${agent_version}")
-    else
-      install_specs+=("$package")
-    fi
+    install_specs+=("$package")
   fi
 done
 
@@ -191,25 +167,24 @@ PY
   exit 0
 fi
 
-[[ "$(id -u)" == "0" ]] || fail "apply must run as root" 1
+[[ "$(id -u)" == "0" ]] || fail "${mode} must run as root" 1
 
 export DEBIAN_FRONTEND=noninteractive
-if ((${#install_specs[@]})) || [[ "$agent_from_deb" == 1 ]]; then
-ros_installer="${ROOT}/install-ros-apt-source.sh"
-if [[ ! -x "$ros_installer" ]]; then
-  ros_installer="$(cd "$ROOT/.." && pwd)/scripts/build/install-ros-apt-source.sh"
-fi
-[[ -x "$ros_installer" ]] || fail "ROS apt source installer is not beside the baseline" 1
-if [[ ! -e /etc/apt/sources.list.d/ros1.list ]]; then
-  "$ros_installer" "$ros_distro" "$ubuntu_codename"
-fi
-need_xgc2_apt=0
-for spec in "${install_specs[@]}"; do
-  if [[ "$spec" == "${agent_package}="* || "$spec" == "$agent_package" ]]; then
-    need_xgc2_apt=1
+ensure_ros_source() {
+  local ros_installer="${ROOT}/install-ros-apt-source.sh"
+  if [[ ! -x "$ros_installer" ]]; then
+    ros_installer="$(cd "$ROOT/.." && pwd)/scripts/build/install-ros-apt-source.sh"
   fi
-done
-if [[ "$need_xgc2_apt" == 1 && ! -e /etc/apt/sources.list.d/xgc2.list ]]; then
+  [[ -x "$ros_installer" ]] || fail "ROS apt source installer is not beside the baseline" 1
+  if [[ ! -e /etc/apt/sources.list.d/ros1.list ]]; then
+    "$ros_installer" "$ros_distro" "$ubuntu_codename"
+  fi
+}
+ensure_xgc2_source() {
+  if [[ -e /etc/apt/sources.list.d/xgc2.list ]]; then
+    return 0
+  fi
+  local tmp found
   tmp="$(mktemp)"
   curl -fsSL --retry 3 --connect-timeout 20 --max-time 120 https://xgc2.apt.xiaokang.ink/xgc2-archive-keyring.gpg -o "$tmp"
   found="$(gpg --batch --show-keys --with-fingerprint --with-colons "$tmp" | awk -F: '$1=="fpr"{print toupper($10)}' | sort -u)"
@@ -219,28 +194,46 @@ if [[ "$need_xgc2_apt" == 1 && ! -e /etc/apt/sources.list.d/xgc2.list ]]; then
   rm -f "$tmp"
   printf 'deb [arch=%s signed-by=/etc/apt/keyrings/xgc2-archive-keyring.gpg] https://xgc2.apt.xiaokang.ink %s main\n' \
     "$(dpkg --print-architecture)" "$ubuntu_codename" > /etc/apt/sources.list.d/xgc2.list
+}
+
+if [[ "$mode" == "apply" ]]; then
+  if ((${#install_specs[@]})); then
+    ensure_ros_source
+    apt-get update
+    apt-get install -y --no-install-recommends "${install_specs[@]}"
+  fi
+  geoid_path=/usr/share/GeographicLib/geoids/egm96-5.pgm
+  if [[ "$profile" == "fs150-focal-noetic" && ! -s "$geoid_path" ]]; then
+    geographiclib-get-geoids -p /usr/share/GeographicLib egm96-5
+  fi
+  if [[ "$profile" == "fs150-focal-noetic" && ! -s "$geoid_path" ]]; then
+    fail "MAVROS geoid was not installed at ${geoid_path}" 1
+  fi
+  printf 'onboard-baseline: applied %s\n' "$profile"
+  exit 0
 fi
-apt-get update
-if ((${#install_specs[@]})); then
-  apt-get install -y --no-install-recommends "${install_specs[@]}"
-fi
-if [[ "$agent_from_deb" == 1 ]]; then
+
+agent_deb="${ONBOARD_BASELINE_AGENT_DEB:-}"
+agent_version="${ONBOARD_BASELINE_AGENT_VERSION:-}"
+if [[ -n "$agent_deb" ]]; then
+  [[ -f "$agent_deb" ]] || fail "local agent deb is not a file: ${agent_deb}" 1
   apt-get install -y --no-install-recommends ca-certificates init-system-helpers systemd
-  dpkg -i "$local_agent_deb"
+  dpkg -i "$agent_deb"
+elif ! package_installed "$agent_package" || [[ -n "$agent_version" ]]; then
+  ensure_xgc2_source
+  apt-get update
+  if [[ -n "$agent_version" ]]; then
+    apt-get install -y --no-install-recommends "${agent_package}=${agent_version}"
+  else
+    apt-get install -y --no-install-recommends "$agent_package"
+  fi
+else
+  printf 'onboard-baseline: %s is already installed\n' "$agent_package"
+fi
+package_installed "$agent_package" || fail "package ${agent_package} is not installed" 1
+if [[ -n "$agent_version" ]]; then
   installed_version="$(dpkg-query -W -f='${Version}' "$agent_package")"
-  [[ "$installed_version" == "$agent_version" ]] || fail "local agent deb installed ${installed_version}, want ${agent_version}" 1
-  install -d -m 0755 /usr/share/xgc2-agent
-  printf 'agent_source=local-deb\nagent_sha256=%s\nagent_version=%s\n' \
-    "${local_agent_sha:-unset}" "$installed_version" > /usr/share/xgc2-agent/install-source
-  printf 'onboard-baseline: installed %s from local deb, not from the signed APT index\n' "$agent_package"
-fi
-fi
-geoid_path=/usr/share/GeographicLib/geoids/egm96-5.pgm
-if [[ "$profile" == "fs150-focal-noetic" && ! -s "$geoid_path" ]]; then
-  geographiclib-get-geoids -p /usr/share/GeographicLib egm96-5
-fi
-if [[ "$profile" == "fs150-focal-noetic" && ! -s "$geoid_path" ]]; then
-  fail "MAVROS geoid was not installed at ${geoid_path}" 1
+  [[ "$installed_version" == "$agent_version" ]] || fail "installed ${agent_package} ${installed_version}, want ${agent_version}" 1
 fi
 
 agent_env=/etc/xgc2/agent.env
@@ -342,4 +335,4 @@ if [[ -d /run/systemd/system ]]; then
 else
   printf 'onboard-baseline: no systemd; container entrypoint starts /usr/lib/xgc2/xgc-agent\n'
 fi
-printf 'onboard-baseline: applied %s\n' "$profile"
+printf 'onboard-baseline: installed %s on %s\n' "$agent_package" "$profile"

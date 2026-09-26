@@ -47,8 +47,8 @@ for dockerfile in "${official[@]}"; do
   if ! grep -qx 'onboard-baseline/.local' "$ignore"; then
     fail "${ignore} does not exclude onboard-baseline/.local"
   fi
-  if ! grep -q 'id=onboard_agent_deb,required=false' "$dockerfile"; then
-    fail "official Dockerfile lacks the optional agent secret: $dockerfile"
+  if grep -q 'onboard_agent_deb' "$dockerfile"; then
+    fail "official Dockerfile still installs an Agent deb: $dockerfile"
   fi
 done
 
@@ -249,6 +249,19 @@ run_ns "$sandbox" \
 [[ -s "$sandbox/geoids/egm96-5.pgm" ]] || fail "apply did not install the geoid"
 [[ "$(cat "$sandbox/evidence/geoid.invoked")" == "-p /usr/share/GeographicLib egm96-5" ]] || fail "geoid tool parent"
 [[ ! -e "$sandbox/evidence/systemctl.invoked" ]] || fail "apply called systemctl without systemd"
+run_ns "$sandbox" \
+  PATH="$sandbox/bin:/usr/bin:/bin" \
+  FAKE_ROS_DISTRO=noetic \
+  FREEZE_EVIDENCE="$sandbox/evidence" \
+  ONBOARD_BASELINE_OS_RELEASE="$sandbox/os-release" \
+  XGC_AGENT_ID=robot-fs150 \
+  XGC_CORE_ENDPOINT=172.30.251.250:9092 \
+  XGC_AGENT_ADVERTISED_ENDPOINT=172.30.251.10:9090 \
+  XGC_AGENT_DATA_DIR=/var/lib/xgc2-agent \
+  XGC_AGENT_MANAGED_ROOT=/var/lib/xgc2-agent/managed \
+  XGC_AGENT_DISPLAY_NAME='FS150 1' \
+  XGC_PROCESS_DEFINITION_PLUGINS=/opt/robot/catalog \
+  "$BASE" install-agent --profile fs150-focal-noetic >"$sandbox/out"
 python3 - "$sandbox/etc-xgc2/agent.env" <<'PY'
 import pathlib, sys
 text = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
@@ -295,7 +308,7 @@ run_ns "$sandbox" \
   XGC_AGENT_ADVERTISED_ENDPOINT=172.30.251.10:9090 \
   XGC_AGENT_DATA_DIR=/var/lib/xgc2-agent \
   XGC_AGENT_MANAGED_ROOT=/var/lib/xgc2-agent/managed \
-  "$BASE" apply --profile fs150-focal-noetic >"$sandbox/out"
+  "$BASE" install-agent --profile fs150-focal-noetic >"$sandbox/out"
 after="$(sha256sum "$sandbox/etc-xgc2/agent.env" | awk '{print $1}')"
 [[ "$before" == "$after" ]] || fail "existing robot identity was rewritten"
 if [[ -f "$sandbox/evidence/systemctl.invoked" && "$(cat "$sandbox/evidence/systemctl.invoked")" == *enable* ]]; then
@@ -314,7 +327,7 @@ run_ns "$sandbox" \
   FAKE_ROS_DISTRO=noetic \
   FREEZE_EVIDENCE="$sandbox/evidence" \
   ONBOARD_BASELINE_OS_RELEASE="$sandbox/os-release" \
-  "$BASE" apply --profile fs150-focal-noetic >"$sandbox/out"
+  "$BASE" install-agent --profile fs150-focal-noetic >"$sandbox/out"
 if [[ -f "$sandbox/evidence/systemctl.invoked" && "$(cat "$sandbox/evidence/systemctl.invoked")" == *enable* ]]; then
   fail "placeholder agent was started"
 fi
@@ -337,7 +350,7 @@ run_ns "$sandbox" \
   XGC_AGENT_ADVERTISED_ENDPOINT=172.30.251.10:9090 \
   XGC_AGENT_DATA_DIR=/var/lib/xgc2-agent \
   XGC_AGENT_MANAGED_ROOT=/var/lib/xgc2-agent/managed \
-  "$BASE" apply --profile fs150-focal-noetic >"$sandbox/out"
+  "$BASE" install-agent --profile fs150-focal-noetic >"$sandbox/out"
 [[ "$(cat "$sandbox/evidence/systemctl.invoked")" == *"enable --now xgc2-agent.service"* ]] || fail "enable was not requested: $(cat "$sandbox/evidence/systemctl.invoked")"
 
 # Snapshot lists the on-disk default and a sorted manual set.
@@ -421,6 +434,9 @@ run_entry() {
   local -a env_args=()
   # /home is replaced inside the namespace, so the entrypoint must not live there.
   cp "$ENTRY" "$sandbox/image-entrypoint.sh"
+  mkdir -p "$sandbox/fake-agent"
+  printf '#!/bin/bash\nexit 0\n' >"$sandbox/fake-agent/xgc-agent"
+  chmod 755 "$sandbox/fake-agent/xgc-agent"
   while [[ $# -gt 0 && "$1" == *=* ]]; do
     env_args+=("$1")
     shift
@@ -443,6 +459,8 @@ run_entry() {
         mount --bind "$sandbox/setup.bash" /opt/ros/noetic/setup.bash
         mount --bind "$sandbox/varlib" /var/lib
         mount --bind "$sandbox/home" /home
+        mkdir -p /usr/lib/xgc2
+        mount --bind "$sandbox/fake-agent" /usr/lib/xgc2
         exec bash "$entry"
       ' bash "$sandbox" "$sandbox/image-entrypoint.sh"
 }
@@ -549,7 +567,12 @@ while [[ $# -gt 0 ]]; do
 done
 if [[ "$fmt" == *'${Status}'* ]]; then
   if [[ "$pkg" == xgc2-agent ]]; then
-    printf 'not-installed\n'
+    evidence="${FREEZE_EVIDENCE:-}"
+    if [[ -s "$evidence/dpkg.invoked" ]] || grep -q xgc2-agent "$evidence/apt-get.invoked" 2>/dev/null; then
+      printf 'install ok installed\n'
+    else
+      printf 'not-installed\n'
+    fi
   else
     printf 'install ok installed\n'
   fi
@@ -586,14 +609,17 @@ run_ns "$sandbox" \
   XGC_AGENT_ADVERTISED_ENDPOINT=10.64.90.101:9090 \
   XGC_AGENT_DATA_DIR=/var/lib/xgc2-agent \
   XGC_AGENT_MANAGED_ROOT=/var/lib/xgc2-managed \
-  "$BASE" apply --profile fs150-focal-noetic >"$sandbox/out"
+  "$BASE" install-agent --profile fs150-focal-noetic >"$sandbox/out"
 grep -q 'archive.ubuntu.com' "$sandbox/apt/sources.list" || fail "signed apply rewrote the ubuntu source"
 if grep -q 'mirrors.ustc' "$sandbox/apt/sources.list"; then
   fail "signed apply rewrote the machine mirror"
 fi
-grep -q 'xgc2.apt.xiaokang.ink' "$sandbox/apt/sources.list.d/xgc2.list" || fail "signed apply did not add the XGC2 index"
-grep -q 'xgc2-agent=0.1.0-2' "$sandbox/evidence/apt-get.invoked" || fail "signed apply did not request the pinned agent"
-[[ ! -e "$sandbox/evidence/dpkg.invoked" ]] || fail "signed apply installed a local deb"
+grep -q 'xgc2.apt.xiaokang.ink' "$sandbox/apt/sources.list.d/xgc2.list" || fail "signed install-agent did not add the XGC2 index"
+grep -q 'xgc2-agent' "$sandbox/evidence/apt-get.invoked" || fail "signed install-agent did not request xgc2-agent"
+if grep -q 'xgc2-agent=' "$sandbox/evidence/apt-get.invoked"; then
+  fail "signed install-agent pinned a frozen agent version"
+fi
+[[ ! -e "$sandbox/evidence/dpkg.invoked" ]] || fail "signed install-agent installed a local deb"
 
 sandbox="$work/apply-local-deb"
 prepare_apt_tree "$sandbox"
@@ -626,7 +652,7 @@ run_ns "$sandbox" \
   XGC_AGENT_ADVERTISED_ENDPOINT=10.64.90.101:9090 \
   XGC_AGENT_DATA_DIR=/var/lib/xgc2-agent \
   XGC_AGENT_MANAGED_ROOT=/var/lib/xgc2-managed \
-  "$BASE" apply --profile fs150-focal-noetic >"$sandbox/out"
+  "$BASE" install-agent --profile fs150-focal-noetic >"$sandbox/out"
 grep -q 'archive.ubuntu.com' "$sandbox/apt/sources.list" || fail "local deb apply rewrote the ubuntu source"
 [[ ! -e "$sandbox/apt/sources.list.d/xgc2.list" ]] || fail "local deb apply added the signed index"
 grep -q -- "-i $sandbox/agent.deb" "$sandbox/evidence/dpkg.invoked" || fail "local deb was not installed: $(cat "$sandbox/evidence/dpkg.invoked")"
