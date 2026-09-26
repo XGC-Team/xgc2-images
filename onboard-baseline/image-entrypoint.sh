@@ -19,7 +19,11 @@ if [[ ! -x /usr/lib/xgc2/xgc-agent ]]; then
     printf 'onboard-baseline: xgc2-agent is not installed\n' >&2
     exit 1
   fi
-  /opt/xgc2/onboard-baseline/onboard-baseline.sh install-agent --profile "${ONBOARD_BASELINE_PROFILE:?}"
+  if [[ -n "${ONBOARD_BASELINE_PROFILE:-}" ]]; then
+    /opt/xgc2/onboard-baseline/onboard-baseline.sh install-agent --profile "${ONBOARD_BASELINE_PROFILE}"
+  else
+    /opt/xgc2/onboard-baseline/onboard-baseline.sh install-agent
+  fi
 fi
 if [[ ! -x /usr/lib/xgc2/xgc-agent ]]; then
   printf 'onboard-baseline: xgc2-agent is not installed\n' >&2

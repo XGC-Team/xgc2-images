@@ -1,7 +1,7 @@
 FROM golang:1.26-bookworm@sha256:db25d241820546be7b96953eea8d3e6bd15d413d59d00a75b68b74dfb5e2ecd2 AS execution-runner-build
 
 WORKDIR /src
-COPY scripts/xgc-process-runner.go /src/xgc-process-runner.go
+COPY apps/xgc2-ros1-central-sim/scripts/xgc-process-runner.go /src/xgc-process-runner.go
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/xgc-process-runner /src/xgc-process-runner.go
 
 FROM ghcr.io/xgc-team/xgc2-images/xgc-ros1-runtime:1.2.3
@@ -21,8 +21,8 @@ ENV DISABLE_ROS1_EOL_WARNINGS=1
 ENV XGC2_SIM_LOG_DIR=/var/log/xgc2-sim
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-COPY packages.lock /tmp/xgc2-central-sim-packages.lock
-COPY scripts/install-products.sh /tmp/install-products.sh
+COPY apps/xgc2-ros1-central-sim/packages.lock /tmp/xgc2-central-sim-packages.lock
+COPY apps/xgc2-ros1-central-sim/scripts/install-products.sh /tmp/install-products.sh
 
 RUN chmod +x /tmp/install-products.sh \
     && XGC2_APT_BASE_URL="${XGC2_APT_BASE_URL}" \
@@ -34,7 +34,7 @@ RUN chmod +x /tmp/install-products.sh \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-COPY scripts/install-qgroundcontrol.sh /tmp/install-qgroundcontrol.sh
+COPY apps/xgc2-ros1-central-sim/scripts/install-qgroundcontrol.sh /tmp/install-qgroundcontrol.sh
 
 RUN chmod +x /tmp/install-qgroundcontrol.sh \
     && QGC_APPIMAGE_URL="${QGC_APPIMAGE_URL}" \
@@ -47,11 +47,14 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-COPY scripts/entrypoint.sh /usr/local/bin/xgc2-central-sim-entrypoint
-COPY scripts/healthcheck.sh /usr/local/bin/xgc2-central-sim-healthcheck
-COPY scripts/smoke-simulation.sh /usr/local/bin/xgc2-central-sim-smoke
-COPY scripts/qgroundcontrol.sh /usr/local/bin/qgroundcontrol
-COPY scripts/xgc-process-launcher /usr/local/bin/xgc-process-launcher
+COPY apps/xgc2-ros1-central-sim/scripts/entrypoint.sh /usr/local/bin/xgc2-central-sim-entrypoint
+COPY apps/xgc2-ros1-central-sim/scripts/healthcheck.sh /usr/local/bin/xgc2-central-sim-healthcheck
+COPY apps/xgc2-ros1-central-sim/scripts/smoke-simulation.sh /usr/local/bin/xgc2-central-sim-smoke
+COPY apps/xgc2-ros1-central-sim/scripts/qgroundcontrol.sh /usr/local/bin/qgroundcontrol
+COPY apps/xgc2-ros1-central-sim/scripts/xgc-process-launcher /usr/local/bin/xgc-process-launcher
+COPY onboard-baseline/baselines.json /opt/xgc2/onboard-baseline/baselines.json
+COPY onboard-baseline/onboard-baseline.sh /opt/xgc2/onboard-baseline/onboard-baseline.sh
+COPY onboard-baseline/image-entrypoint.sh /opt/xgc2/onboard-baseline/image-entrypoint.sh
 COPY --from=execution-runner-build /out/xgc-process-runner /usr/local/bin/xgc-process-runner
 
 RUN chmod +x \
@@ -61,6 +64,8 @@ RUN chmod +x \
       /usr/local/bin/xgc-process-launcher \
       /usr/local/bin/xgc-process-runner \
       /usr/local/bin/qgroundcontrol \
+      /opt/xgc2/onboard-baseline/onboard-baseline.sh \
+      /opt/xgc2/onboard-baseline/image-entrypoint.sh \
     && /usr/local/bin/xgc2-central-sim-healthcheck
 
 RUN mkdir -p \
@@ -74,4 +79,3 @@ RUN mkdir -p \
 WORKDIR /home/xgc_ws
 
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/xgc2-central-sim-entrypoint"]
-CMD ["bash"]

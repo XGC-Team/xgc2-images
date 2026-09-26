@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# No command: stay up as the same Agent the onboard images run. An explicit
+# command (the compose shell) keeps the interactive path below.
+if [[ $# -eq 0 ]]; then
+  exec /opt/xgc2/onboard-baseline/image-entrypoint.sh
+fi
+
 export ROS_MASTER_URI="${ROS_MASTER_URI:-http://127.0.0.1:11311}"
 source /opt/ros/noetic/setup.bash
 export DISABLE_ROS1_EOL_WARNINGS="${DISABLE_ROS1_EOL_WARNINGS:-1}"

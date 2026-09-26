@@ -694,7 +694,7 @@ run_ns "$sandbox" \
 grep -q 'archive.ubuntu.com' "$sandbox/apt/sources.list" || fail "local deb apply rewrote the ubuntu source"
 [[ ! -e "$sandbox/apt/sources.list.d/xgc2.list" ]] || fail "local deb apply added the signed index"
 grep -q -- "-i $sandbox/agent.deb" "$sandbox/evidence/dpkg.invoked" || fail "local deb was not installed: $(cat "$sandbox/evidence/dpkg.invoked")"
-if grep -q 'xgc2-agent=' "$sandbox/evidence/apt-get.invoked"; then
+if [[ -e "$sandbox/evidence/apt-get.invoked" ]] && grep -q 'xgc2-agent=' "$sandbox/evidence/apt-get.invoked"; then
   fail "local deb apply also requested the agent from APT"
 fi
 

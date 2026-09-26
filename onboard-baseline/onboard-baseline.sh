@@ -10,7 +10,8 @@ OS_RELEASE="${ONBOARD_BASELINE_OS_RELEASE:-/etc/os-release}"
 XGC2_APT_FINGERPRINT="2A8E11B36F56D307ADF626D85E5FDC30979EA43F"
 
 usage() {
-  echo "usage: onboard-baseline.sh check|apply|snapshot|install-agent --profile <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic>" >&2
+  echo "usage: onboard-baseline.sh check|apply|snapshot --profile <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic>" >&2
+  echo "       onboard-baseline.sh install-agent [--profile <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic>]" >&2
   echo "       onboard-baseline.sh manualdiff --before SNAPSHOT --after SNAPSHOT" >&2
   exit 2
 }
@@ -65,9 +66,13 @@ while (($#)); do
   esac
 done
 [[ "$mode" == "check" || "$mode" == "apply" || "$mode" == "snapshot" || "$mode" == "install-agent" ]] || usage
-[[ -n "$profile" && -f "$BASELINES" ]] || usage
+if [[ "$mode" != "install-agent" && -z "$profile" ]]; then
+  usage
+fi
+[[ -f "$BASELINES" ]] || usage
 
-eval "$(python3 - "$BASELINES" "$profile" <<'PY'
+if [[ -n "$profile" ]]; then
+  eval "$(python3 - "$BASELINES" "$profile" <<'PY'
 import json, shlex, sys
 doc = json.load(open(sys.argv[1], encoding="utf-8"))
 profile = doc["profiles"].get(sys.argv[2])
@@ -80,11 +85,26 @@ print("agent_package=" + shlex.quote(doc["agentPackage"]))
 print("packages=(" + " ".join(shlex.quote(item) for item in profile["packages"]) + ")")
 PY
 )" || fail "unknown profile ${profile}" 2
-
-# shellcheck disable=SC1090
-. "$OS_RELEASE"
-if [[ "${VERSION_CODENAME:-}" != "$ubuntu_codename" || "${VERSION_ID:-}" != "$ubuntu_version_id" ]]; then
-  fail "refusing profile ${profile}: host is ${VERSION_CODENAME:-unknown} ${VERSION_ID:-unknown}, not ${ubuntu_codename} ${ubuntu_version_id}" 3
+  # shellcheck disable=SC1090
+  . "$OS_RELEASE"
+  if [[ "${VERSION_CODENAME:-}" != "$ubuntu_codename" || "${VERSION_ID:-}" != "$ubuntu_version_id" ]]; then
+    fail "refusing profile ${profile}: host is ${VERSION_CODENAME:-unknown} ${VERSION_ID:-unknown}, not ${ubuntu_codename} ${ubuntu_version_id}" 3
+  fi
+else
+  # install-agent without a robot profile reads the image's own APT suite.
+  eval "$(python3 - "$BASELINES" <<'PY'
+import json, shlex, sys
+doc = json.load(open(sys.argv[1], encoding="utf-8"))
+print("agent_package=" + shlex.quote(doc["agentPackage"]))
+print("ros_distro=" + shlex.quote(""))
+print("packages=()")
+PY
+)" || fail "agent package name is missing" 2
+  # shellcheck disable=SC1090
+  . "$OS_RELEASE"
+  ubuntu_codename="${VERSION_CODENAME:-}"
+  ubuntu_version_id="${VERSION_ID:-}"
+  [[ -n "$ubuntu_codename" ]] || fail "os-release has no VERSION_CODENAME" 3
 fi
 
 package_installed() {
@@ -95,12 +115,14 @@ package_installed() {
 
 missing=()
 install_specs=()
+if [[ "$mode" != "install-agent" ]]; then
 for package in "${packages[@]}"; do
   if ! package_installed "$package"; then
     missing+=("$package")
     install_specs+=("$package")
   fi
 done
+fi
 
 if [[ "$mode" == "check" ]]; then
   if ((${#missing[@]})); then
@@ -217,7 +239,8 @@ agent_deb="${ONBOARD_BASELINE_AGENT_DEB:-}"
 agent_version="${ONBOARD_BASELINE_AGENT_VERSION:-}"
 if [[ -n "$agent_deb" ]]; then
   [[ -f "$agent_deb" ]] || fail "local agent deb is not a file: ${agent_deb}" 1
-  apt-get install -y --no-install-recommends ca-certificates init-system-helpers systemd
+  # The image already contains the deb's install dependencies. Do not apt or
+  # rescan the profile package list on this path; a later start finds the binary.
   dpkg -i "$agent_deb"
 elif ! package_installed "$agent_package" || [[ -n "$agent_version" ]]; then
   ensure_xgc2_source
@@ -335,4 +358,4 @@ if [[ -d /run/systemd/system ]]; then
 else
   printf 'onboard-baseline: no systemd; container entrypoint starts /usr/lib/xgc2/xgc-agent\n'
 fi
-printf 'onboard-baseline: installed %s on %s\n' "$agent_package" "$profile"
+printf 'onboard-baseline: installed %s on %s\n' "$agent_package" "${profile:-$ubuntu_codename}"
