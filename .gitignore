@@ -6,3 +6,6 @@ dist/
 tmp/
 __pycache__/
 *.pyc
+onboard-baseline/.local/
+onboard-baseline/FREEZE.md
+onboard-baseline/OWNED-FILES.sha256

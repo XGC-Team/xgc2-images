@@ -1,0 +1,27 @@
+name: Wheeltec Nano bionic melodic onboard simulation base
+title: Wheeltec Nano bionic melodic onboard simulation base
+additionalProperties:
+  key: onboard-sim-wheeltec-bionic-melodic
+  name: Wheeltec Nano bionic melodic onboard simulation base
+  tags:
+    - Simulation
+  shortDescEn: Wheeltec Nano bionic melodic onboard simulation base
+  description:
+    en: Wheeltec Nano bionic melodic onboard simulation base. Shared onboard baseline, no chassis or experiment autostart.
+  type: simulation
+  crossVersionUpdate: false
+  limit: 0
+  website: https://github.com/XGC-Team/xgc2-images
+  github: https://github.com/XGC-Team/xgc2-images
+  document: https://github.com/XGC-Team/xgc2-images/tree/master/onboard-baseline
+  architectures:
+    - amd64
+    - arm64/v8
+  batchInstallSupport: false
+  formFields:
+    - default: onboard-sim-wheeltec-bionic-melodic
+      envKey: CONTAINER_NAME
+      label:
+        en: Container name
+      required: true
+      type: text

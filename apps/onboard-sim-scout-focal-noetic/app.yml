@@ -1,0 +1,17 @@
+key: onboard-sim-scout-focal-noetic
+name: Scout Orin NX focal noetic onboard simulation base
+version: 1.0.0
+image: ghcr.io/xgc-team/xgc2-images/onboard-sim-scout-focal-noetic:1.0.0
+description: Scout Orin NX focal noetic onboard simulation base. Runs the shared onboard baseline and does not start a chassis or experiment.
+type: simulation
+repositoryContext: true
+tags:
+  - Simulation
+architectures:
+  - amd64
+  - arm64/v8
+license: Apache-2.0
+source: https://github.com/XGC-Team/xgc2-images
+entrypoints:
+  shell: /opt/xgc2/onboard-baseline/image-entrypoint.sh
+  healthcheck: /opt/xgc2/onboard-baseline/image-healthcheck.sh

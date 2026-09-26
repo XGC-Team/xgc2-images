@@ -28,6 +28,13 @@ while IFS= read -r file; do
   if [[ "$path" =~ ^scripts/build/ ]] || [[ "$path" == ".github/workflows/build.yml" ]] || [[ "$path" == ".github/workflows/reusable-build-images.yml" ]] || [[ "$path" == ".github/workflows/reusable-build-chain.yml" ]] || [[ "$path" == "scripts/detect-ci-matrices.rb" ]]; then
     rebuild_all_build_images=true
   fi
+  if [[ "$path" == onboard-baseline/* ]]; then
+    for app in onboard-sim-fs150-focal-noetic onboard-sim-scout-bionic-melodic onboard-sim-scout-focal-noetic onboard-sim-wheeltec-bionic-melodic; do
+      if [[ ! " ${apps[*]} " =~ " ${app} " ]]; then
+        apps+=("$app")
+      fi
+    done
+  fi
   if [[ "$path" =~ ^apps/([^/]+)/ ]]; then
     app="${BASH_REMATCH[1]}"
     if [[ ! -d "apps/${app}" ]]; then

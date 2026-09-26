@@ -165,7 +165,7 @@ expanded.each do |app|
       "multiarch" => multiarch,
       "no_cache" => force_no_cache || doc["noCache"] == true,
       "version_only" => doc["publishVersionOnly"] == true,
-      "context" => "apps/#{app}",
+      "context" => (doc["repositoryContext"] == true ? "." : "apps/#{app}"),
       "file" => "apps/#{app}/Dockerfile",
       "parent_image" => ""
     )

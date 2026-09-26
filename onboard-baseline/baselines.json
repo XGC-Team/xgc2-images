@@ -1,0 +1,32 @@
+{
+  "owner": "onboard-baseline/onboard-baseline.sh",
+  "agentPackage": "xgc2-agent",
+  "agentVersion": "0.1.0-2",
+  "note": "Pin one profile per robot. FS150 is Focal/Noetic. Scout Xavier and Wheeltec Nano are Bionic/Melodic. Scout Orin NX is Focal/Noetic. amd64 images are local simulation; arm64 images are the onboard build.",
+  "profiles": {
+    "fs150-focal-noetic": {
+      "ubuntuCodename": "focal",
+      "ubuntuVersionId": "20.04",
+      "rosDistro": "noetic",
+      "packages": ["ca-certificates", "curl", "gnupg", "iproute2", "procps", "python3", "ros-noetic-ros-base", "ros-noetic-mavros", "geographiclib-tools", "xgc2-agent"]
+    },
+    "scout-bionic-melodic": {
+      "ubuntuCodename": "bionic",
+      "ubuntuVersionId": "18.04",
+      "rosDistro": "melodic",
+      "packages": ["ca-certificates", "curl", "gnupg", "iproute2", "procps", "python3", "ros-melodic-ros-base", "xgc2-agent"]
+    },
+    "scout-focal-noetic": {
+      "ubuntuCodename": "focal",
+      "ubuntuVersionId": "20.04",
+      "rosDistro": "noetic",
+      "packages": ["ca-certificates", "curl", "gnupg", "iproute2", "procps", "python3", "ros-noetic-ros-base", "xgc2-agent"]
+    },
+    "wheeltec-bionic-melodic": {
+      "ubuntuCodename": "bionic",
+      "ubuntuVersionId": "18.04",
+      "rosDistro": "melodic",
+      "packages": ["ca-certificates", "curl", "gnupg", "iproute2", "procps", "python3", "ros-melodic-ros-base", "xgc2-agent"]
+    }
+  }
+}

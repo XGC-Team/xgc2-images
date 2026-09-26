@@ -1,0 +1,60 @@
+# syntax=docker/dockerfile:1.7
+# Simulation-only layer on the local FS150 baseline. It installs the two
+# already-published FS150 SITL packages. It does not replace image-entrypoint.sh
+# and it is not an onboard machine install.
+ARG PARENT_IMAGE=onboard-sim-fs150-focal-noetic:agent-0.1.0-2-local
+FROM ${PARENT_IMAGE}
+ARG PARENT_IMAGE
+ARG ONBOARD_APT_MIRROR
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN bash <<'EOF'
+set -euo pipefail
+if [ -n "${ONBOARD_APT_MIRROR:-}" ]; then
+  unset HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy || true
+  export NO_PROXY="${NO_PROXY:+$NO_PROXY,}xgc2.apt.xiaokang.ink,packages.ros.org,snapshots.ros.org"
+  export no_proxy="$NO_PROXY"
+  for sources in /etc/apt/sources.list /etc/apt/sources.list.d/*; do
+    if [ -f "$sources" ] && [ ! -L "$sources" ]; then
+      sed -i \
+        -e "s|http://archive.ubuntu.com/ubuntu|${ONBOARD_APT_MIRROR}|g" \
+        -e "s|http://security.ubuntu.com/ubuntu|${ONBOARD_APT_MIRROR}|g" \
+        -e "s|https://archive.ubuntu.com/ubuntu|${ONBOARD_APT_MIRROR}|g" \
+        -e "s|https://security.ubuntu.com/ubuntu|${ONBOARD_APT_MIRROR}|g" \
+        "$sources"
+    fi
+  done
+fi
+apt-get update
+apt-get install -y --no-install-recommends ca-certificates curl gnupg
+tmp="$(mktemp)"
+curl -fsSL --retry 3 --connect-timeout 20 --max-time 120 https://xgc2.apt.xiaokang.ink/xgc2-archive-keyring.gpg -o "$tmp"
+found="$(gpg --batch --show-keys --with-fingerprint --with-colons "$tmp" | awk -F: '$1=="fpr"{print toupper($10)}' | sort -u)"
+[[ "$found" == "2A8E11B36F56D307ADF626D85E5FDC30979EA43F" ]]
+install -d -m 0755 /etc/apt/keyrings
+install -m 0644 "$tmp" /etc/apt/keyrings/xgc2-archive-keyring.gpg
+rm -f "$tmp"
+printf 'deb [arch=%s signed-by=/etc/apt/keyrings/xgc2-archive-keyring.gpg] https://xgc2.apt.xiaokang.ink focal main\n' \
+  "$(dpkg --print-architecture)" > /etc/apt/sources.list.d/xgc2.list
+apt-get update
+apt-get install -y --no-install-recommends \
+  ros-noetic-xgc2-gazebo-sim-fs150-sitl=1.1.0-23 \
+  ros-noetic-xgc2-px4-sitl-1-12=1.12.3-27
+sitl="$(dpkg-query -W -f '${Version}' ros-noetic-xgc2-gazebo-sim-fs150-sitl)"
+px4="$(dpkg-query -W -f '${Version}' ros-noetic-xgc2-px4-sitl-1-12)"
+[[ "$sitl" == "1.1.0-23" ]]
+[[ "$px4" == "1.12.3-27" ]]
+test -r /opt/ros/noetic/share/px4_sitl_1_12/runtime/bin/px4
+test -x /opt/ros/noetic/share/px4_sitl_1_12/runtime/bin/px4
+test -r /opt/ros/noetic/share/gazebo_sim_fs150_sitl/config/generated/fs150-sitl.params
+test -x /opt/ros/noetic/lib/mavros/mavros_node
+test -s /usr/share/GeographicLib/geoids/egm96-5.pgm
+test -f /opt/xgc2/onboard-baseline/image-entrypoint.sh
+grep -q 'runuser --preserve-environment -u xgc2' /opt/xgc2/onboard-baseline/image-entrypoint.sh
+install -d -m 0755 /usr/share/xgc2/onboard-baseline
+printf 'sitl=ros-noetic-xgc2-gazebo-sim-fs150-sitl %s\npx4=ros-noetic-xgc2-px4-sitl-1-12 %s\nparent=%s\n' \
+  "$sitl" "$px4" "${PARENT_IMAGE}" > /usr/share/xgc2/onboard-baseline/sitl-versions.txt
+EOF
+
+ENTRYPOINT ["/opt/xgc2/onboard-baseline/image-entrypoint.sh"]

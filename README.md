@@ -177,6 +177,26 @@ The same dry-run can be started locally when the `gh` token has `read:packages`:
 scripts/gc-ghcr-images.sh --owner XGC-Team --repo xgc2-images
 ```
 
+## Onboard simulation baselines
+
+`onboard-baseline/onboard-baseline.sh` is the only base-environment recipe.
+Image Dockerfiles call `apply`. A machine can call `check` or `apply` for one
+profile. An OS mismatch exits 3 and does not upgrade the system. The script
+does not start a chassis or an experiment. Pin an experiment to one profile
+id: `fs150-focal-noetic`, `scout-bionic-melodic`, `scout-focal-noetic`, or
+`wheeltec-bionic-melodic`. The agent package is `xgc2-agent` `0.1.0-2` from
+XGC2 APT. Image builds stay blocked until that version is in the live index.
+
+FS150 `check` requires `/usr/share/GeographicLib/geoids/egm96-5.pgm`. `apply`
+installs it with `geographiclib-get-geoids -p /usr/share/GeographicLib egm96-5`.
+A missing `agent.env` is seeded with the package default, including
+`XGC_PROCESS_DEFINITION_PLUGINS=/usr/share/xgc2-agent/process-definitions`.
+Docker environment passed to `image-entrypoint.sh` replaces that file for the
+agent process, and ROS logs for the `xgc2` user default to `/home/xgc2/.ros`.
+`snapshot` prints that env plus manual package rows. `manualdiff` compares two
+snapshots. `bash onboard-baseline/freeze-check.sh` covers these without apt or
+an image build.
+
 ## Local Smoke
 
 ```bash

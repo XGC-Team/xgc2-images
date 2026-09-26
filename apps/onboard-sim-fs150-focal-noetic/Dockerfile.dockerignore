@@ -1,0 +1,6 @@
+onboard-baseline/.local
+onboard-baseline/FREEZE.md
+onboard-baseline/OWNED-FILES.sha256
+onboard-baseline/build-local-image.sh
+onboard-baseline/freeze-check.sh
+onboard-baseline/prove-two-experiments.sh
