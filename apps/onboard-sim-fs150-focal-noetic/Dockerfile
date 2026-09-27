@@ -36,6 +36,9 @@ if [ -n "${ONBOARD_APT_MIRROR:-}" ]; then
   done
 fi
 /opt/xgc2/onboard-baseline/onboard-baseline.sh apply --profile fs150-focal-noetic
+# Installation is privileged; baseline consumption uses the real robot account.
+runuser -u "$ONBOARD_BASELINE_USER" -- \
+  /opt/xgc2/onboard-baseline/onboard-baseline.sh check --profile "$ONBOARD_BASELINE_PROFILE"
 EOF
 
 ENTRYPOINT ["/opt/xgc2/onboard-baseline/image-entrypoint.sh"]

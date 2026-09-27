@@ -1,31 +1,32 @@
 {
   "owner": "onboard-baseline/onboard-baseline.sh",
   "agentPackage": "xgc2-agent",
+  "architectures": ["amd64", "arm64"],
   "note": "Pin one profile per robot. FS150 is Focal/Noetic. Scout Xavier and Wheeltec Nano are Bionic/Melodic. Scout Orin NX is Focal/Noetic. amd64 images are local simulation; arm64 images are the onboard build.",
   "profiles": {
     "fs150-focal-noetic": {
       "ubuntuCodename": "focal",
       "ubuntuVersionId": "20.04",
       "rosDistro": "noetic",
-      "packages": ["ca-certificates", "curl", "gnupg", "sudo", "systemd", "init-system-helpers", "iproute2", "procps", "python3", "ros-noetic-ros-base", "ros-noetic-mavros", "geographiclib-tools"]
+      "packages": ["ca-certificates", "curl", "gnupg", "sudo", "systemd", "init-system-helpers", "iproute2", "util-linux", "procps", "python3", "ros-noetic-ros-base", "ros-noetic-mavros", "ros-noetic-mavros-extras", "geographiclib-tools", "wget", "bzip2"]
     },
     "scout-bionic-melodic": {
       "ubuntuCodename": "bionic",
       "ubuntuVersionId": "18.04",
       "rosDistro": "melodic",
-      "packages": ["ca-certificates", "curl", "gnupg", "sudo", "systemd", "init-system-helpers", "iproute2", "procps", "python3", "ros-melodic-ros-base"]
+      "packages": ["ca-certificates", "curl", "gnupg", "sudo", "systemd", "init-system-helpers", "iproute2", "util-linux", "procps", "python3", "ros-melodic-ros-base"]
     },
     "scout-focal-noetic": {
       "ubuntuCodename": "focal",
       "ubuntuVersionId": "20.04",
       "rosDistro": "noetic",
-      "packages": ["ca-certificates", "curl", "gnupg", "sudo", "systemd", "init-system-helpers", "iproute2", "procps", "python3", "ros-noetic-ros-base"]
+      "packages": ["ca-certificates", "curl", "gnupg", "sudo", "systemd", "init-system-helpers", "iproute2", "util-linux", "procps", "python3", "ros-noetic-ros-base"]
     },
     "wheeltec-bionic-melodic": {
       "ubuntuCodename": "bionic",
       "ubuntuVersionId": "18.04",
       "rosDistro": "melodic",
-      "packages": ["ca-certificates", "curl", "gnupg", "sudo", "systemd", "init-system-helpers", "iproute2", "procps", "python3", "ros-melodic-ros-base"]
+      "packages": ["ca-certificates", "curl", "gnupg", "sudo", "systemd", "init-system-helpers", "iproute2", "util-linux", "procps", "python3", "ros-melodic-ros-base"]
     }
   }
 }
