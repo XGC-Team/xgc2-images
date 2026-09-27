@@ -99,6 +99,11 @@ class EntrypointTests(unittest.TestCase):
         # /bin/bash is used by the actual entrypoint's user-directory check.
         if not (cls.base / "bin/bash").exists():
             copy_binary(cls.base, "/bin/bash")
+        # Focal's glibc loads the files NSS backend at runtime, so ldd on
+        # id/getent/runuser does not list this dependency of /etc/passwd lookup.
+        for directory in (Path("/lib"), Path("/usr/lib")):
+            for module in directory.glob("*/libnss_files.so.2"):
+                copy_binary(cls.base, module)
         modules = list(Path("/lib").glob("*/security/pam_permit.so"))
         modules += list(Path("/usr/lib").glob("*/security/pam_permit.so"))
         if not modules:

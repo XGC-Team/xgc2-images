@@ -36,7 +36,9 @@ elif name == 'dpkg':
     else: sys.exit(91)
 elif name == 'dpkg-query':
     if args[-1] not in state['installed']: sys.exit(1)
-    if '${Status}' in args[1]: print('install ok installed', end='')
+    if '${Status}' in args[1]:
+        print(state.get('package_status', {}).get(args[-1], 'install ok installed'), end='')
+        if state.get('query_failure'): sys.exit(1)
     elif '${Version}' == args[1][3:]: print('1.0', end='')
     else: print('manual\t%s\t1.0\t%s' % (args[-1], state['arch']))
 elif name == 'apt-mark':
@@ -55,8 +57,8 @@ elif name == 'rosversion':
     print(state.get('rosversion', os.environ['ROS_DISTRO']))
 elif name == 'rospack':
     if args[-1] == state.get('missing_ros_package'): sys.exit(1)
-    cache = pathlib.Path(os.environ['HOME']) / '.ros'
-    cache.mkdir(exist_ok=True); (cache / 'rospack_cache').write_text('fixture')
+    cache = pathlib.Path(os.environ['ROS_HOME'])
+    cache.mkdir(parents=True, exist_ok=True); (cache / 'rospack_cache').write_text('fixture')
     print('/fixture/' + args[-1])
 elif name in ('python', 'python3'):
     if state.get('python_failure'): sys.exit(1)
@@ -223,6 +225,12 @@ class BaselineTests(unittest.TestCase):
         self.assertIn('unsupported architecture', self.apply(expected=3).stderr)
         self.assertEqual(self.calls('apt-get'), [])
 
+    def test_missing_os_fields_cannot_use_inherited_values(self):
+        (self.root / 'os-release').write_text('ID=ubuntu\n')
+        self.env.update(VERSION_ID='20.04', VERSION_CODENAME='focal')
+        self.apply(expected=3)
+        self.assertEqual(self.calls('apt-get'), [])
+
     def test_architecture_probe_failure_is_not_success(self):
         self.state['arch_failure'] = True; self.save()
         self.apply(expected=3)
@@ -232,6 +240,25 @@ class BaselineTests(unittest.TestCase):
         self.state['installed'].remove('ros-noetic-mavros'); self.save()
         self.assertIn('ros-noetic-mavros', self.check(expected=4).stderr)
         self.assertEqual(self.calls('rosversion'), [])
+        self.assertEqual(self.calls('apt-get'), [])
+
+    def test_failed_dpkg_query_is_not_installed(self):
+        self.state['query_failure'] = True; self.save()
+        self.check(expected=4)
+        self.assertEqual(self.calls('rosversion'), [])
+        self.assertEqual(self.calls('apt-get'), [])
+
+    def test_installed_held_packages_are_not_reinstalled(self):
+        self.state['package_status'] = {'curl': 'hold ok installed'}; self.save()
+        self.check()
+        self.apply()
+        self.assertEqual(self.calls('apt-get'), [])
+
+    def test_incomplete_package_states_are_not_installed(self):
+        for status in ('install ok unpacked', 'install reinstreq half-installed'):
+            with self.subTest(status=status):
+                self.state['package_status'] = {'curl': status}; self.save()
+                self.check(expected=4)
         self.assertEqual(self.calls('apt-get'), [])
 
     def test_check_rejects_missing_setup_despite_ambient_ros(self):
@@ -353,10 +380,16 @@ class BaselineTests(unittest.TestCase):
         entry.write_text(self.relocate((BASELINE / 'image-entrypoint.sh').read_text()))
         env = dict(self.env, ONBOARD_BASELINE_USER='robot-user',
                    ONBOARD_BASELINE_AGENT_DEB='/nonexistent/unused.deb',
+                   XGC_AGENT_ID='w06-entrypoint-robot',
+                   XGC_CORE_ENDPOINT='127.0.0.1:19102',
+                   XGC_AGENT_ADVERTISED_ENDPOINT='127.0.0.1:19090',
                    XGC_AGENT_DATA_DIR=str(self.root / 'data'),
                    XGC_AGENT_MANAGED_ROOT=str(self.root / 'managed'))
+        # The production entrypoint prepares directories as root. Use a user
+        # namespace when running this command-fixture test without privilege.
+        prefix = [] if os.geteuid() == 0 else ['unshare', '--user', '--map-root-user', '--']
         for _ in range(2):
-            result = subprocess.run(['bash', str(entry)], env=env, capture_output=True, text=True, timeout=15)
+            result = subprocess.run(prefix + ['bash', str(entry)], env=env, capture_output=True, text=True, timeout=15)
             self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(len(self.calls('xgc-agent')), 2)
         for command in ('apt-get', 'dpkg', 'dpkg-query', 'geographiclib-get-geoids', 'useradd'):

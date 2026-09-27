@@ -416,7 +416,7 @@ for needle in (
         raise SystemExit("snapshot missing %s\n%s" % (needle, text))
 PY
 
-# Entrypoint: Docker catalog and ROS master win. Unset ROS_HOME becomes the xgc2 home.
+# Entrypoint: Docker catalog and ROS master win. Unset ROS_HOME uses the robot home.
 entry_stubs() {
   local bin="$1"
   mkdir -p "$bin"
@@ -441,9 +441,9 @@ done
 EOF
   cat >"$bin/runuser" <<'EOF'
 #!/bin/bash
-if [[ "$1" == -u && "$2" == marvsmart && "$3" == -- && "$4" == test && "$5" == -w ]]; then
-  [[ -w "$6" ]]
-  exit
+if [[ "$1" == -u && "$2" == marvsmart && "$3" == -- && "$4" == /bin/bash ]]; then
+  shift 3
+  USER=marvsmart exec "$@"
 fi
 if [[ "$1" == --preserve-environment && "$2" == -u && "$3" == marvsmart && "$4" == -- && "$5" == /usr/lib/xgc2/xgc-agent ]]; then
   {
@@ -483,6 +483,9 @@ run_entry() {
       -u XGC_AGENT_DATA_DIR -u XGC_AGENT_MANAGED_ROOT \
       -u ONBOARD_BASELINE_AGENT_DEB -u ONBOARD_BASELINE_PROFILE \
       -u ROS_MASTER_URI -u ROS_HOME -u ROS_LOG_DIR -u ROS_IP -u ROS_HOSTNAME \
+      XGC_AGENT_ID=fixture-fs150 \
+      XGC_CORE_ENDPOINT=127.0.0.1:19102 \
+      XGC_AGENT_ADVERTISED_ENDPOINT=127.0.0.1:19090 \
       "${env_args[@]}" \
       ONBOARD_BASELINE_USER=marvsmart \
       ENTRYPOINT_EVIDENCE="$sandbox/evidence" \
@@ -522,6 +525,9 @@ run_entry_install() {
       -u XGC_AGENT_DATA_DIR -u XGC_AGENT_MANAGED_ROOT \
       -u ONBOARD_BASELINE_AGENT_DEB -u ONBOARD_BASELINE_PROFILE \
       -u ROS_MASTER_URI -u ROS_HOME -u ROS_LOG_DIR -u ROS_IP -u ROS_HOSTNAME \
+      XGC_AGENT_ID=fixture-fs150 \
+      XGC_CORE_ENDPOINT=127.0.0.1:19102 \
+      XGC_AGENT_ADVERTISED_ENDPOINT=127.0.0.1:19090 \
       "${env_args[@]}" \
       ONBOARD_BASELINE_USER=marvsmart \
       ENTRYPOINT_EVIDENCE="$sandbox/evidence" \

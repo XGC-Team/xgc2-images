@@ -8,7 +8,7 @@ Source starting point: `70c4165f28eb73bbc93425fdda79f4b89f041ec5` in
 
 These tests are explicit maintenance/review operations, not Power, Run,
 entrypoint or healthcheck hooks. They never contact a robot or the production
-station. `image-entrypoint.sh` is unchanged.
+station. W07's entrypoint tests are consumed alongside this baseline suite.
 
 ## Profile and user-space boundary
 
@@ -34,7 +34,7 @@ existing Melodic Python 2 before `apply` installs the listed Python 3 package.
 Bash, an existing Python interpreter and dpkg are prerequisites; this is not a
 bare-OS bootstrapper. No apt runs before a valid profile/OS/architecture is known.
 
-`check` loads the selected installed ROS under a clean, temporary HOME. It checks
+`check` loads the selected installed ROS under a clean, temporary HOME and ROS_HOME. It checks
 Debian package status, ROS package resolution, Python imports and, for FS150,
 MAVROS executable/shared-library availability, launch-file resolution and a real
 GeoidEval read. It starts no nodes and uses no ROS master. Only disposable caches
@@ -46,6 +46,8 @@ USB/serial, CAN, radio, vendor drivers, firmware or control behavior.
 Run from the repository root:
 
 ```bash
+python3 -m unittest discover -s onboard-baseline/tests -p test_baseline.py -v
+# Run the combined suite as root inside an isolated Linux test runner:
 python3 -m unittest discover -s onboard-baseline/tests -p 'test_*.py' -v
 bash onboard-baseline/freeze-check.sh
 bash -n onboard-baseline/onboard-baseline.sh
@@ -57,11 +59,16 @@ These process/fixture tests exercise the real shell script in a disposable tree,
 with explicit package/service/ROS command doubles. They cover rejection before
 installation, clean-shell loading, interpreter selection, corrupt/missing runtime
 dependencies, repeated apply, local-DEB Agent installation, existing identities,
-snapshot/manualdiff and the unchanged entrypoint's installed-Agent restart path.
+snapshot/manualdiff and W07's installed-Agent restart path. Held installed packages
+remain installed; failed dpkg queries and incomplete package states do not.
+The entrypoint command fixture supplies a configured identity and endpoints and
+uses a root user namespace when the suite is run unprivileged. W07's separate
+chroot tests run real account switching; they require root in an isolated runner
+and copy the files NSS backend required for passwd/group lookup on Focal.
 They are not ROS functionality or actual Python 2 execution evidence. The existing
 freeze-check also requires user/mount namespaces and its existing empty bind-mount
 targets; run it on a disposable review host, not a production robot. Its original
-assertions remain unchanged; only the OS/ROS command fixtures are updated.
+assertions remain unchanged; the OS/ROS and configured-entrypoint fixtures are updated.
 
 ## Local image build and functional replay (Docker required)
 

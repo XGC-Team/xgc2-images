@@ -103,6 +103,7 @@ print("packages=(" + " ".join(quote(item) for item in profile["packages"]) + ")"
 PY
 )" || fail "invalid or unknown profile ${profile}" 2
   eval "$profile_config"
+  unset ID VERSION_CODENAME VERSION_ID
   # shellcheck disable=SC1090
   . "$OS_RELEASE"
   if [[ "${ID:-}" != "ubuntu" || "${VERSION_CODENAME:-}" != "$ubuntu_codename" || "${VERSION_ID:-}" != "$ubuntu_version_id" ]]; then
@@ -129,6 +130,7 @@ print("packages=()")
 PY
 )" || fail "agent package name is missing" 2
   eval "$agent_config"
+  unset VERSION_CODENAME VERSION_ID
   # shellcheck disable=SC1090
   . "$OS_RELEASE"
   ubuntu_codename="${VERSION_CODENAME:-}"
@@ -138,8 +140,8 @@ fi
 
 package_installed() {
   local package="$1" status
-  status="$(dpkg-query -W -f='${Status}' "$package" 2>/dev/null || true)"
-  [[ "$status" == "install ok installed" ]]
+  status="$(dpkg-query -W -f='${Status}' "$package" 2>/dev/null)" || return 1
+  [[ "$status" == "install ok installed" || "$status" == "hold ok installed" ]]
 }
 
 missing=()
@@ -163,7 +165,7 @@ if [[ "$mode" == "check" ]]; then
   check_runtime() (
     check_home="$(mktemp -d)" || return 1
     trap 'rm -rf -- "$check_home"' EXIT
-    env -i HOME="$check_home" PATH=/usr/sbin:/usr/bin:/sbin:/bin \
+    env -i HOME="$check_home" ROS_HOME="$check_home/.ros" PATH=/usr/sbin:/usr/bin:/sbin:/bin \
       LANG=C.UTF-8 PYTHONDONTWRITEBYTECODE=1 \
       bash --noprofile --norc -s -- "$ros_distro" "$profile" <<'ROS'
 set -eo pipefail
