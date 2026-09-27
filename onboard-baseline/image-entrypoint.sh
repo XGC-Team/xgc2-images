@@ -11,6 +11,12 @@ if [[ -d /run/systemd/system ]]; then
   printf 'onboard-baseline: systemd is running; use systemctl, not this entrypoint\n' >&2
   exit 1
 fi
+# Installation and runtime directory preparation need root; the Agent itself
+# must run through runuser below, as the image's existing robot account.
+if (( EUID != 0 )); then
+  printf 'onboard-baseline: container entrypoint requires root to prepare the robot account\n' >&2
+  exit 1
+fi
 agent_user="${ONBOARD_BASELINE_USER:?Set the existing robot user}"
 agent_group="$(id -gn "$agent_user")"
 agent_home="$(getent passwd "$agent_user" | cut -d: -f6)"
@@ -65,6 +71,7 @@ for key in \
   XGC_GAZEBO_SCENE_PLUGIN_PATH \
   XGC_GAZEBO_VRPN_PLUGIN_PATH \
   XGC_GAZEBO_VRPN_CONFIG_PATH \
+  GAZEBO_MASTER_URI \
   ROS_MASTER_URI \
   ROS_IP \
   ROS_HOSTNAME \
@@ -73,10 +80,11 @@ for key in \
 do
   preserve_key "$key"
 done
+# Snapshot names without /dev/fd process substitution (also works in chroots).
 while IFS= read -r key; do
   [[ "$key" == XGC_ADAPTER_* ]] || continue
   preserve_key "$key"
-done < <(compgen -e)
+done <<< "$(compgen -e)"
 
 if [[ -f /etc/xgc2/agent.env ]]; then
   set -a
@@ -97,6 +105,19 @@ fi
 for key in "${!incoming[@]}"; do
   export "$key=${incoming[$key]}"
 done
+# Do not boot the package placeholder or let an explicitly empty caller value
+# silently choose Agent defaults. A configured conffile is still supported.
+for key in XGC_AGENT_ID XGC_CORE_ENDPOINT XGC_AGENT_ADVERTISED_ENDPOINT; do
+  if [[ -z "${!key:-}" ]]; then
+    printf 'onboard-baseline: %s is required for container Agent startup\n' "$key" >&2
+    exit 1
+  fi
+done
+if [[ "$XGC_AGENT_ID" == agent-01 ]]; then
+  printf 'onboard-baseline: agent-01 is a package placeholder, not a container identity\n' >&2
+  exit 1
+fi
+
 # Caller ROS_HOME wins; otherwise ROS logs use the robot operator home.
 if [[ ! -v 'incoming[ROS_HOME]' ]]; then
   export ROS_HOME="$agent_home/.ros"
@@ -114,11 +135,18 @@ chmod 0440 /etc/sudoers.d/robot-operator
 if [[ "$ROS_HOME" == "$agent_home/.ros" ]]; then
   install -d -o "$agent_user" -g "$agent_group" -m 0750 -- "$ROS_HOME" "$ROS_LOG_DIR"
 fi
+# A writable but non-searchable directory is not usable by Files/Terminal.
+# Check as the real account, including HOME, without recursively reowning data
+# or silently creating caller-supplied ROS directories.
+runuser -u "$agent_user" -- /bin/bash -c '
+  for directory; do
+    if [[ ! -d "$directory" || ! -r "$directory" || ! -w "$directory" || ! -x "$directory" ]]; then
+      printf "onboard-baseline: directory not usable by %s: %s\n" "$USER" "$directory" >&2
+      exit 1
+    fi
+  done
+' onboard-baseline "$agent_home" "$data_dir" "$managed_root" "$ROS_HOME" "$ROS_LOG_DIR"
 cd "$data_dir"
-runuser -u "$agent_user" -- test -w "$data_dir"
-runuser -u "$agent_user" -- test -w "$managed_root"
-runuser -u "$agent_user" -- test -w "$ROS_HOME"
-runuser -u "$agent_user" -- test -w "$ROS_LOG_DIR"
 export HOME="$agent_home"
 export USER="$agent_user"
 export LOGNAME="$agent_user"
