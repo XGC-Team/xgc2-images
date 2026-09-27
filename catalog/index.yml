@@ -3,9 +3,9 @@ updatedAt: "2026-09-05"
 apps:
   - key: xgc-ros1-runtime
     name: ROS1 Simulation Kit
-    version: 1.2.3
+    version: 1.2.4
     type: simulation
-    image: ghcr.io/xgc-team/xgc2-images/xgc-ros1-runtime:1.2.3
+    image: ghcr.io/xgc-team/xgc2-images/xgc-ros1-runtime:1.2.4
     app: ../apps/xgc-ros1-runtime/app.yml
     data: ../apps/xgc-ros1-runtime/data.yml
     compose: ../apps/xgc-ros1-runtime/docker-compose.yml

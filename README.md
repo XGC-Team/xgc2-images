@@ -225,6 +225,18 @@ docker run --rm xgc-ros1-runtime:local bash -lc \
 
 For GUI/Gazebo usage, run through the app compose file or mount X11 manually.
 
+Runtime 1.2.4 builds Gazebo 11.15.1's rendering library with independent GPU
+laser materials. The upstream shared second-pass material runs past OGRE's
+texture slots when several full-circle sensors are active. The small source
+patch lives under `apps/xgc-ros1-runtime/scripts/gazebo/`; the rest of Gazebo
+remains the distribution package. The original library is diverted outside
+loader search directories and the patched library replaces its package path.
+Keeping a second copy in `/usr/local/lib` is insufficient: NVIDIA's container
+hook rebuilds the loader cache and can select the distribution copy first.
+The `xgc2-gazebo-sim-scenes` simple-lidar live check covers eight sensors and
+deleting/rebuilding one while the others continue publishing. Run it with
+`--gpus all` against the installed image, not only a host library override.
+
 The centralized XGC2 ROS1 simulation image additionally verifies its locked
 product set and launch files:
 

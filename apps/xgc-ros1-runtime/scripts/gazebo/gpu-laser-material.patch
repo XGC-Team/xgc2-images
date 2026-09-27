@@ -1,0 +1,19 @@
+--- a/gazebo/rendering/GpuLaser.cc
++++ b/gazebo/rendering/GpuLaser.cc
+@@ -125,0 +126,5 @@
++  if (this->dataPtr->matSecondPass)
++  {
++    Ogre::MaterialManager::getSingleton().remove(this->dataPtr->matSecondPass->getName());
++    this->dataPtr->matSecondPass = nullptr;
++  }
+@@ -127 +131,0 @@
+-  this->dataPtr->texCount = 0;
+@@ -197,2 +201,3 @@
+-  this->dataPtr->matSecondPass = (Ogre::Material*)(
+-  Ogre::MaterialManager::getSingleton().getByName("Gazebo/LaserScan2nd").get());
++  auto secondPass = Ogre::MaterialManager::getSingleton().getByName("Gazebo/LaserScan2nd");
++  this->dataPtr->matSecondPass = secondPass->clone(_textureName + "_material").get();
++  this->dataPtr->matSecondPass->getTechnique(0)->getPass(0)->removeAllTextureUnitStates();
+@@ -205 +210 @@
+-    unsigned int texIndex = this->dataPtr->texCount++;
++    unsigned int texIndex = i;
