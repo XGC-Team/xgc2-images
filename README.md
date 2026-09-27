@@ -196,7 +196,12 @@ installs it with `geographiclib-get-geoids -p /usr/share/GeographicLib egm96-5`.
 A missing `agent.env` is seeded with the package default, including
 `XGC_PROCESS_DEFINITION_PLUGINS=/usr/share/xgc2-agent/process-definitions`.
 Docker environment passed to `image-entrypoint.sh` replaces that file for the
-agent process, and ROS logs for the `xgc2` user default to `/home/xgc2/.ros`.
+agent process. The Agent, terminal, files and algorithms use the onboard account:
+FS150 `marvsmart`, Scout Xavier `agilex`, Scout Orin `nvidia`, Wheeltec `wheeltec`.
+Images create that account with UID 1000; real-machine installation selects an
+existing account with `install-agent --user NAME`. ROS logs use that user’s home.
+Experiment containers grant that operator sudo for environment setup; machine
+installation keeps the existing sudo policy.
 `snapshot` prints that env plus manual package rows. `manualdiff` compares two
 snapshots. `bash onboard-baseline/freeze-check.sh` covers these without apt or
 an image build.

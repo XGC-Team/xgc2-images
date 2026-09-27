@@ -12,7 +12,7 @@ XGC2_APT_FINGERPRINT="2A8E11B36F56D307ADF626D85E5FDC30979EA43F"
 usage() {
   echo "usage: onboard-baseline.sh check|apply|snapshot --profile <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic>" >&2
   echo "       onboard-baseline.sh install-sitl --profile fs150-focal-noetic" >&2
-  echo "       onboard-baseline.sh install-agent [--profile <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic>]" >&2
+  echo "       onboard-baseline.sh install-agent [--user EXISTING_USER] [--profile <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic>]" >&2
   echo "       onboard-baseline.sh manualdiff --before SNAPSHOT --after SNAPSHOT" >&2
   exit 2
 }
@@ -60,9 +60,11 @@ PY
   exit "$rc"
 fi
 profile=""
+agent_user="${ONBOARD_BASELINE_USER:-${SUDO_USER:-}}"
 while (($#)); do
   case "$1" in
     --profile) profile="${2:-}"; shift 2 ;;
+    --user) agent_user="${2:-}"; shift 2 ;;
     *) usage ;;
   esac
 done
@@ -255,6 +257,8 @@ if [[ "$mode" == "install-sitl" ]]; then
   exit 0
 fi
 
+[[ -n "$agent_user" ]] || fail "install-agent requires --user with the existing robot account" 2
+id "$agent_user" >/dev/null
 agent_deb="${ONBOARD_BASELINE_AGENT_DEB:-}"
 agent_version="${ONBOARD_BASELINE_AGENT_VERSION:-}"
 if [[ -n "$agent_deb" ]]; then
@@ -330,7 +334,7 @@ XGC_AGENT_DATA_DIR=/var/lib/xgc2-agent
 XGC_AGENT_DOWNLOAD_HOSTS=github.com,objects.githubusercontent.com,release-assets.githubusercontent.com
 XGC_PROCESS_DEFINITION_PLUGINS=/usr/share/xgc2-agent/process-definitions
 EOF
-  chown root:xgc2 "$agent_env" 2>/dev/null || true
+  chown "root:$(id -gn "$agent_user")" "$agent_env"
   chmod 0640 "$agent_env" 2>/dev/null || chmod 0644 "$agent_env"
 }
 start_agent=0
@@ -365,6 +369,7 @@ current_id=""
 if [[ -f "$agent_env" ]]; then
   current_id="$(agent_id_from_file "$agent_env")"
 fi
+/usr/lib/xgc2/configure-agent-user "$agent_user"
 if [[ -d /run/systemd/system ]]; then
   if systemctl is-active --quiet xgc2-agent.service; then
     printf 'onboard-baseline: xgc2-agent.service already running\n'

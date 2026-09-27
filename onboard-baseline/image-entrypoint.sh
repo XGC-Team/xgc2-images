@@ -11,6 +11,9 @@ if [[ -d /run/systemd/system ]]; then
   printf 'onboard-baseline: systemd is running; use systemctl, not this entrypoint\n' >&2
   exit 1
 fi
+agent_user="${ONBOARD_BASELINE_USER:?Set the existing robot user}"
+agent_group="$(id -gn "$agent_user")"
+agent_home="$(getent passwd "$agent_user" | cut -d: -f6)"
 # Install only while creating a container that has no Agent yet and was given
 # an explicit local deb. Restart finds the binary and does not run this.
 # A missing deb is not an APT install; the operator runs install-agent for that.
@@ -85,43 +88,38 @@ for key in "${!incoming[@]}"; do
   export "$key=${incoming[$key]}"
 done
 if [[ -n "${ROS_DISTRO:-}" && -f "/opt/ros/${ROS_DISTRO}/setup.bash" ]]; then
+  # ROS setup scripts read optional environment variables without defaults.
+  set +u
   # shellcheck disable=SC1090
   source "/opt/ros/${ROS_DISTRO}/setup.bash"
+  set -u
 fi
 for key in "${!incoming[@]}"; do
   export "$key=${incoming[$key]}"
 done
-# A root shell's ROS_HOME is not writable by xgc2. Caller ROS_HOME wins;
-# otherwise logs go to the deb user's home.
+# Caller ROS_HOME wins; otherwise ROS logs use the robot operator home.
 if [[ ! -v 'incoming[ROS_HOME]' ]]; then
-  export ROS_HOME=/home/xgc2/.ros
+  export ROS_HOME="$agent_home/.ros"
 fi
 if [[ ! -v 'incoming[ROS_LOG_DIR]' ]]; then
   export ROS_LOG_DIR="${ROS_HOME}/log"
 fi
 data_dir="${XGC_AGENT_DATA_DIR:-/var/lib/xgc2-agent}"
 managed_root="${XGC_AGENT_MANAGED_ROOT:-/var/lib/xgc2-managed}"
-install -d -o xgc2 -g xgc2 -m 0750 -- "$data_dir" "$managed_root"
-tmpfiles=""
-for candidate in /usr/lib/tmpfiles.d/xgc2-agent.conf /lib/tmpfiles.d/xgc2-agent.conf; do
-  if [[ -f "$candidate" ]]; then
-    tmpfiles="$candidate"
-    break
-  fi
-done
-if [[ -n "$tmpfiles" ]]; then
-  systemd-tmpfiles --create "$tmpfiles"
-fi
-id xgc2 >/dev/null
-if [[ "$ROS_HOME" == /home/xgc2/.ros ]]; then
-  install -d -o xgc2 -g xgc2 -m 0750 -- "$ROS_HOME" "$ROS_LOG_DIR"
+install -d -o "$agent_user" -g "$agent_group" -m 0750 -- "$data_dir" "$managed_root" /run/xgc2-agent /run/xgc2/adapter
+# This permission applies only to operator-managed experiment containers.
+install -d -m 0755 /etc/sudoers.d
+printf '%s ALL=(root) NOPASSWD: ALL\n' "$agent_user" > /etc/sudoers.d/robot-operator
+chmod 0440 /etc/sudoers.d/robot-operator
+if [[ "$ROS_HOME" == "$agent_home/.ros" ]]; then
+  install -d -o "$agent_user" -g "$agent_group" -m 0750 -- "$ROS_HOME" "$ROS_LOG_DIR"
 fi
 cd "$data_dir"
-runuser -u xgc2 -- test -w "$data_dir"
-runuser -u xgc2 -- test -w "$managed_root"
-runuser -u xgc2 -- test -w "$ROS_HOME"
-runuser -u xgc2 -- test -w "$ROS_LOG_DIR"
-export HOME=/home/xgc2
-export USER=xgc2
-export LOGNAME=xgc2
-exec runuser --preserve-environment -u xgc2 -- /usr/lib/xgc2/xgc-agent
+runuser -u "$agent_user" -- test -w "$data_dir"
+runuser -u "$agent_user" -- test -w "$managed_root"
+runuser -u "$agent_user" -- test -w "$ROS_HOME"
+runuser -u "$agent_user" -- test -w "$ROS_LOG_DIR"
+export HOME="$agent_home"
+export USER="$agent_user"
+export LOGNAME="$agent_user"
+exec runuser --preserve-environment -u "$agent_user" -- /usr/lib/xgc2/xgc-agent

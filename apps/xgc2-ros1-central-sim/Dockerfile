@@ -17,6 +17,7 @@ ARG QGC_APPIMAGE_SHA256=c0356bfed3ca1c02fafd36d3168cd532590a894c787d612aa237a0cf
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ROS_DISTRO=noetic
+ENV ONBOARD_BASELINE_USER=xgc
 ENV DISABLE_ROS1_EOL_WARNINGS=1
 ENV XGC2_SIM_LOG_DIR=/var/log/xgc2-sim
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -42,8 +43,9 @@ RUN chmod +x /tmp/install-qgroundcontrol.sh \
       /tmp/install-qgroundcontrol.sh \
     && rm -f /tmp/install-qgroundcontrol.sh
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends libpulse-mainloop-glib0 \
+RUN useradd --uid 1000 --create-home --shell /bin/bash --user-group "$ONBOARD_BASELINE_USER" \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends libpulse-mainloop-glib0 sudo \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

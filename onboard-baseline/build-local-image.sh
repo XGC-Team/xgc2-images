@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Local image build. The four baselines require ONBOARD_BASELINE_AGENT_DEB.
-# There is no default deb path. Signed APT is what the Dockerfiles do when
-# that secret is omitted. This script does not push a registry tag.
+# Local robot base image build. Agent installation happens when the
+# container is prepared. This script does not push a registry tag.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -16,9 +15,9 @@ if [[ -z "$PROFILE" ]]; then
 fi
 
 if [[ "$PROFILE" == "fs150-focal-noetic-sitl" ]]; then
-  parent_tag="${PARENT_IMAGE:-onboard-sim-fs150-focal-noetic:agent-0.1.0-2-local}"
+  parent_tag="${PARENT_IMAGE:-onboard-sim-fs150-focal-noetic:base-local}"
   docker image inspect "$parent_tag" >/dev/null
-  tag="onboard-sim-fs150-focal-noetic:agent-0.1.0-2-local-sitl-1.1.0-23"
+  tag="onboard-sim-fs150-focal-noetic:base-local-sitl-1.1.0-23"
   echo "build-local-image: docker build -t ${tag}"
   echo "build-local-image: parent=${parent_tag}"
   DOCKER_BUILDKIT=1 docker build --pull=false \

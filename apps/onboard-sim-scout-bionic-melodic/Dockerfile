@@ -11,6 +11,7 @@ FROM ${PARENT_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ONBOARD_BASELINE_PROFILE=scout-bionic-melodic
+ENV ONBOARD_BASELINE_USER=agilex
 ENV ROS_DISTRO=melodic
 ENV DISABLE_ROS1_EOL_WARNINGS=1
 
@@ -19,6 +20,7 @@ COPY --from=runtime-sources /onboard-baseline/ /opt/xgc2/onboard-baseline/
 ARG ONBOARD_APT_MIRROR
 RUN bash <<'EOF'
 set -euo pipefail
+useradd --uid 1000 --create-home --shell /bin/bash --user-group "$ONBOARD_BASELINE_USER"
 chmod 0755 /opt/xgc2/onboard-baseline/*.sh
 if [ -n "${ONBOARD_APT_MIRROR:-}" ]; then
   unset HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy || true

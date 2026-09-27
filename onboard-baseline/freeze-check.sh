@@ -128,6 +128,12 @@ printf '%s\n' "$*" >"${FREEZE_EVIDENCE:?}/geoid.invoked"
 mkdir -p "$parent/geoids"
 printf 'pgm\n' >"$parent/geoids/egm96-5.pgm"
 EOF
+  cat >"$bin/id" <<'EOF'
+#!/bin/bash
+if [[ "$*" == '-gn marvsmart' ]]; then echo 0
+elif [[ "$*" == marvsmart ]]; then echo 'uid=1000(marvsmart)'
+else exec /usr/bin/id "$@"; fi
+EOF
   chmod 755 "$bin"/*
 }
 
@@ -145,17 +151,22 @@ run_ns() {
       -u XGC_PROCESS_DEFINITION_PLUGINS -u XGC_AGENT_DISPLAY_NAME \
       -u XGC_AGENT_GRPC_ADDR -u ROS_HOME -u ROS_LOG_DIR -u ROS_MASTER_URI \
       -u ROS_IP -u ROS_HOSTNAME \
+      ONBOARD_BASELINE_USER=marvsmart \
       "${env_args[@]}" \
       unshare --user --map-root-user --mount --propagation private -- bash -c '
         set -euo pipefail
         sandbox="$1"
         shift
+        mount --bind "$sandbox/agent-tools" /usr/lib/xgc2
         mount --bind "$sandbox/etc-xgc2" /etc/xgc2
+        mount -t tmpfs tmpfs /etc/sudoers.d
         if [[ -d "$sandbox/usr-share" ]]; then
           mount --bind "$sandbox/usr-share" /usr/share
         fi
         mkdir -p /usr/share/GeographicLib/geoids
         mount --bind "$sandbox/geoids" /usr/share/GeographicLib/geoids
+        mount -t tmpfs tmpfs /run
+        mkdir -p /run/systemd
         mount --bind "$sandbox/run-systemd" /run/systemd
         mount --bind "$sandbox/apt" /etc/apt
         exec "$@"
@@ -170,6 +181,9 @@ new_sandbox() {
   else
     mkdir -p "$sandbox/run-systemd"
   fi
+  mkdir -p "$sandbox/agent-tools"
+  printf '#!/bin/sh\nexit 0\n' >"$sandbox/agent-tools/configure-agent-user"
+  chmod 755 "$sandbox/agent-tools/configure-agent-user"
   common_stubs "$sandbox/bin"
 }
 
@@ -387,11 +401,13 @@ entry_stubs() {
   mkdir -p "$bin"
   cat >"$bin/id" <<'EOF'
 #!/bin/bash
-[[ "${1:-}" == xgc2 ]]
+if [[ "$*" == '-gn marvsmart' ]]; then echo marvsmart
+elif [[ "$*" != marvsmart ]]; then exit 1; fi
 EOF
-  cat >"$bin/systemd-tmpfiles" <<'EOF'
+  cat >"$bin/getent" <<'EOF'
 #!/bin/bash
-printf '%s\n' "$*" >"${ENTRYPOINT_EVIDENCE:?}/tmpfiles.invoked"
+[[ "$*" == 'passwd marvsmart' ]]
+printf 'marvsmart:x:1000:1000::/home/marvsmart:/bin/bash\n'
 EOF
   cat >"$bin/install" <<'EOF'
 #!/bin/bash
@@ -404,11 +420,11 @@ done
 EOF
   cat >"$bin/runuser" <<'EOF'
 #!/bin/bash
-if [[ "$1" == -u && "$2" == xgc2 && "$3" == -- && "$4" == test && "$5" == -w ]]; then
+if [[ "$1" == -u && "$2" == marvsmart && "$3" == -- && "$4" == test && "$5" == -w ]]; then
   [[ -w "$6" ]]
   exit
 fi
-if [[ "$1" == --preserve-environment && "$2" == -u && "$3" == xgc2 && "$4" == -- && "$5" == /usr/lib/xgc2/xgc-agent ]]; then
+if [[ "$1" == --preserve-environment && "$2" == -u && "$3" == marvsmart && "$4" == -- && "$5" == /usr/lib/xgc2/xgc-agent ]]; then
   {
     printf 'PLUGINS=%s\n' "${XGC_PROCESS_DEFINITION_PLUGINS-__unset__}"
     printf 'MASTER=%s\n' "${ROS_MASTER_URI-__unset__}"
@@ -447,6 +463,7 @@ run_entry() {
       -u ONBOARD_BASELINE_AGENT_DEB -u ONBOARD_BASELINE_PROFILE \
       -u ROS_MASTER_URI -u ROS_HOME -u ROS_LOG_DIR -u ROS_IP -u ROS_HOSTNAME \
       "${env_args[@]}" \
+      ONBOARD_BASELINE_USER=marvsmart \
       ENTRYPOINT_EVIDENCE="$sandbox/evidence" \
       PATH="$sandbox/bin:/usr/bin:/bin" \
       ROS_DISTRO=noetic \
@@ -454,9 +471,11 @@ run_entry() {
         set -euo pipefail
         sandbox="$1"; entry="$2"
         shift 2
+        mount -t tmpfs tmpfs /run
+        mkdir -p /run/systemd
         mount --bind "$sandbox/empty-systemd" /run/systemd
         mount --bind "$sandbox/etc-xgc2" /etc/xgc2
-        mount --bind "$sandbox/tmpfiles" /usr/lib/tmpfiles.d
+        mount -t tmpfs tmpfs /etc/sudoers.d
         mount --bind "$sandbox/setup.bash" /opt/ros/noetic/setup.bash
         mount --bind "$sandbox/varlib" /var/lib
         mount --bind "$sandbox/home" /home
@@ -483,6 +502,7 @@ run_entry_install() {
       -u ONBOARD_BASELINE_AGENT_DEB -u ONBOARD_BASELINE_PROFILE \
       -u ROS_MASTER_URI -u ROS_HOME -u ROS_LOG_DIR -u ROS_IP -u ROS_HOSTNAME \
       "${env_args[@]}" \
+      ONBOARD_BASELINE_USER=marvsmart \
       ENTRYPOINT_EVIDENCE="$sandbox/evidence" \
       PATH="$sandbox/bin:/usr/bin:/bin" \
       ROS_DISTRO=noetic \
@@ -490,9 +510,11 @@ run_entry_install() {
         set -euo pipefail
         sandbox="$1"; entry="$2"
         shift 2
+        mount -t tmpfs tmpfs /run
+        mkdir -p /run/systemd
         mount --bind "$sandbox/empty-systemd" /run/systemd
         mount --bind "$sandbox/etc-xgc2" /etc/xgc2
-        mount --bind "$sandbox/tmpfiles" /usr/lib/tmpfiles.d
+        mount -t tmpfs tmpfs /etc/sudoers.d
         mount --bind "$sandbox/opt" /opt
         mount --bind "$sandbox/varlib" /var/lib
         mount --bind "$sandbox/home" /home
@@ -504,17 +526,16 @@ run_entry_install() {
 }
 
 sandbox="$work/entry-default-ros"
-mkdir -p "$sandbox/bin" "$sandbox/etc-xgc2" "$sandbox/tmpfiles" "$sandbox/varlib/xgc2-agent" \
-  "$sandbox/empty-systemd" "$sandbox/home/xgc2" "$sandbox/evidence"
+mkdir -p "$sandbox/bin" "$sandbox/etc-xgc2" "$sandbox/varlib/xgc2-agent" \
+  "$sandbox/empty-systemd" "$sandbox/home/marvsmart" "$sandbox/evidence"
 entry_stubs "$sandbox/bin"
-chmod 1777 "$sandbox/varlib/xgc2-agent" "$sandbox/home/xgc2"
+chmod 1777 "$sandbox/varlib/xgc2-agent" "$sandbox/home/marvsmart"
 cat >"$sandbox/etc-xgc2/agent.env" <<'EOF'
 XGC_AGENT_ID=agent-01
 XGC_AGENT_DISPLAY_NAME="Agent 01"
 XGC_PROCESS_DEFINITION_PLUGINS=/usr/share/xgc2-agent/process-definitions
 XGC_CORE_ENDPOINT=127.0.0.1:9092
 EOF
-printf 'd /run/xgc2/adapter 0750 xgc2 xgc2 -\n' >"$sandbox/tmpfiles/xgc2-agent.conf"
 printf 'export ROS_MASTER_URI=http://localhost:11311\nexport ROS_HOME=/root/.ros\nexport ROS_SETUP_MARK=sourced\n' >"$sandbox/setup.bash"
 run_entry "$sandbox" \
   XGC_PROCESS_DEFINITION_PLUGINS=/opt/robot/catalog \
@@ -523,50 +544,48 @@ run_entry "$sandbox" \
   XGC_AGENT_DATA_DIR=/var/lib/xgc2-agent \
   XGC_AGENT_MANAGED_ROOT=/var/lib/xgc2-managed \
   ROS_MASTER_URI=http://10.64.0.2:11311
-python3 - "$sandbox/evidence/exec.env" "$sandbox/evidence/install.invoked" "$sandbox/evidence/tmpfiles.invoked" <<'PY'
+python3 - "$sandbox/evidence/exec.env" "$sandbox/evidence/install.invoked" <<'PY'
 import pathlib, sys
 env = dict(line.split("=", 1) for line in pathlib.Path(sys.argv[1]).read_text().splitlines())
 install = pathlib.Path(sys.argv[2]).read_text()
-tmpfiles = pathlib.Path(sys.argv[3]).read_text().strip()
 assert env["PLUGINS"] == "/opt/robot/catalog", env
 assert env["DISPLAY"] == "FS150 1", env
 assert env["MASTER"] == "http://10.64.0.2:11311", env
-assert env["ROS_HOME"] == "/home/xgc2/.ros", env
-assert env["ROS_LOG"] == "/home/xgc2/.ros/log", env
+assert env["ROS_HOME"] == "/home/marvsmart/.ros", env
+assert env["ROS_LOG"] == "/home/marvsmart/.ros/log", env
 assert env["ADAPTER"] == "/run/xgc2/adapter/runtime.sock", env
 assert env["DATA"] == "/var/lib/xgc2-agent", env
 assert env["MANAGED"] == "/var/lib/xgc2-managed", env
-assert env["USER"] == "xgc2", env
-assert "-o xgc2 -g xgc2" in install, install
-assert "/home/xgc2/.ros" in install, install
+assert env["USER"] == "marvsmart", env
+assert "-o marvsmart -g marvsmart" in install, install
+assert "/home/marvsmart/.ros" in install, install
 assert "/var/lib/xgc2-agent" in install, install
 assert "/var/lib/xgc2-managed" in install, install
-assert tmpfiles == "--create /usr/lib/tmpfiles.d/xgc2-agent.conf", tmpfiles
+assert "/run/xgc2/adapter" in install, install
 PY
 
 sandbox="$work/entry-caller-ros"
-mkdir -p "$sandbox/bin" "$sandbox/etc-xgc2" "$sandbox/tmpfiles" "$sandbox/varlib/xgc2-agent" \
-  "$sandbox/empty-systemd" "$sandbox/home/xgc2/custom-ros/log" "$sandbox/evidence"
+mkdir -p "$sandbox/bin" "$sandbox/etc-xgc2" "$sandbox/varlib/xgc2-agent" \
+  "$sandbox/empty-systemd" "$sandbox/home/marvsmart/custom-ros/log" "$sandbox/evidence"
 entry_stubs "$sandbox/bin"
-chmod -R 1777 "$sandbox/varlib/xgc2-agent" "$sandbox/home/xgc2"
+chmod -R 1777 "$sandbox/varlib/xgc2-agent" "$sandbox/home/marvsmart"
 printf 'XGC_PROCESS_DEFINITION_PLUGINS=/usr/share/xgc2-agent/process-definitions\n' >"$sandbox/etc-xgc2/agent.env"
-printf 'd /run/xgc2/adapter 0750 xgc2 xgc2 -\n' >"$sandbox/tmpfiles/xgc2-agent.conf"
 printf 'export ROS_HOME=/root/.ros\nexport ROS_MASTER_URI=http://localhost:11311\n' >"$sandbox/setup.bash"
 run_entry "$sandbox" \
-  ROS_HOME=/home/xgc2/custom-ros \
-  ROS_LOG_DIR=/home/xgc2/custom-ros/log \
+  ROS_HOME=/home/marvsmart/custom-ros \
+  ROS_LOG_DIR=/home/marvsmart/custom-ros/log \
   ROS_MASTER_URI=http://172.30.251.250:11311
 python3 - "$sandbox/evidence/exec.env" <<'PY'
 import pathlib, sys
 env = dict(line.split("=", 1) for line in pathlib.Path(sys.argv[1]).read_text().splitlines())
-assert env["ROS_HOME"] == "/home/xgc2/custom-ros", env
-assert env["ROS_LOG"] == "/home/xgc2/custom-ros/log", env
+assert env["ROS_HOME"] == "/home/marvsmart/custom-ros", env
+assert env["ROS_LOG"] == "/home/marvsmart/custom-ros/log", env
 assert env["MASTER"] == "http://172.30.251.250:11311", env
 assert env["PLUGINS"] == "/usr/share/xgc2-agent/process-definitions", env
 assert env["ADAPTER"] == "__unset__", env
 PY
 install_text="$(cat "$sandbox/evidence/install.invoked")"
-[[ "$install_text" != *"/home/xgc2/custom-ros"* ]] || fail "caller ROS_HOME was recreated"
+[[ "$install_text" != *"/home/marvsmart/custom-ros"* ]] || fail "caller ROS_HOME was recreated"
 [[ "$install_text" == *"/var/lib/xgc2-agent"* ]] || fail "persist data dir was not prepared"
 
 write_transport_stubs() {
@@ -699,13 +718,12 @@ if [[ -e "$sandbox/evidence/apt-get.invoked" ]] && grep -q 'xgc2-agent=' "$sandb
 fi
 
 sandbox="$work/entry-deb-create"
-mkdir -p "$sandbox/bin" "$sandbox/etc-xgc2" "$sandbox/tmpfiles" "$sandbox/varlib/xgc2-agent" \
-  "$sandbox/empty-systemd" "$sandbox/home/xgc2" "$sandbox/evidence" "$sandbox/agent-dir" \
+mkdir -p "$sandbox/bin" "$sandbox/etc-xgc2" "$sandbox/varlib/xgc2-agent" \
+  "$sandbox/empty-systemd" "$sandbox/home/marvsmart" "$sandbox/evidence" "$sandbox/agent-dir" \
   "$sandbox/opt/xgc2/onboard-baseline" "$sandbox/opt/ros/noetic"
 entry_stubs "$sandbox/bin"
-chmod 1777 "$sandbox/varlib/xgc2-agent" "$sandbox/home/xgc2"
+chmod 1777 "$sandbox/varlib/xgc2-agent" "$sandbox/home/marvsmart"
 printf 'XGC_AGENT_ID=agent-01\n' >"$sandbox/etc-xgc2/agent.env"
-printf 'd /run/xgc2/adapter 0750 xgc2 xgc2 -\n' >"$sandbox/tmpfiles/xgc2-agent.conf"
 printf 'export ROS_MASTER_URI=http://localhost:11311\n' >"$sandbox/opt/ros/noetic/setup.bash"
 cat >"$sandbox/opt/xgc2/onboard-baseline/onboard-baseline.sh" <<'EOF'
 #!/bin/bash

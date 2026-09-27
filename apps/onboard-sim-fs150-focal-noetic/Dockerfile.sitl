@@ -39,7 +39,7 @@ test -r /opt/ros/noetic/share/gazebo_sim_fs150_sitl/config/generated/fs150-sitl.
 test -x /opt/ros/noetic/lib/mavros/mavros_node
 test -s /usr/share/GeographicLib/geoids/egm96-5.pgm
 test -f /opt/xgc2/onboard-baseline/image-entrypoint.sh
-grep -q 'runuser --preserve-environment -u xgc2' /opt/xgc2/onboard-baseline/image-entrypoint.sh
+grep -q 'runuser --preserve-environment -u' /opt/xgc2/onboard-baseline/image-entrypoint.sh
 install -d -m 0755 /usr/share/xgc2/onboard-baseline
 printf 'sitl=ros-noetic-xgc2-gazebo-sim-fs150-sitl %s\npx4=ros-noetic-xgc2-px4-sitl-1-12 %s\nparent=%s\n' \
   "$sitl" "$px4" "${PARENT_IMAGE}" > /usr/share/xgc2/onboard-baseline/sitl-versions.txt
