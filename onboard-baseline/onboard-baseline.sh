@@ -18,7 +18,7 @@ usage() {
 }
 
 fail() {
-  printf 'onboard-baseline: %s\n' "$*" >&2
+  printf 'onboard-baseline: %s\n' "$1" >&2
   exit "${2:-1}"
 }
 
@@ -29,8 +29,8 @@ if [[ "$mode" == "manualdiff" ]]; then
   after=""
   while (($#)); do
     case "$1" in
-      --before) before="${2:-}"; shift 2 ;;
-      --after) after="${2:-}"; shift 2 ;;
+      --before) [[ $# -ge 2 && -n "$2" && "$2" != --* ]] || usage; before="$2"; shift 2 ;;
+      --after) [[ $# -ge 2 && -n "$2" && "$2" != --* ]] || usage; after="$2"; shift 2 ;;
       *) usage ;;
     esac
   done
@@ -63,8 +63,8 @@ profile=""
 agent_user="${ONBOARD_BASELINE_USER:-${SUDO_USER:-}}"
 while (($#)); do
   case "$1" in
-    --profile) profile="${2:-}"; shift 2 ;;
-    --user) agent_user="${2:-}"; shift 2 ;;
+    --profile) [[ $# -ge 2 && -n "$2" && "$2" != --* ]] || usage; profile="$2"; shift 2 ;;
+    --user) [[ $# -ge 2 && -n "$2" && "$2" != --* ]] || usage; agent_user="$2"; shift 2 ;;
     *) usage ;;
   esac
 done
@@ -74,35 +74,61 @@ if [[ "$mode" != "install-agent" && -z "$profile" ]]; then
 fi
 [[ -f "$BASELINES" ]] || usage
 
+# Melodic's ROS core parent has Python 2, not necessarily Python 3 yet.
+# Read the same JSON with its existing interpreter; apply then installs python3
+# from the profile. No bootstrap apt runs before profile/OS/architecture checks.
+metadata_python=python3
+if ! command -v "$metadata_python" >/dev/null 2>&1; then
+  metadata_python=python
+  command -v "$metadata_python" >/dev/null 2>&1 || fail "python3 or the existing Melodic python is required to read baselines.json" 2
+fi
+
 if [[ -n "$profile" ]]; then
-  eval "$(python3 - "$BASELINES" "$profile" <<'PY'
-import json, shlex, sys
-doc = json.load(open(sys.argv[1], encoding="utf-8"))
+  profile_config="$("$metadata_python" - "$BASELINES" "$profile" <<'PY'
+import io, json, sys
+try:
+    from shlex import quote
+except ImportError:  # Python 2 on the Melodic ROS core parent
+    from pipes import quote
+doc = json.load(io.open(sys.argv[1], encoding="utf-8"))
 profile = doc["profiles"].get(sys.argv[2])
 if profile is None:
     raise SystemExit(2)
-print("ubuntu_codename=" + shlex.quote(profile["ubuntuCodename"]))
-print("ubuntu_version_id=" + shlex.quote(profile["ubuntuVersionId"]))
-print("ros_distro=" + shlex.quote(profile["rosDistro"]))
-print("agent_package=" + shlex.quote(doc["agentPackage"]))
-print("packages=(" + " ".join(shlex.quote(item) for item in profile["packages"]) + ")")
+print("ubuntu_codename=" + quote(profile["ubuntuCodename"]))
+print("ubuntu_version_id=" + quote(profile["ubuntuVersionId"]))
+print("ros_distro=" + quote(profile["rosDistro"]))
+print("agent_package=" + quote(doc["agentPackage"]))
+print("architectures=(" + " ".join(quote(item) for item in profile["architectures"]) + ")")
+print("packages=(" + " ".join(quote(item) for item in profile["packages"]) + ")")
 PY
-)" || fail "unknown profile ${profile}" 2
+)" || fail "invalid or unknown profile ${profile}" 2
+  eval "$profile_config"
   # shellcheck disable=SC1090
   . "$OS_RELEASE"
-  if [[ "${VERSION_CODENAME:-}" != "$ubuntu_codename" || "${VERSION_ID:-}" != "$ubuntu_version_id" ]]; then
-    fail "refusing profile ${profile}: host is ${VERSION_CODENAME:-unknown} ${VERSION_ID:-unknown}, not ${ubuntu_codename} ${ubuntu_version_id}" 3
+  if [[ "${ID:-}" != "ubuntu" || "${VERSION_CODENAME:-}" != "$ubuntu_codename" || "${VERSION_ID:-}" != "$ubuntu_version_id" ]]; then
+    fail "refusing profile ${profile}: host is ${ID:-unknown} ${VERSION_CODENAME:-unknown} ${VERSION_ID:-unknown}, not ubuntu ${ubuntu_codename} ${ubuntu_version_id}" 3
   fi
+  host_arch="$(dpkg --print-architecture)" || fail "cannot read host architecture" 3
+  arch_supported=0
+  for architecture in "${architectures[@]}"; do
+    [[ "$host_arch" != "$architecture" ]] || arch_supported=1
+  done
+  [[ "$arch_supported" == 1 ]] || fail "refusing profile ${profile}: unsupported architecture ${host_arch}; expected ${architectures[*]}" 3
 else
   # install-agent without a robot profile reads the image's own APT suite.
-  eval "$(python3 - "$BASELINES" <<'PY'
-import json, shlex, sys
-doc = json.load(open(sys.argv[1], encoding="utf-8"))
-print("agent_package=" + shlex.quote(doc["agentPackage"]))
-print("ros_distro=" + shlex.quote(""))
+  agent_config="$("$metadata_python" - "$BASELINES" <<'PY'
+import io, json, sys
+try:
+    from shlex import quote
+except ImportError:  # Python 2 on the Melodic ROS core parent
+    from pipes import quote
+doc = json.load(io.open(sys.argv[1], encoding="utf-8"))
+print("agent_package=" + quote(doc["agentPackage"]))
+print("ros_distro=" + quote(""))
 print("packages=()")
 PY
 )" || fail "agent package name is missing" 2
+  eval "$agent_config"
   # shellcheck disable=SC1090
   . "$OS_RELEASE"
   ubuntu_codename="${VERSION_CODENAME:-}"
@@ -131,21 +157,57 @@ if [[ "$mode" == "check" ]]; then
   if ((${#missing[@]})); then
     fail "missing packages: ${missing[*]}" 4
   fi
-  if command -v rosversion >/dev/null 2>&1; then
-    actual="$(rosversion -d 2>/dev/null || true)"
-    [[ "$actual" == "$ros_distro" ]] || fail "ros distro is ${actual:-unset}, want ${ros_distro}" 4
-  else
-    fail "rosversion is not installed" 4
+  # No caller overlay, shell startup files or ROS master is needed. rospack
+  # and roslaunch may write caches: keep those in a disposable home, not the
+  # robot user's home. Nothing here starts ROS nodes or connects to hardware.
+  check_runtime() (
+    check_home="$(mktemp -d)" || return 1
+    trap 'rm -rf -- "$check_home"' EXIT
+    env -i HOME="$check_home" PATH=/usr/sbin:/usr/bin:/sbin:/bin \
+      LANG=C.UTF-8 PYTHONDONTWRITEBYTECODE=1 \
+      bash --noprofile --norc -s -- "$ros_distro" "$profile" <<'ROS'
+set -eo pipefail
+ros_distro="$1"
+profile="$2"
+ros_prefix="/opt/ros/$ros_distro"
+[[ -r "$ros_prefix/setup.bash" ]] || { echo "missing ROS setup: $ros_prefix/setup.bash" >&2; exit 1; }
+# ROS setup reads optional variables, so enable nounset only after sourcing it.
+source "$ros_prefix/setup.bash"
+set -u
+actual="$(rosversion -d)"
+[[ "$actual" == "$ros_distro" ]] || { echo "ros distro is $actual, want $ros_distro" >&2; exit 1; }
+for package in roscpp rospy roslaunch geometry_msgs nav_msgs; do
+  rospack find "$package" >/dev/null
+done
+python=python3
+[[ "$ros_distro" != melodic ]] || python=python
+"$python" -B -c 'import rospy, roslaunch, rosbag; from geometry_msgs.msg import Twist; from nav_msgs.msg import Odometry'
+if [[ "$profile" == fs150-focal-noetic ]]; then
+  rospack find mavros >/dev/null
+  "$python" -B -c 'from mavros_msgs.msg import State; from mavros_msgs.srv import CommandBool'
+  node="$ros_prefix/lib/mavros/mavros_node"
+  [[ -x "$node" ]] || { echo "missing MAVROS executable: $node" >&2; exit 1; }
+  ldd "$node" >"$HOME/mavros-ldd.txt"
+  if grep -q 'not found' "$HOME/mavros-ldd.txt"; then
+    cat "$HOME/mavros-ldd.txt" >&2
+    exit 1
   fi
-  if [[ "$profile" == "fs150-focal-noetic" && ! -s /usr/share/GeographicLib/geoids/egm96-5.pgm ]]; then
-    fail "missing MAVROS geoid /usr/share/GeographicLib/geoids/egm96-5.pgm" 4
-  fi
-  printf 'onboard-baseline: %s matches %s %s\n' "$profile" "$ubuntu_codename" "$ros_distro"
+  # --files resolves the installed launch graph without launching it.
+  roslaunch --files mavros px4.launch >/dev/null
+  geoid_dir=/usr/share/GeographicLib/geoids
+  [[ -s "$geoid_dir/egm96-5.pgm" && -r "$geoid_dir/egm96-5.pgm" ]] || { echo "missing/unreadable MAVROS geoid: $geoid_dir/egm96-5.pgm" >&2; exit 1; }
+  GeoidEval -d "$geoid_dir" -n egm96-5 --input-string '0 0' >/dev/null
+fi
+ROS
+  )
+  check_runtime || fail "runtime check failed for ${profile}" 4
+  printf 'onboard-baseline: %s matches %s %s arch=%s user=%s\n' "$profile" "$ubuntu_codename" "$ros_distro" "$host_arch" "$(id -un)"
   exit 0
 fi
 
 if [[ "$mode" == "snapshot" ]]; then
   printf 'profile=%s os=%s ros=%s arch=%s\n' "$profile" "$ubuntu_codename" "$ros_distro" "$(dpkg --print-architecture 2>/dev/null || uname -m)"
+  printf 'runtime_user=%s\n' "$(id -un)"
   if [[ -s /usr/share/GeographicLib/geoids/egm96-5.pgm ]]; then
     printf 'geoid=present\n'
   else
@@ -225,7 +287,7 @@ if [[ "$mode" == "apply" ]]; then
   if ((${#install_specs[@]})); then
     ensure_ros_source
     apt-get update
-    apt-get install -y --no-install-recommends "${install_specs[@]}"
+    apt-get install -y --no-install-recommends --no-remove "${install_specs[@]}"
   fi
   geoid_path=/usr/share/GeographicLib/geoids/egm96-5.pgm
   if [[ "$profile" == "fs150-focal-noetic" && ! -s "$geoid_path" ]]; then

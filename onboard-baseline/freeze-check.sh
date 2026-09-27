@@ -54,7 +54,7 @@ done
 
 write_os() {
   local dest="$1" codename="$2" version="$3"
-  printf 'VERSION_CODENAME=%s\nVERSION_ID=%s\n' "$codename" "$version" >"$dest"
+  printf 'ID=ubuntu\nVERSION_CODENAME=%s\nVERSION_ID=%s\n' "$codename" "$version" >"$dest"
 }
 
 common_stubs() {
@@ -169,6 +169,7 @@ run_ns() {
         mkdir -p /run/systemd
         mount --bind "$sandbox/run-systemd" /run/systemd
         mount --bind "$sandbox/apt" /etc/apt
+        mount --bind "$sandbox/opt" /opt
         exec "$@"
       ' bash "$sandbox" "$@"
 }
@@ -185,6 +186,26 @@ new_sandbox() {
   printf '#!/bin/sh\nexit 0\n' >"$sandbox/agent-tools/configure-agent-user"
   chmod 755 "$sandbox/agent-tools/configure-agent-user"
   common_stubs "$sandbox/bin"
+  # check now loads ROS in a clean shell, so keep the command doubles inside
+  # a namespace-mounted ROS prefix rather than relying on caller PATH/env.
+  # These remain fixtures, not proof that ROS/MAVROS or real geoid data works.
+  local distro prefix
+  for distro in noetic melodic; do
+    prefix="$sandbox/opt/ros/$distro"
+    mkdir -p "$prefix/lib/mavros"
+    printf '#!/bin/sh\nexit 0\n' >"$prefix/lib/mavros/mavros_node"
+    chmod 755 "$prefix/lib/mavros/mavros_node"
+    printf 'export ROS_DISTRO=%s\n' "$distro" >"$prefix/setup.bash"
+    cat >>"$prefix/setup.bash" <<'ROS_FIXTURE'
+rosversion() { printf '%s\n' "$ROS_DISTRO"; }
+rospack() { [[ "$1" == find ]]; }
+python() { [[ "$1" == -B && "$2" == -c ]]; }
+python3() { python "$@"; }
+ldd() { [[ -x "$1" ]]; }
+roslaunch() { [[ "$*" == '--files mavros px4.launch' ]]; }
+GeoidEval() { [[ "$(cat /usr/share/GeographicLib/geoids/egm96-5.pgm)" == pgm ]]; }
+ROS_FIXTURE
+  done
 }
 
 # manualdiff does not need the target OS.

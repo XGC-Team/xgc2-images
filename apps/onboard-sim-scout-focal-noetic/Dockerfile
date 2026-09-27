@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-ARG PARENT_IMAGE=ros:noetic-ros-base-focal
+ARG PARENT_IMAGE=ros:noetic-ros-core-focal
 FROM scratch AS runtime-sources
 COPY onboard-baseline/baselines.json /onboard-baseline/baselines.json
 COPY onboard-baseline/onboard-baseline.sh /onboard-baseline/onboard-baseline.sh
@@ -36,6 +36,8 @@ if [ -n "${ONBOARD_APT_MIRROR:-}" ]; then
   done
 fi
 /opt/xgc2/onboard-baseline/onboard-baseline.sh apply --profile scout-focal-noetic
+# Validate as the existing robot operator, not the privileged installer.
+runuser -u "$ONBOARD_BASELINE_USER" -- /opt/xgc2/onboard-baseline/onboard-baseline.sh check --profile "$ONBOARD_BASELINE_PROFILE"
 EOF
 
 ENTRYPOINT ["/opt/xgc2/onboard-baseline/image-entrypoint.sh"]
