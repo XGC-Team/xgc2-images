@@ -180,6 +180,9 @@ scripts/gc-ghcr-images.sh --owner XGC-Team --repo xgc2-images
 ## Onboard simulation baselines
 
 `onboard-baseline/onboard-baseline.sh` is the only base-environment recipe.
+The optional FS150 simulator packages use `install-sitl --profile fs150-focal-noetic`;
+`Dockerfile.sitl` calls that same installer. It can also run from a container
+terminal after uploading the script and `baselines.json`.
 Image Dockerfiles call `apply`. A machine can call `check` or `apply` for one
 profile. An OS mismatch exits 3 and does not upgrade the system. The script
 does not start a chassis or an experiment. Pin an experiment to one profile

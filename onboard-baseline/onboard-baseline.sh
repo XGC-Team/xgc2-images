@@ -11,6 +11,7 @@ XGC2_APT_FINGERPRINT="2A8E11B36F56D307ADF626D85E5FDC30979EA43F"
 
 usage() {
   echo "usage: onboard-baseline.sh check|apply|snapshot --profile <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic>" >&2
+  echo "       onboard-baseline.sh install-sitl --profile fs150-focal-noetic" >&2
   echo "       onboard-baseline.sh install-agent [--profile <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic>]" >&2
   echo "       onboard-baseline.sh manualdiff --before SNAPSHOT --after SNAPSHOT" >&2
   exit 2
@@ -65,7 +66,7 @@ while (($#)); do
     *) usage ;;
   esac
 done
-[[ "$mode" == "check" || "$mode" == "apply" || "$mode" == "snapshot" || "$mode" == "install-agent" ]] || usage
+[[ "$mode" == "check" || "$mode" == "apply" || "$mode" == "snapshot" || "$mode" == "install-agent" || "$mode" == "install-sitl" ]] || usage
 if [[ "$mode" != "install-agent" && -z "$profile" ]]; then
   usage
 fi
@@ -115,7 +116,7 @@ package_installed() {
 
 missing=()
 install_specs=()
-if [[ "$mode" != "install-agent" ]]; then
+if [[ "$mode" != "install-agent" && "$mode" != "install-sitl" ]]; then
 for package in "${packages[@]}"; do
   if ! package_installed "$package"; then
     missing+=("$package")
@@ -232,6 +233,25 @@ if [[ "$mode" == "apply" ]]; then
     fail "MAVROS geoid was not installed at ${geoid_path}" 1
   fi
   printf 'onboard-baseline: applied %s\n' "$profile"
+  exit 0
+fi
+
+# The optional simulator layer shares this installer with Dockerfile.sitl.
+# Physical-machine apply never installs SITL or touches the running Agent.
+if [[ "$mode" == "install-sitl" ]]; then
+  [[ "$profile" == "fs150-focal-noetic" ]] || fail "SITL packages require the FS150 Focal/Noetic profile" 2
+  simulation_packages=(ros-noetic-xgc2-gazebo-sim-fs150-sitl=1.1.0-23 ros-noetic-xgc2-px4-sitl-1-12=1.12.3-27)
+  missing=()
+  for spec in "${simulation_packages[@]}"; do
+    installed="$(dpkg-query -W -f='${Version}' "${spec%%=*}" 2>/dev/null || true)"
+    [[ "$installed" == "${spec#*=}" ]] || missing+=("$spec")
+  done
+  if ((${#missing[@]})); then
+    ensure_xgc2_source
+    apt-get update
+    apt-get install -y --no-install-recommends "${missing[@]}"
+  fi
+  printf 'onboard-baseline: FS150 SITL packages installed\n'
   exit 0
 fi
 

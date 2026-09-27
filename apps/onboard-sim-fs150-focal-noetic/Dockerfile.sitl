@@ -7,6 +7,8 @@ FROM ${PARENT_IMAGE}
 ARG PARENT_IMAGE
 ARG ONBOARD_APT_MIRROR
 
+COPY onboard-baseline/onboard-baseline.sh /opt/xgc2/onboard-baseline/onboard-baseline.sh
+
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN bash <<'EOF'
@@ -26,21 +28,7 @@ if [ -n "${ONBOARD_APT_MIRROR:-}" ]; then
     fi
   done
 fi
-apt-get update
-apt-get install -y --no-install-recommends ca-certificates curl gnupg
-tmp="$(mktemp)"
-curl -fsSL --retry 3 --connect-timeout 20 --max-time 120 https://xgc2.apt.xiaokang.ink/xgc2-archive-keyring.gpg -o "$tmp"
-found="$(gpg --batch --show-keys --with-fingerprint --with-colons "$tmp" | awk -F: '$1=="fpr"{print toupper($10)}' | sort -u)"
-[[ "$found" == "2A8E11B36F56D307ADF626D85E5FDC30979EA43F" ]]
-install -d -m 0755 /etc/apt/keyrings
-install -m 0644 "$tmp" /etc/apt/keyrings/xgc2-archive-keyring.gpg
-rm -f "$tmp"
-printf 'deb [arch=%s signed-by=/etc/apt/keyrings/xgc2-archive-keyring.gpg] https://xgc2.apt.xiaokang.ink focal main\n' \
-  "$(dpkg --print-architecture)" > /etc/apt/sources.list.d/xgc2.list
-apt-get update
-apt-get install -y --no-install-recommends \
-  ros-noetic-xgc2-gazebo-sim-fs150-sitl=1.1.0-23 \
-  ros-noetic-xgc2-px4-sitl-1-12=1.12.3-27
+bash /opt/xgc2/onboard-baseline/onboard-baseline.sh install-sitl --profile fs150-focal-noetic
 sitl="$(dpkg-query -W -f '${Version}' ros-noetic-xgc2-gazebo-sim-fs150-sitl)"
 px4="$(dpkg-query -W -f '${Version}' ros-noetic-xgc2-px4-sitl-1-12)"
 [[ "$sitl" == "1.1.0-23" ]]
