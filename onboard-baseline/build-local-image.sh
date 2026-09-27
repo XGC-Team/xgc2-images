@@ -6,13 +6,19 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BASELINES="${ROOT}/onboard-baseline/baselines.json"
 PROFILE="${1:-}"
+PLATFORM="${2:-linux/amd64}"
 MIRROR="${ONBOARD_APT_MIRROR:-http://mirrors.ustc.edu.cn/ubuntu}"
 
 if [[ -z "$PROFILE" ]]; then
-  echo "usage: build-local-image.sh <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic>" >&2
+  echo "usage: build-local-image.sh <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic> [linux/amd64|linux/arm64]" >&2
   echo "       PARENT_IMAGE=<image> build-local-image.sh fs150-focal-noetic-sitl" >&2
   exit 2
 fi
+
+case "$PLATFORM" in
+  linux/amd64|linux/arm64) ;;
+  *) echo "unsupported platform $PLATFORM" >&2; exit 2 ;;
+esac
 
 if [[ "$PROFILE" == "fs150-focal-noetic-sitl" ]]; then
   parent_tag="${PARENT_IMAGE:-onboard-sim-fs150-focal-noetic:base-local}"
@@ -20,7 +26,7 @@ if [[ "$PROFILE" == "fs150-focal-noetic-sitl" ]]; then
   tag="onboard-sim-fs150-focal-noetic:base-local-sitl-1.1.0-23"
   echo "build-local-image: docker build -t ${tag}"
   echo "build-local-image: parent=${parent_tag}"
-  DOCKER_BUILDKIT=1 docker build --pull=false \
+  DOCKER_BUILDKIT=1 docker build --platform "$PLATFORM" --pull=false \
     --build-arg "PARENT_IMAGE=${parent_tag}" \
     --build-arg "ONBOARD_APT_MIRROR=${MIRROR}" \
     -f "${ROOT}/apps/onboard-sim-fs150-focal-noetic/Dockerfile.sitl" \
@@ -43,7 +49,7 @@ esac
 
 tag="onboard-sim-${PROFILE}:base-local"
 echo "build-local-image: docker build -t ${tag}"
-DOCKER_BUILDKIT=1 docker build --pull=false \
+DOCKER_BUILDKIT=1 docker build --platform "$PLATFORM" --pull=false \
   --build-arg "PARENT_IMAGE=${parent}" \
   --build-arg "ONBOARD_APT_MIRROR=${MIRROR}" \
   -f "${ROOT}/apps/${app}/Dockerfile" \
