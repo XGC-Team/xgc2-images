@@ -206,6 +206,15 @@ installation keeps the existing sudo policy.
 snapshots. `bash onboard-baseline/freeze-check.sh` covers these without apt or
 an image build.
 
+For local builds, use `bash onboard-baseline/build-local-image.sh PROFILE linux/amd64`
+or `linux/arm64`. Explicit platforms produce distinct `:base-local-amd64` and
+`:base-local-arm64` tags. Omitting the platform preserves `:base-local` for amd64.
+The helper uses each Dockerfile's parent default and checks the built image's
+OS/architecture. `fs150-focal-noetic-sitl` is admitted only for amd64; its default
+parent uses the same tag suffix, or `PARENT_IMAGE` names an existing local amd64
+parent. Neither this helper nor an architecture check proves target operation.
+No image is pushed.
+
 ## Local Smoke
 
 ```bash
