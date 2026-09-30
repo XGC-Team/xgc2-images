@@ -3,6 +3,13 @@ set -euo pipefail
 . /etc/os-release
 test "${VERSION_CODENAME}" = "bionic"
 /usr/local/bin/xgc2-build-assert-no-xgc2-apt.sh
+for package in ca-certificates init-system-helpers python3 systemd; do
+  test "$(dpkg-query -W -f='${Status}' "$package")" = "install ok installed"
+done
+command -v systemctl >/dev/null
+command -v deb-systemd-helper >/dev/null
+command -v python3 >/dev/null
+systemctl --version >/dev/null
 command -v g++ >/dev/null
 command -v cmake >/dev/null
 command -v dpkg-buildpackage >/dev/null

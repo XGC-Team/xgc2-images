@@ -220,9 +220,9 @@ apps:
       - Bionic
   - key: xgc2-build-bionic-dev
     name: XGC2 bionic CI dev
-    version: 1.0.0
+    version: 1.0.1
     type: build
-    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-bionic-dev:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-bionic-dev:1.0.1
     app: ../apps/xgc2-build-bionic-dev/app.yml
     data: ../apps/xgc2-build-bionic-dev/data.yml
     compose: ../apps/xgc2-build-bionic-dev/docker-compose.yml
@@ -270,9 +270,9 @@ apps:
       - Focal
   - key: xgc2-build-focal-dev
     name: XGC2 focal CI dev
-    version: 1.0.0
+    version: 1.0.1
     type: build
-    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-focal-dev:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-focal-dev:1.0.1
     app: ../apps/xgc2-build-focal-dev/app.yml
     data: ../apps/xgc2-build-focal-dev/data.yml
     compose: ../apps/xgc2-build-focal-dev/docker-compose.yml

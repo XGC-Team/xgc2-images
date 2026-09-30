@@ -1,0 +1,5 @@
+# Agent install/start package hooks and HTTPS/Python smoke checks.
+ca-certificates
+init-system-helpers
+python3
+systemd
