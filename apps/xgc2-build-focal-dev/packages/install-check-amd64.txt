@@ -1,0 +1,2 @@
+# Execute arm64 Agent binaries from an amd64 install-check host.
+qemu-user-static

@@ -3,7 +3,7 @@ ARG PARENT_IMAGE=ghcr.io/xgc-team/xgc2-images/xgc2-build-focal-base:1.0.0
 FROM ${PARENT_IMAGE}
 
 LABEL org.opencontainers.image.title="XGC2 focal CI dev"
-LABEL org.opencontainers.image.description="Ubuntu focal CI compile and Debian packaging image with compilers, Node, pnpm, uv, Go, Rust, and packaging tools. No ROS and no XGC2 APT packages."
+LABEL org.opencontainers.image.description="Ubuntu focal CI compile and Debian packaging image with compilers, Node, pnpm, uv, Go, Rust, and packaging tools. Includes systemd and Agent install-check dependencies. Includes static arm64 QEMU on amd64 hosts. No ROS and no XGC2 APT packages."
 LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-images"
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -16,16 +16,19 @@ ENV UV_PYTHON_INSTALL_DIR=/usr/local/share/uv/python
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY scripts/build/ /tmp/xgc2-build/
+COPY apps/xgc2-build-focal-dev/packages/ /tmp/xgc2-install-check/
 COPY apps/xgc2-build-focal-dev/scripts/healthcheck.sh /usr/local/bin/xgc2-build-healthcheck
 
 RUN chmod +x /tmp/xgc2-build/*.sh /usr/local/bin/xgc2-build-healthcheck \
  && cp /tmp/xgc2-build/assert-no-xgc2-apt.sh /usr/local/bin/xgc2-build-assert-no-xgc2-apt.sh \
  && chmod +x /usr/local/bin/xgc2-build-assert-no-xgc2-apt.sh \
  && printf 'Acquire::Retries "5";\n' >/etc/apt/apt.conf.d/99-xgc2-retries \
- && /tmp/xgc2-build/install-packages.sh /tmp/xgc2-build/packages/dev.txt /tmp/xgc2-build/packages/dev-focal.txt \
+ && install_check_packages=(/tmp/xgc2-install-check/install-check.txt) \
+ && if [[ "$(dpkg --print-architecture)" == "amd64" ]]; then install_check_packages+=(/tmp/xgc2-install-check/install-check-amd64.txt); fi \
+ && /tmp/xgc2-build/install-packages.sh /tmp/xgc2-build/packages/dev.txt /tmp/xgc2-build/packages/dev-focal.txt "${install_check_packages[@]}" \
  && /tmp/xgc2-build/install-toolchains.sh \
  && /tmp/xgc2-build/assert-no-xgc2-apt.sh \
- && rm -rf /tmp/xgc2-build /var/lib/apt/lists/*
+ && rm -rf /tmp/xgc2-build /tmp/xgc2-install-check /var/lib/apt/lists/*
 
 WORKDIR /work
 CMD ["bash"]
