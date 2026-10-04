@@ -1,0 +1,37 @@
+diff --git a/tools/rosbag_storage/include/rosbag/bag.h b/tools/rosbag_storage/include/rosbag/bag.h
+--- a/tools/rosbag_storage/include/rosbag/bag.h
++++ b/tools/rosbag_storage/include/rosbag/bag.h
+@@ -589,7 +589,9 @@
+             connections_[conn_id] = connection_info;
+             // No need to encrypt connection records in chunks
+             writeConnectionRecord(connection_info, false);
+-            appendConnectionRecordToBuffer(outgoing_chunk_buffer_, connection_info);
++            if (mode_ != BagMode::Write) {
++                appendConnectionRecordToBuffer(outgoing_chunk_buffer_, connection_info);
++            }
+         }
+ 
+         // Add to topic indexes
+@@ -656,13 +658,15 @@
+     writeDataLength(msg_ser_len);
+     write((char*) record_buffer_.getData(), msg_ser_len);
+     
+-    // todo: use better abstraction than appendHeaderToBuffer
+-    appendHeaderToBuffer(outgoing_chunk_buffer_, header);
+-    appendDataLengthToBuffer(outgoing_chunk_buffer_, msg_ser_len);
+-
+-    uint32_t offset = outgoing_chunk_buffer_.getSize();
+-    outgoing_chunk_buffer_.setSize(outgoing_chunk_buffer_.getSize() + msg_ser_len);
+-    memcpy(outgoing_chunk_buffer_.getData() + offset, record_buffer_.getData(), msg_ser_len);
++    // Only readable/append modes need the in-memory mirror for current-chunk read-back.
++    if (mode_ != BagMode::Write) {
++        appendHeaderToBuffer(outgoing_chunk_buffer_, header);
++        appendDataLengthToBuffer(outgoing_chunk_buffer_, msg_ser_len);
++
++        uint32_t offset = outgoing_chunk_buffer_.getSize();
++        outgoing_chunk_buffer_.setSize(outgoing_chunk_buffer_.getSize() + msg_ser_len);
++        memcpy(outgoing_chunk_buffer_.getData() + offset, record_buffer_.getData(), msg_ser_len);
++    }
+     
+     // Update the current chunk time range
+     if (time > curr_chunk_info_.end_time)
