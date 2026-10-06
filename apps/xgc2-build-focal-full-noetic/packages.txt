@@ -1,0 +1,3 @@
+# Native GPU sensor build dependencies for the Focal / Noetic full layer.
+libglfw3-dev
+libglm-dev
