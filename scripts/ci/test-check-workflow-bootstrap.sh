@@ -109,5 +109,30 @@ if python3 "${checker}" "${tmpdir}/upstream"; then
   fail=1
 fi
 
+# Source-repository migration keeps upstream Node CI, never Debian bootstrap.
+viewer="${tmpdir}/viewer"
+mkdir -p "${viewer}/.github/workflows" "${viewer}/.xgc2/scripts"
+printf '%s\n' 'id: xgc2-lichtblick' > "${viewer}/.xgc2/product.yml"
+printf '%s\n' '- uses: actions/setup-node@v6' > "${viewer}/.github/workflows/ci.yml"
+printf '%s\n' 'image=ghcr.io/xgc-team/xgc2-images/xgc2-build-noble-dev:1.0.0' \
+  > "${viewer}/.xgc2/scripts/build_deb_in_docker.sh"
+if ! python3 "${checker}" "${viewer}"; then
+  echo "expected maintained Lichtblick source Node CI to succeed" >&2
+  fail=1
+fi
+for forbidden in .github/workflows/apt-ci.yml .github/workflows/apt-release.yml .xgc2/scripts/build_extra.sh; do
+  printf '%s\n' '- uses: actions/setup-node@v6' > "${viewer}/${forbidden}"
+  if python3 "${checker}" "${viewer}"; then
+    echo "expected ${forbidden} toolchain bootstrap to fail" >&2
+    fail=1
+  fi
+  rm "${viewer}/${forbidden}"
+done
+printf '%s\n' 'id: another-product' > "${viewer}/.xgc2/product.yml"
+if python3 "${checker}" "${viewer}"; then
+  echo "expected first-party Node bootstrap to fail" >&2
+  fail=1
+fi
+
 echo "checker fixtures ok"
 exit "${fail}"

@@ -77,6 +77,19 @@ UPSTREAM_INTEGRATION_EXCEPTIONS["xgc2-lichtblick"] = {
     )
 }
 
+# The maintained upstream source now owns Debian packaging too. Its existing
+# source/desktop/browser checks keep upstream's Node action. This exception is
+# deliberately absent from apt-ci.yml, apt-release.yml and all build helpers:
+# the two Debian packages still use the locked XGC2 image toolchain.
+LICHTBLICK_SOURCE_NODE_WORKFLOWS = frozenset(
+    f".github/workflows/{name}.yml"
+    for name in (
+        "ci", "cloudflare-pages", "dependabot-fix", "e2e-regression",
+        "gh-pages", "message-pipeline-performance", "post-release", "pre-build",
+        "prerelease", "release", "sonar-fork-reports", "sonarqube",
+    )
+)
+
 HOST_B_RE = re.compile(
     r"\[self-hosted[^\]]*(?:xgc-team-b|\bxgc\b[^\]]*org[^\]]*docker)",
     re.IGNORECASE,
@@ -243,6 +256,13 @@ def scan_file(root: Path, current_product_id: str, path: Path) -> list[str]:
             continue
         for uses in FORBIDDEN_USES:
             if uses in line:
+                if (
+                    current_product_id == "xgc2-lichtblick"
+                    and path.relative_to(root).as_posix() in LICHTBLICK_SOURCE_NODE_WORKFLOWS
+                    and uses == "actions/setup-node"
+                    and re.fullmatch(r"(?:-\s*)?uses:\s*actions/setup-node@v6", line)
+                ):
+                    continue
                 findings.append(f"{rel}:{lineno}: forbidden toolchain action {uses}")
         if HOST_B_RE.search(line):
             findings.append(
