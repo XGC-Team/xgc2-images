@@ -57,10 +57,12 @@ CPP
 "${grpc_probe}"
 python3 - <<'PY'
 from concurrent import futures
+from importlib.metadata import version
 import grpc
 
-print("Python gRPC", grpc.__version__)
-assert tuple(map(int, grpc.__version__.split(".")[:2])) >= (1, 16)
+grpc_version = version("grpcio")
+print("Python gRPC", grpc_version)
+assert tuple(map(int, grpc_version.split(".")[:2])) >= (1, 16)
 with futures.ThreadPoolExecutor(max_workers=1) as executor:
     server = grpc.server(executor)
     handler = grpc.unary_unary_rpc_method_handler(lambda request, context: request)
