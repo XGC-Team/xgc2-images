@@ -38,8 +38,8 @@ int main() {
 CPP
 "${gpu_probe}"
 # Exercise the native completion queue and c-ares link used by the adapter client.
-c++ -std=c++14 $(pkg-config --cflags grpc++) -x c++ - \
-  $(pkg-config --libs grpc++) -o "${grpc_probe}" <<'CPP'
+c++ -std=c++14 $(pkg-config --cflags grpc++ libcares) -x c++ - \
+  $(pkg-config --libs grpc++ libcares) -o "${grpc_probe}" <<'CPP'
 #include <ares.h>
 #include <grpcpp/grpcpp.h>
 
