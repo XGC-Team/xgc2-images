@@ -1,3 +1,7 @@
 # Native GPU sensor build dependencies for the Focal / Noetic full layer.
 libglfw3-dev
 libglm-dev
+
+# Native asynchronous adapter client and its Python gRPC test server.
+libc-ares-dev
+python3-grpcio
