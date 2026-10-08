@@ -17,7 +17,8 @@ contains only the maintained, independently versioned simulator products; the
 retired `gazebo-sim-manager`, `gazebo-sim-examples`, and umbrella packages are
 not installed.
 
-The image derives from the pinned amd64 manifest of `xgc-ros1-runtime:1.2.4`.
+The amd64 image derives from the pinned multi-platform manifest of
+`xgc-ros1-runtime:1.2.5`, including the native Focal OpenMP 10 runtime.
 XGC2 products are installed
 from `https://xgc2.apt.xiaokang.ink` only while the image is built. Container
 startup never runs `apt update` or installs products.
