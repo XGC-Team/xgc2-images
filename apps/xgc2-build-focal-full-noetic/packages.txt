@@ -1,6 +1,8 @@
 # Native GPU sensor build dependencies for the Focal / Noetic full layer.
 libglfw3-dev
 libglm-dev
+# Match the existing Focal Clang 10 compiler used by native GPU builds.
+libomp-10-dev
 
 # Native asynchronous adapter client and its Python gRPC test server.
 libc-ares-dev

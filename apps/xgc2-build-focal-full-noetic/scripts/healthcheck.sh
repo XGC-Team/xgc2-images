@@ -15,11 +15,20 @@ dpkg-query -W ros-noetic-pcl-ros ros-noetic-pcl-conversions \
   ros-noetic-eigen-conversions ros-noetic-tf libgflags-dev \
   libgoogle-glog-dev libtbb-dev libyaml-cpp-dev libpcl-dev \
   libffmpeg-nvenc-dev nlohmann-json3-dev libglfw3-dev libglm-dev \
-  libc-ares-dev python3-grpcio >/dev/null
+  libomp-10-dev libomp5-10 libc-ares-dev python3-grpcio >/dev/null
 # Compile and link the GPU sensor headers without requiring a display or GPU.
 gpu_probe="$(mktemp)"
 grpc_probe="$(mktemp)"
-trap 'rm -f "${gpu_probe}" "${grpc_probe}"' EXIT
+openmp_probe="$(mktemp -d)"
+trap 'rm -f "${gpu_probe}" "${grpc_probe}"; rm -rf "${openmp_probe}"' EXIT
+# Use the same Clang/CMake discovery as the native GPU package.
+cat >"${openmp_probe}/CMakeLists.txt" <<'CMAKE'
+cmake_minimum_required(VERSION 3.16)
+project(FocalClangOpenMP LANGUAGES C CXX)
+find_package(OpenMP REQUIRED COMPONENTS C CXX)
+CMAKE
+cmake -S "${openmp_probe}" -B "${openmp_probe}/build" \
+  -DCMAKE_C_COMPILER=clang-10 -DCMAKE_CXX_COMPILER=clang++-10
 c++ -std=c++17 -x c++ - -lglfw -o "${gpu_probe}" <<'CPP'
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
