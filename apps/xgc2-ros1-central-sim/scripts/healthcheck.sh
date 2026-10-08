@@ -45,7 +45,7 @@ test -x \
   /opt/ros/noetic/lib/xgc2_robot_visualization/xgc2_robot_description_publisher_node
 test -x /opt/ros/noetic/lib/xgc2_ros_visualizer/xgc2_ros_visualizer_node
 test -f /opt/ros/noetic/lib/libxgc2_gazebo_rendering.so
-test -f /opt/ros/noetic/lib/libgazebo_scene_contract.so
+test -f /opt/ros/noetic/lib/libxgc2_gazebo_scene_system.so
 test -f /opt/ros/noetic/lib/libgazebo_sim_mecanum_contract.so
 test -x /opt/ros/noetic/lib/xgc_px4_multirotor_ros1_adapter/xgc_px4_multirotor_ros1_adapter_node
 test -x /opt/ros/noetic/lib/xgc_scout_mini_ros1_adapter/xgc_scout_mini_ros1_adapter_node
@@ -62,7 +62,7 @@ linked_artifacts=(
   /opt/ros/noetic/lib/rviz/rviz
   /opt/ros/noetic/lib/xgc2_ros_visualizer/xgc2_ros_visualizer_node
   /opt/ros/noetic/lib/libxgc2_gazebo_rendering.so
-  /opt/ros/noetic/lib/libgazebo_scene_contract.so
+  /opt/ros/noetic/lib/libxgc2_gazebo_scene_system.so
   /opt/ros/noetic/lib/libgazebo_sim_mecanum_contract.so
   /opt/ros/noetic/lib/xgc_ros1_tools_adapter/xgc_ros1_tools_adapter_node
   /opt/qgroundcontrol/appdir/QGroundControl
