@@ -24,7 +24,7 @@ grep -a -q 'v4\.4\.4' /opt/qgroundcontrol/appdir/QGroundControl
 required_ros_packages=(
   xgc2_gazebo_scene
   xgc2_robot_visualization
-  xgc2_ros_display_relays
+  xgc2_ros_visualizer
   gazebo_sim_vrpn_bridge
   gazebo_sim_worlds
   gazebo_sim_scout
