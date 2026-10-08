@@ -24,7 +24,7 @@ grep -a -q 'v4\.4\.4' /opt/qgroundcontrol/appdir/QGroundControl
 required_ros_packages=(
   xgc2_gazebo_scene
   xgc2_robot_visualization
-  gazebo_sim_visualization
+  xgc2_ros_display_relays
   gazebo_sim_vrpn_bridge
   gazebo_sim_worlds
   gazebo_sim_scout
@@ -43,6 +43,8 @@ done
 
 test -x \
   /opt/ros/noetic/lib/xgc2_robot_visualization/xgc2_robot_description_publisher_node
+test -x /opt/ros/noetic/lib/xgc2_ros_visualizer/xgc2_ros_visualizer_node
+test -f /opt/ros/noetic/lib/libxgc2_gazebo_rendering.so
 test -f /opt/ros/noetic/lib/libgazebo_scene_contract.so
 test -f /opt/ros/noetic/lib/libgazebo_sim_mecanum_contract.so
 test -x /opt/ros/noetic/lib/xgc_px4_multirotor_ros1_adapter/xgc_px4_multirotor_ros1_adapter_node
@@ -58,6 +60,8 @@ linked_artifacts=(
   /usr/bin/gzserver-11.15.1
   /usr/bin/gzclient-11.15.1
   /opt/ros/noetic/lib/rviz/rviz
+  /opt/ros/noetic/lib/xgc2_ros_visualizer/xgc2_ros_visualizer_node
+  /opt/ros/noetic/lib/libxgc2_gazebo_rendering.so
   /opt/ros/noetic/lib/libgazebo_scene_contract.so
   /opt/ros/noetic/lib/libgazebo_sim_mecanum_contract.so
   /opt/ros/noetic/lib/xgc_ros1_tools_adapter/xgc_ros1_tools_adapter_node
