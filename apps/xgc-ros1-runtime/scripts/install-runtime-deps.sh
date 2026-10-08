@@ -17,6 +17,7 @@ apt-get install -y --no-install-recommends \
   iputils-ping \
   libgazebo11-dev \
   libgoogle-glog-dev \
+  libomp5-10 \
   libyaml-cpp-dev \
   libzmqpp-dev \
   mesa-utils \

@@ -10,4 +10,5 @@ command -v gazebo >/dev/null
 command -v git >/dev/null
 command -v gdb >/dev/null
 command -v glxinfo >/dev/null
+dpkg-query -W libomp5-10 >/dev/null
 test -x /opt/ros/noetic/lib/mavros/mavros_node
