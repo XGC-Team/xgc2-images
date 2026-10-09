@@ -1,6 +1,6 @@
 services:
   xgc2-build-jammy-ros-humble:
-    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-jammy-ros-humble:1.0.1
+    image: ghcr.io/xgc-team/xgc2-images/xgc2-build-jammy-ros-humble:1.0.2
     container_name: ${CONTAINER_NAME}
     working_dir: /work
     volumes:

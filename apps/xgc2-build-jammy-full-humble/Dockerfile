@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-ARG PARENT_IMAGE=ghcr.io/xgc-team/xgc2-images/xgc2-build-jammy-ros-humble:1.0.1
+ARG PARENT_IMAGE=ghcr.io/xgc-team/xgc2-images/xgc2-build-jammy-ros-humble:1.0.2
 FROM ${PARENT_IMAGE}
 
 LABEL org.opencontainers.image.title="XGC2 jammy humble CI full"
