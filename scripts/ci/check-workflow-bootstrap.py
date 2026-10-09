@@ -77,6 +77,13 @@ UPSTREAM_INTEGRATION_EXCEPTIONS["xgc2-lichtblick"] = {
     )
 }
 
+# The published SDK is a first-party product input. Its third-party
+# dependencies must already be provided by the selected build image.
+FIRST_PARTY_SDK_INSTALLERS = {
+    "xgc2-scene-generation": ".xgc2/scripts/install_published_products.sh",
+    "xgc2-gazebo-sim-scenes": ".xgc2/scripts/build_debs_in_docker.sh",
+}
+
 # The maintained upstream source now owns Debian packaging too. Its existing
 # source/desktop/browser checks keep upstream's Node action. This exception is
 # deliberately absent from apt-ci.yml, apt-release.yml and all build helpers:
@@ -270,6 +277,14 @@ def scan_file(root: Path, current_product_id: str, path: Path) -> list[str]:
             )
         if (
             PIP_RE.search(line)
+            and not (
+                FIRST_PARTY_SDK_INSTALLERS.get(current_product_id) == path.relative_to(root).as_posix()
+                and "--no-index" in line and "--no-deps" in line
+                and re.fullmatch(r'(?:python3|"\$\{XGC2_PYTHON_EXECUTABLE\}") -m pip install (?:--no-index --no-deps|--no-deps --no-index) "\$(?:sdk_wheel|\{wheel\})"', line)
+                and "https://github.com/XGC-Team/xgc2-xrpc/releases/download/v0.1.0-1/xgc2_xrpc-0.1.0-py3-none-any.whl" in text
+                and "8e505ab2366eed198dcd4343e758fed5b7936990b2a72ba635d73d81b195187c" in text
+                and "sha256sum" in text
+            )
             and not re.search(
                 r"\bpip(?:3)?\s+install\s+(?:--no-deps\s+)?\.\s+(?:--no-deps\b|$)",
                 line,
