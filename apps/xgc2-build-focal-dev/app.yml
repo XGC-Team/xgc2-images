@@ -1,7 +1,7 @@
 key: xgc2-build-focal-dev
 name: XGC2 focal CI dev
-version: 1.0.3
-image: ghcr.io/xgc-team/xgc2-images/xgc2-build-focal-dev:1.0.3
+version: 1.0.4
+image: ghcr.io/xgc-team/xgc2-images/xgc2-build-focal-dev:1.0.4
 dependsOnApp: xgc2-build-focal-base
 description: Ubuntu focal CI compile and Debian packaging image with compilers, Node, pnpm, uv, Go, Rust, and packaging tools. No ROS and no XGC2 APT packages.
 type: build

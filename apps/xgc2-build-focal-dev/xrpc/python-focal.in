@@ -4,3 +4,6 @@ httpcore==1.0.9
 grpcio==1.70.0
 setuptools==75.3.2
 wheel==0.45.1
+packaging==25.0
+importlib-metadata==8.5.0
+zipp==3.20.2
