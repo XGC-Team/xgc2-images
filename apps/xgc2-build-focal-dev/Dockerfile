@@ -17,6 +17,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY scripts/build/ /tmp/xgc2-build/
 COPY apps/xgc2-build-focal-dev/scripts/healthcheck.sh /usr/local/bin/xgc2-build-healthcheck
+COPY apps/xgc2-build-focal-dev/xrpc/ /tmp/xgc2-xrpc-deps/
 
 RUN chmod +x /tmp/xgc2-build/*.sh /usr/local/bin/xgc2-build-healthcheck \
  && cp /tmp/xgc2-build/assert-no-xgc2-apt.sh /usr/local/bin/xgc2-build-assert-no-xgc2-apt.sh \
@@ -24,8 +25,9 @@ RUN chmod +x /tmp/xgc2-build/*.sh /usr/local/bin/xgc2-build-healthcheck \
  && printf 'Acquire::Retries "5";\n' >/etc/apt/apt.conf.d/99-xgc2-retries \
  && /tmp/xgc2-build/install-packages.sh /tmp/xgc2-build/packages/dev.txt /tmp/xgc2-build/packages/dev-focal.txt \
  && /tmp/xgc2-build/install-toolchains.sh \
+ && bash /tmp/xgc2-xrpc-deps/install.sh builder \
  && /tmp/xgc2-build/assert-no-xgc2-apt.sh \
- && rm -rf /tmp/xgc2-build /var/lib/apt/lists/*
+ && rm -rf /tmp/xgc2-build /tmp/xgc2-xrpc-deps /var/lib/apt/lists/*
 
 WORKDIR /work
 CMD ["bash"]

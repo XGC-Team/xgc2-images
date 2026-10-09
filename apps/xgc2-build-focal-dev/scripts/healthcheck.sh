@@ -32,3 +32,30 @@ if dpkg-query -W -f='${Package}\n' | grep -E '^(lib)?xgc2-|ros-[a-z]+-xgc2-'; th
   echo "XGC2 packages leaked into build image" >&2
   exit 1
 fi
+
+/usr/local/bin/xgc2-python-xrpc-healthcheck
+test -d /opt/xgc2/npm-cache/_cacache
+
+native_probe="$(mktemp)"
+clang++-10 -std=c++2a -pthread $(pkg-config --cflags grpc++) -x c++ - \
+  $(pkg-config --libs grpc++) -o "$native_probe" <<'CPP'
+#include <stop_token>
+#include <condition_variable>
+#include <span>
+#include <map>
+#include <string_view>
+#include <grpcpp/resource_quota.h>
+#include <grpcpp/server_posix.h>
+int main() {
+  std::stop_source stop; std::stop_callback callback(stop.get_token(), [] {});
+  std::mutex mutex; std::unique_lock<std::mutex> lock(mutex);
+  std::condition_variable_any changed;
+  changed.wait_until(lock, stop.get_token(), std::chrono::steady_clock::now(), [] { return true; });
+  grpc::ResourceQuota quota; quota.Resize(1048576).SetMaxThreads(2);
+  auto accepted_fd = &grpc::AddInsecureChannelFromFd;
+  int data[1] = {0}; std::span<int> view(data); std::map<int, int> table;
+  return !accepted_fd || view.size() != 1 || table.contains(0) || !std::string_view("xrpc").starts_with("x");
+}
+CPP
+"$native_probe"
+rm "$native_probe"

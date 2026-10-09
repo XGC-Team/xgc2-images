@@ -30,3 +30,6 @@ if dpkg-query -W -f='${Package}\n' | grep -E '^(lib)?xgc2-|ros-[a-z]+-xgc2-'; th
   echo "XGC2 packages leaked into build image" >&2
   exit 1
 fi
+
+/usr/local/bin/xgc2-python-xrpc-healthcheck
+test -d /opt/xgc2/npm-cache/_cacache
