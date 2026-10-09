@@ -72,6 +72,7 @@ SHA256
 python3 - <<'PYTHON'
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 source = Path("/usr/local/share/xgc2/vrpn-native")
@@ -80,6 +81,14 @@ lock = json.loads(lock_bytes)
 patch = source / lock["vrpn"]["patch"]
 assert hashlib.sha256(patch.read_bytes()).hexdigest() == lock["vrpn"]["patch_sha256"]
 assert hashlib.sha256(Path("/opt/xgc2/vrpn-native/xgc2-vrpn-router-native.json").read_bytes()).digest() == hashlib.sha256(lock_bytes).digest()
+official = Path("/opt/xgc2/vrpn-official")
+manifest = json.loads((official / "xgc2-vrpn-official.json").read_text())
+assert manifest["source_lock_sha256"] == hashlib.sha256(lock_bytes).hexdigest()
+assert manifest["commit"] == lock["vrpn"]["commit"] and manifest["patched"] is False
+# The upstream print-devices help entry is no arguments; --help is a tracker name.
+for tool, args in (("vrpn_server", ["--help"]), ("vrpn_print_devices", [])):
+    reply = subprocess.run([str(official / "bin" / tool), *args], capture_output=True, timeout=5)
+    assert reply.returncode == 0 and b"Usage:" in reply.stdout + reply.stderr
 PYTHON
 # Link the patched profile marker and current resolver API from static archives;
 # a system 07.34/1.15 header or library cannot satisfy this consumer.
@@ -123,7 +132,7 @@ with futures.ThreadPoolExecutor(max_workers=1) as executor:
 with grpc.insecure_channel("localhost:1") as channel:
     assert callable(channel.unary_unary("/probe/Echo"))
 PY
-python3 -c 'import cv2, numpy; assert cv2.__version__ == "4.12.0"; assert numpy.__version__ == "1.24.4"; assert hasattr(cv2.aruco, "ArucoDetector")'
+python3 -c 'import cv2, numpy, scipy.linalg, scipy.sparse; assert scipy.__version__ == "1.10.1"; assert cv2.__version__ == "4.12.0"; assert numpy.__version__ == "1.24.4"; assert hasattr(cv2.aruco, "ArucoDetector")'
 if dpkg-query -W -f='${Package}\n' | grep -E '^(lib)?xgc2-|ros-[a-z]+-xgc2-'; then
   echo "XGC2 packages leaked into build image" >&2
   exit 1

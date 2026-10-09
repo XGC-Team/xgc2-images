@@ -38,6 +38,10 @@ RUN chmod +x /tmp/xgc2-build/*.sh /usr/local/bin/xgc2-build-healthcheck \
  && install -d /opt/xgc2 \
  && cp -a /tmp/xgc2-vrpn-native-prefix /opt/xgc2/vrpn-native \
  && rm -rf /tmp/xgc2-vrpn-native-build /tmp/xgc2-vrpn-native-prefix \
+ && CC=clang-10 CXX=clang++-10 python3 /usr/local/share/xgc2/vrpn-native/build-official.py \
+      --work-dir /tmp/xgc2-vrpn-official-build --prefix /tmp/xgc2-vrpn-official-prefix \
+ && cp -a /tmp/xgc2-vrpn-official-prefix /opt/xgc2/vrpn-official \
+ && rm -rf /tmp/xgc2-vrpn-official-build /tmp/xgc2-vrpn-official-prefix \
  && /tmp/xgc2-build/assert-no-xgc2-apt.sh \
  && rm -rf /tmp/xgc2-build /tmp/xgc2-full-noetic-packages.txt /tmp/xgc2-python-vision-requirements.lock.txt /var/lib/apt/lists/*
 
