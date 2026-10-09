@@ -15,6 +15,9 @@ command -v xgc-process-launcher >/dev/null
 command -v xgc-process-runner >/dev/null
 command -v setsid >/dev/null
 command -v flock >/dev/null
+command -v clang++-10 >/dev/null
+/usr/local/bin/xgc2-python-xrpc-healthcheck
+python3 -c 'from importlib.metadata import version; import xgc2_xrpc; assert version("xgc2-xrpc") == "0.1.0"'
 test "$(cat /opt/qgroundcontrol/VERSION)" = "4.4.4"
 test "$(cat /opt/qgroundcontrol/APPIMAGE_SHA256)" = \
   "c0356bfed3ca1c02fafd36d3168cd532590a894c787d612aa237a0cfc0b48580"
