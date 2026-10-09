@@ -1,0 +1,1 @@
+libstdc++-10-dev=10.5.0-1ubuntu1~20.04
