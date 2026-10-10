@@ -38,5 +38,15 @@ RUN chmod +x /tmp/xgc2-build/*.sh /usr/local/bin/xgc2-build-healthcheck \
  && /tmp/xgc2-build/assert-no-xgc2-apt.sh \
  && rm -rf /tmp/xgc2-build /var/lib/apt/lists/*
 
+# JSON-HTTP's header dependency is owned by this full build image.
+COPY apps/xgc2-build-jammy-full-humble/json-http-packages.txt /tmp/xgc2-json-http-packages.txt
+COPY scripts/build/install-packages.sh /tmp/xgc2-install-json-http.sh
+COPY apps/xgc2-build-jammy-full-humble/scripts/check-json-http.sh /usr/local/bin/xgc2-build-json-http-check
+RUN chmod +x /tmp/xgc2-install-json-http.sh /usr/local/bin/xgc2-build-json-http-check \
+ && /tmp/xgc2-install-json-http.sh /tmp/xgc2-json-http-packages.txt \
+ && printf '\n/usr/local/bin/xgc2-build-json-http-check\n' >> /usr/local/bin/xgc2-build-healthcheck \
+ && rm -f /tmp/xgc2-install-json-http.sh /tmp/xgc2-json-http-packages.txt \
+ && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /work
 CMD ["bash"]
