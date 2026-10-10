@@ -26,7 +26,6 @@ grep -a -q 'v4\.4\.4' /opt/qgroundcontrol/appdir/QGroundControl
 
 required_ros_packages=(
   xgc2_gazebo_scene
-  xgc2_robot_visualization
   xgc2_ros_visualizer
   gazebo_sim_vrpn_bridge
   gazebo_sim_worlds
@@ -44,8 +43,6 @@ for package in "${required_ros_packages[@]}"; do
   rospack find "${package}" >/dev/null
 done
 
-test -x \
-  /opt/ros/noetic/lib/xgc2_robot_visualization/xgc2_robot_description_publisher_node
 test -x /opt/ros/noetic/lib/xgc2_ros_visualizer/xgc2_ros_visualizer_node
 test -f /opt/ros/noetic/lib/libxgc2_gazebo_rendering.so
 test -f /opt/ros/noetic/lib/libxgc2_gazebo_scene_system.so
