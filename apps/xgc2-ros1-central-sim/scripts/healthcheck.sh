@@ -32,7 +32,11 @@ required_ros_packages=(
   gazebo_sim_scout
   gazebo_sim_mecanum
   xgc2_geometry_msgs
-  ros_image_rtp_adapter
+  xgc2_camera_driver
+  gazebo_sim_camera
+  xgc_camera_calibration
+  xgc_ugv_ros1_adapter
+  xgc_px4_multirotor_ros1_adapter
   xgc_ros1_tools_adapter
   px4_sitl_1_12
   gazebo_sim_px4_1_12
@@ -48,9 +52,9 @@ test -f /opt/ros/noetic/lib/libxgc2_gazebo_rendering.so
 test -f /opt/ros/noetic/lib/libxgc2_gazebo_scene_system.so
 test -f /opt/ros/noetic/lib/libgazebo_sim_mecanum_contract.so
 test -x /opt/ros/noetic/lib/xgc_px4_multirotor_ros1_adapter/xgc_px4_multirotor_ros1_adapter_node
-test -x /opt/ros/noetic/lib/xgc_scout_mini_ros1_adapter/xgc_scout_mini_ros1_adapter_node
-test -x /opt/ros/noetic/lib/xgc_mecanum_ugv_ros1_adapter/xgc_mecanum_ugv_ros1_adapter_node
-test -x /opt/ros/noetic/lib/ros_image_rtp_adapter/image_rtp_adapter
+test -x /opt/ros/noetic/lib/xgc_ugv_ros1_adapter/xgc_ugv_ros1_adapter_node
+test -x /opt/ros/noetic/lib/xgc2_camera_driver/xgc2_camera_driver_node
+test -x /opt/ros/noetic/lib/xgc2_camera_driver/xgc2_ros_image_pipe
 test -x /opt/ros/noetic/lib/xgc_ros1_tools_adapter/xgc_ros1_tools_adapter_node
 test -x /opt/ros/noetic/lib/xgc_ros1_tools_adapter/xgc_ros1_tools_adapter_service_helper
 test -x /usr/bin/xgc-media-edge
@@ -82,6 +86,11 @@ done
 for forbidden_package in \
   xgc2-agent \
   ros-noetic-xgc2-b2arx-description \
+  ros-noetic-xgc2-scene-runtime \
+  ros-noetic-xgc2-world-lidar \
+  ros-noetic-xgc2-ros-image-rtp-adapter \
+  ros-noetic-xgc2-scout-mini-adapter \
+  ros-noetic-xgc2-mecanum-ugv-adapter \
   ros-noetic-xgc2-unitree-b2-adapter \
   ros-noetic-xgc2-mocap-rotor-adapter \
   ros-noetic-xgc2-mocap-rotor-forwarder; do

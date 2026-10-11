@@ -7,8 +7,9 @@ disposable container. The matching current ROS1 semantic Adapters are baked in
 for those three supported robot families.
 
 The complete Central Simulation transport set is also installed at build time:
-XGC2 Geometry Messages, ROS Image RTP Adapter, ROS1 Tools Adapter, and Media
-Edge. Operators do not need to add those products in a derived local-fleet
+XGC2 Geometry Messages, the camera driver with its ROS image pipe, the camera
+messages, the Gazebo camera and camera calibration products, ROS1 Tools Adapter,
+and Media Edge. Operators do not need to add those products in a derived local-fleet
 image. The image remains zero-Agent; Core enrollment and Agent lifecycle stay
 outside this container.
 
