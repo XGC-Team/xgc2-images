@@ -281,8 +281,8 @@ def scan_file(root: Path, current_product_id: str, path: Path) -> list[str]:
                 FIRST_PARTY_SDK_INSTALLERS.get(current_product_id) == path.relative_to(root).as_posix()
                 and "--no-index" in line and "--no-deps" in line
                 and re.fullmatch(r'(?:python3|"\$\{XGC2_PYTHON_EXECUTABLE\}") -m pip install (?:--no-index --no-deps|--no-deps --no-index) "\$(?:sdk_wheel|\{wheel\})"', line)
-                and "https://github.com/XGC-Team/xgc2-xrpc/releases/download/v0.1.0-1/xgc2_xrpc-0.1.0-py3-none-any.whl" in text
-                and "8e505ab2366eed198dcd4343e758fed5b7936990b2a72ba635d73d81b195187c" in text
+                and "https://github.com/XGC-Team/xgc2-xrpc/releases/download/v0.2.0-1/xgc2_xrpc-0.2.0-py3-none-any.whl" in text
+                and "fc81fe2ee5ef1abf2e7313ff4ae9401ce60f3dee14292b5228ea46e01f97c298" in text
                 and "sha256sum" in text
             )
             and not re.search(
