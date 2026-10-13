@@ -8,7 +8,7 @@ npm -g, curl|sh, and stock ubuntu:/ros: build containers.
 Allowed: repo lockfile installs (pnpm install, npm ci, yarn install, bun install,
 uv sync, go test) inside an image that already has the toolchain.
 Allowed apt: a locally built .deb under test, apt-get -f, and already-published
-XGC2 products (`xgc2-*`, `libxgc2-*`, `ros-*-xgc2-*`). High-level controllers
+XGC2 products (`xgc2-*`, `libxgc2-*`, `node-xgc2-*`, `ros-*-xgc2-*`). High-level controllers
 and estimators may install those; images and intermediate libraries may not.
 
 Explicit upstream-integration exceptions are keyed centrally by product id,
@@ -206,7 +206,7 @@ def _apt_packages(line: str) -> list[str]:
 
 def _is_published_xgc2_product(pkg: str) -> bool:
     name = pkg.strip("'\";,()").split("=", 1)[0].lower()
-    if name.startswith("xgc2-") or name.startswith("libxgc2-"):
+    if name.startswith(("xgc2-", "libxgc2-", "node-xgc2-")):
         return True
     return (name.startswith("ros-") and "-xgc2-" in name) or bool(
         LEGACY_XGC2_APT_PACKAGE_RE.fullmatch(name)
@@ -395,7 +395,7 @@ def main() -> int:
             file=sys.stderr,
         )
         print(
-            "Allowed apt: local .deb under test, and published xgc2-* / libxgc2-* / ros-*-xgc2-*.",
+            "Allowed apt: local .deb under test, and published xgc2-* / libxgc2-* / node-xgc2-* / ros-*-xgc2-*.",
             file=sys.stderr,
         )
         print(

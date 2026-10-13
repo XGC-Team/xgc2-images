@@ -35,6 +35,7 @@ jobs:
       - run: apt-get install -y ./debs/xgc2-foo_*.deb
       - run: apt-get install -f
       - run: apt-get install -y --no-install-recommends xgc2-acados libxgc2-math-dev ros-noetic-xgc2-ros1-utils
+      - run: apt-get install -y node-xgc2-xrpc node-xgc2-xrpc-client=0.2.0-1~noble
       - run: apt-get install -y --no-install-recommends ros-melodic-swarm-ros-bridge ros-noetic-scout-msgs
 EOF
 
@@ -55,6 +56,8 @@ jobs:
       - uses: actions/setup-node@v4
       - run: sudo apt-get install -y cmake
       - run: apt-get install -y xgc2-acados cmake
+      - run: apt-get install -y node-xgc2-xrpc cmake
+      - run: apt-get install -y node-external-sdk nodejs
       - run: apt-get install -y ros-noetic-roscpp
       - run: curl --proto "=https" -sSf https://sh.rustup.rs | sh -s -- -y
 EOF
