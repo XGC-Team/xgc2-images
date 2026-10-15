@@ -1,0 +1,47 @@
+--- a/gazebo/rendering/Scene.cc
++++ b/gazebo/rendering/Scene.cc
+@@ -1611,2 +1611,2 @@
+-    boost::shared_ptr<msgs::Light> lm(new msgs::Light(_msg->light(i)));
+-    this->dataPtr->lightFactoryMsgs.push_back(lm);
++    ConstLightPtr lm(new msgs::Light(_msg->light(i)));
++    this->OnLightFactoryMsg(lm);
+@@ -1617,2 +1617,2 @@
+-    boost::shared_ptr<msgs::Joint> jm(new msgs::Joint(_msg->joint(i)));
+-    this->dataPtr->jointMsgs.push_back(jm);
++    ConstJointPtr jm(new msgs::Joint(_msg->joint(i)));
++    this->OnJointMsg(jm);
+@@ -1714 +1714 @@
+-    boost::shared_ptr<msgs::Joint> jm(new msgs::Joint(
++    ConstJointPtr jm(new msgs::Joint(
+@@ -1716 +1716 @@
+-    this->dataPtr->jointMsgs.push_back(jm);
++    this->OnJointMsg(jm);
+@@ -1720 +1720 @@
+-      boost::shared_ptr<msgs::Sensor> sm(new msgs::Sensor(
++      ConstSensorPtr sm(new msgs::Sensor(
+@@ -1722 +1722 @@
+-      this->dataPtr->sensorMsgs.push_back(sm);
++      this->OnSensorMsg(sm);
+@@ -1763 +1763 @@
+-      boost::shared_ptr<msgs::Visual> vm(new msgs::Visual(
++      ConstVisualPtr vm(new msgs::Visual(
+@@ -1765 +1765 @@
+-      this->dataPtr->visualMsgs.push_back(vm);
++      this->OnVisualMsg(vm);
+@@ -1781 +1781 @@
+-      boost::shared_ptr<msgs::Sensor> sm(new msgs::Sensor(
++      ConstSensorPtr sm(new msgs::Sensor(
+@@ -1783 +1783 @@
+-      this->dataPtr->sensorMsgs.push_back(sm);
++      this->OnSensorMsg(sm);
+@@ -1787 +1787 @@
+-      boost::shared_ptr<msgs::Light> lm(new msgs::Light(
++      ConstLightPtr lm(new msgs::Light(
+@@ -1789 +1789 @@
+-      this->dataPtr->lightFactoryMsgs.push_back(lm);
++      this->OnLightFactoryMsg(lm);
+@@ -1795,2 +1795,2 @@
+-    boost::shared_ptr<msgs::Model> mm(new msgs::Model(_msg.model(i)));
+-    this->dataPtr->modelMsgs.push_back(mm);
++    ConstModelPtr mm(new msgs::Model(_msg.model(i)));
++    this->OnModelMsg(mm);
