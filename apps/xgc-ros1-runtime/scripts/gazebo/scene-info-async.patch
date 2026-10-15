@@ -1,0 +1,21 @@
+--- a/gazebo/rendering/Scene.cc
++++ b/gazebo/rendering/Scene.cc
+@@ -456,14 +456,4 @@
+-  // Get scene info from physics::World with ignition transport service
+-  ignition::transport::Node node;
+-  const std::string serviceName = "/scene_info";
+-  std::vector<ignition::transport::ServicePublisher> publishers;
+-  if (!node.ServiceInfo(serviceName, publishers) ||
+-      !node.Request(serviceName, &Scene::OnSceneInfo, this))
+-  {
+-    gzwarn << "Ignition transport [" << serviceName << "] service call failed,"
+-           << " falling back to gazebo transport [scene_info] request."
+-           << std::endl;
+-    this->dataPtr->requestPub->WaitForConnection();
+-    this->dataPtr->requestMsg.reset(msgs::CreateRequest("scene_info"));
+-    this->dataPtr->requestPub->Publish(*this->dataPtr->requestMsg);
+-  }
++  // Request scene info asynchronously through Gazebo transport.
++  this->dataPtr->requestPub->WaitForConnection();
++  this->dataPtr->requestMsg.reset(msgs::CreateRequest("scene_info"));
++  this->dataPtr->requestPub->Publish(*this->dataPtr->requestMsg);

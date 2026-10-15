@@ -19,6 +19,7 @@ tar -xzf "${archive}" -C "${work_dir}"
 source_dir="${work_dir}/gazebo-classic-gazebo11_${version}"
 patch -d "${source_dir}" -p1 < "${script_dir}/gpu-laser-material.patch"
 patch -d "${source_dir}" -p1 < "${script_dir}/scene-visual-producer-lock.patch"
+patch -d "${source_dir}" -p1 < "${script_dir}/scene-info-async.patch"
 cmake -S "${source_dir}" -B "${work_dir}/build" \
   -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DENABLE_PROFILER=OFF \
   -DCMAKE_SKIP_RPATH=ON
