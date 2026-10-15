@@ -1,0 +1,14 @@
+--- a/gazebo/rendering/Visual.cc
++++ b/gazebo/rendering/Visual.cc
+@@ -381,11 +380,0 @@
+-    {
+-      std::vector<ignition::transport::ServicePublisher> publishers;
+-      if (!node.ServiceInfo(validServiceName, publishers))
+-      {
+-        gzerr << "Service name [" << validServiceName << "] not advertised, "
+-              << "not attempting to load shininess for visual with name ["
+-              << this->Name() << "]."
+-              << std::endl;
+-        tryServiceCall = false;
+-      }
+-    }
