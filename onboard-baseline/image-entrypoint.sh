@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Container path: no systemd. Caller environment wins over /etc/xgc2/agent.env.
-# The package default catalog is /usr/share/xgc2-agent/process-definitions.
-# A robot catalog passed in XGC_PROCESS_DEFINITION_PLUGINS replaces it.
-# This does not claim the systemd unit is enabled, and it does not disable ROS.
+# The image starts only the Agent daemon. A saved autostart workflow may start
+# a chassis later; this entrypoint does not start drivers, algorithms, or a ROS master.
 set -euo pipefail
 if [[ $# -gt 0 ]]; then
   exec "$@"
@@ -20,30 +19,16 @@ fi
 agent_user="${ONBOARD_BASELINE_USER:?Set the existing robot user}"
 agent_group="$(id -gn "$agent_user")"
 agent_home="$(getent passwd "$agent_user" | cut -d: -f6)"
-# Install only while creating a container that has no Agent yet and was given
-# an explicit local deb. Restart finds the binary and does not run this.
-# A missing deb is not an APT install; the operator runs install-agent for that.
-if [[ ! -x /usr/lib/xgc2/xgc-agent ]]; then
-  if [[ -z "${ONBOARD_BASELINE_AGENT_DEB:-}" ]]; then
-    printf 'onboard-baseline: xgc2-agent is not installed\n' >&2
-    exit 1
-  fi
-  if [[ -n "${ONBOARD_BASELINE_PROFILE:-}" ]]; then
-    /opt/xgc2/onboard-baseline/onboard-baseline.sh install-agent --profile "${ONBOARD_BASELINE_PROFILE}"
-  else
-    /opt/xgc2/onboard-baseline/onboard-baseline.sh install-agent
-  fi
-fi
+# The live package is installed while the image is built. A copied deb is not
+# a stand-in, and this process does not install or start anything else.
 if [[ ! -x /usr/lib/xgc2/xgc-agent ]]; then
   printf 'onboard-baseline: xgc2-agent is not installed\n' >&2
   exit 1
 fi
 
-# Same keys as agentprofile.ConfigFromEnvironment, CatalogConfigFromEnvironment,
-# and AdapterRuntimePathsFromEnvironment. Caller values replace the package
-# conffile, including a robot catalog in XGC_PROCESS_DEFINITION_PLUGINS.
-# The package default remains /usr/share/xgc2-agent/process-definitions.
-# This list does not point at Core's /usr/share/xgc2 catalog or turn ROS off.
+# Keys read by the current Agent, plus the ROS environment a later workflow
+# can inherit. Caller values replace the package conffile. Old catalog,
+# adapter, and simulator paths are not part of daemon startup.
 declare -A incoming=()
 preserve_key() {
   [[ -v $1 ]] || return 0
@@ -57,21 +42,9 @@ for key in \
   XGC_AGENT_ADVERTISED_ENDPOINT \
   XGC_AGENT_DATA_DIR \
   XGC_AGENT_MANAGED_ROOT \
-  XGC_AGENT_DOWNLOAD_HOSTS \
   XGC_AGENT_IDENTITY_KEY \
   XGC_AGENT_ACCESS_TOKEN_FILE \
   XGC_AGENT_CORE_PIN_PATH \
-  XGC_USER_FILES_DIR \
-  XGC_PROCESS_DEFINITION_PLUGINS \
-  XGC_PROCESS_CATALOG_ROOT \
-  XGC_ADAPTER_DEFINITION_PATHS \
-  XGC_ADAPTER_RUNTIME_UDS \
-  XGC_ADAPTER_RUNTIME_DIR \
-  XGC_ROBOT_ADAPTER_PROFILE_PATHS \
-  XGC_GAZEBO_SCENE_PLUGIN_PATH \
-  XGC_GAZEBO_VRPN_PLUGIN_PATH \
-  XGC_GAZEBO_VRPN_CONFIG_PATH \
-  GAZEBO_MASTER_URI \
   ROS_MASTER_URI \
   ROS_IP \
   ROS_HOSTNAME \
@@ -80,11 +53,6 @@ for key in \
 do
   preserve_key "$key"
 done
-# Snapshot names without /dev/fd process substitution (also works in chroots).
-while IFS= read -r key; do
-  [[ "$key" == XGC_ADAPTER_* ]] || continue
-  preserve_key "$key"
-done <<< "$(compgen -e)"
 
 if [[ -f /etc/xgc2/agent.env ]]; then
   set -a
@@ -146,6 +114,18 @@ runuser -u "$agent_user" -- /bin/bash -c '
     fi
   done
 ' onboard-baseline "$agent_home" "$data_dir" "$managed_root" "$ROS_HOME" "$ROS_LOG_DIR"
+# Drop a stale catalog or simulator path. The daemon does not launch it;
+# a saved workflow supplies its own command when Core is offline.
+# Command substitution stays in this shell. Process substitution needs /dev/fd,
+# which the isolated chroot does not provide.
+for key in $(compgen -e); do
+  case "$key" in
+    XGC_PROCESS_DEFINITION_PLUGINS|XGC_PROCESS_CATALOG_ROOT|XGC_USER_FILES_DIR|XGC_AGENT_DOWNLOAD_HOSTS|GAZEBO_MASTER_URI)
+      unset "$key" ;;
+    XGC_ADAPTER_*|XGC_GAZEBO_*|XGC_ROBOT_ADAPTER_*)
+      unset "$key" ;;
+  esac
+done
 cd "$data_dir"
 export HOME="$agent_home"
 export USER="$agent_user"

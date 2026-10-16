@@ -59,4 +59,4 @@ DOCKER_BUILDKIT=1 docker build --platform "$PLATFORM" --pull=false \
   -f "${ROOT}/apps/${app}/Dockerfile" -t "$tag" "$ROOT"
 check_platform "$tag"
 docker image inspect "$tag" --format 'tag={{.RepoTags}} id={{.Id}}'
-echo "build-local-image: ${tag} has no Agent. install-agent is a later explicit step."
+echo "build-local-image: ${tag} installs live xgc2-agent from APT while building. This script does not publish the image."

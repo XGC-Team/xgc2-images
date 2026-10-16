@@ -36,6 +36,8 @@ if [ -n "${ONBOARD_APT_MIRROR:-}" ]; then
   done
 fi
 /opt/xgc2/onboard-baseline/onboard-baseline.sh apply --profile fs150-focal-noetic
+# Live APT Agent only. The entrypoint starts that daemon and nothing else.
+/opt/xgc2/onboard-baseline/onboard-baseline.sh install-agent --user "$ONBOARD_BASELINE_USER" --profile fs150-focal-noetic
 # Validate as the existing robot operator, not the privileged installer.
 runuser -u "$ONBOARD_BASELINE_USER" -- /opt/xgc2/onboard-baseline/onboard-baseline.sh check --profile "$ONBOARD_BASELINE_PROFILE"
 EOF

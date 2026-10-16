@@ -24,9 +24,12 @@ def save():
     (root / 'state.json').write_text(json.dumps(state))
 if name == 'id':
     if args == ['-u']: print(state.get('uid', '0'))
-    elif args == ['-un']: print('robot-user')
+    elif args == ['-un']: print(state.get('name', 'robot-user'))
     elif args[:1] == ['-gn']: print('robot-user')
-    elif args[-1] != 'robot-user': sys.exit(1)
+    elif len(args) == 1 and not args[0].startswith('-'):
+        accounts = state.get('accounts', ['robot-user', 'marvsmart', 'agilex', 'nvidia', 'wheeltec'])
+        if args[0] == state.get('missing_user') or args[0] not in accounts: sys.exit(1)
+    else: sys.exit(1)
 elif name == 'dpkg':
     if args == ['--print-architecture']:
         if state.get('arch_failure'): sys.exit(1)
@@ -80,7 +83,13 @@ elif name == 'install':
         i += 1
 elif name == 'runuser':
     sys.exit(subprocess.call(args[args.index('--') + 1:]))
-elif name in ('configure-agent-user', 'xgc-agent'):
+elif name == 'xgc-agent':
+    (root / 'agent-env.json').write_text(json.dumps({
+        'argv': args, 'id': os.environ.get('XGC_AGENT_ID'),
+        'core': os.environ.get('XGC_CORE_ENDPOINT'),
+        'catalog': os.environ.get('XGC_PROCESS_DEFINITION_PLUGINS'),
+        'adapter': os.environ.get('XGC_ADAPTER_RUNTIME_UDS')}))
+elif name == 'configure-agent-user':
     pass
 else:
     # Any unexpected mutation/network command is a test failure.
@@ -156,6 +165,15 @@ class BaselineTests(unittest.TestCase):
                                 capture_output=True, text=True, timeout=15)
         self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
         return result
+
+    def root_namespace(self):
+        if os.geteuid() == 0:
+            return []
+        probe = subprocess.run(['unshare', '--user', '--map-root-user', 'true'],
+                               capture_output=True, text=True)
+        if probe.returncode != 0:
+            self.skipTest('user namespace is not permitted here: ' + probe.stderr.strip())
+        return ['unshare', '--user', '--map-root-user', '--']
 
     def check(self, expected=0):
         return self.invoke('check', '--profile', self.profile, expected=expected)
@@ -348,14 +366,20 @@ class BaselineTests(unittest.TestCase):
         self.assertNotIn('applied', self.apply(expected=9).stdout)
 
     def test_install_agent_uses_existing_user_without_base_apt(self):
-        deb = self.root / 'agent.deb'; deb.write_text('fixture deb')
-        env = dict(self.env, ONBOARD_BASELINE_AGENT_DEB=str(deb))
+        self.state['installed'].append('xgc2-agent'); self.save()
         before = self.config.read_bytes()
-        self.invoke('install-agent', '--user', 'robot-user', env=env)
-        self.assertEqual(self.calls('dpkg')[0][1], ['-i', str(deb)])
+        self.invoke('install-agent', '--user', 'robot-user')
         self.assertEqual(self.calls('configure-agent-user')[0][1], ['robot-user'])
         self.assertEqual(self.calls('apt-get'), [])
+        self.assertEqual(self.calls('dpkg'), [])
         self.assertEqual(self.config.read_bytes(), before)
+
+    def test_copied_agent_package_is_refused(self):
+        deb = self.root / 'agent.deb'; deb.write_text('fixture deb')
+        env = dict(self.env, ONBOARD_BASELINE_AGENT_DEB=str(deb))
+        self.assertIn('copied agent package', self.invoke('install-agent', '--user', 'robot-user', env=env, expected=1).stderr)
+        self.assertEqual(self.calls('dpkg'), [])
+        self.assertEqual(self.calls('apt-get'), [])
 
     def test_install_agent_rejects_missing_or_unknown_user(self):
         self.invoke('install-agent', expected=2)
@@ -387,7 +411,7 @@ class BaselineTests(unittest.TestCase):
                    XGC_AGENT_MANAGED_ROOT=str(self.root / 'managed'))
         # The production entrypoint prepares directories as root. Use a user
         # namespace when running this command-fixture test without privilege.
-        prefix = [] if os.geteuid() == 0 else ['unshare', '--user', '--map-root-user', '--']
+        prefix = self.root_namespace()
         for _ in range(2):
             result = subprocess.run(prefix + ['bash', str(entry)], env=env, capture_output=True, text=True, timeout=15)
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -397,15 +421,78 @@ class BaselineTests(unittest.TestCase):
         self.assertTrue(all(row[1][0:2] == ['-u', 'robot-user'] or '--preserve-environment' in row[1]
                             for row in self.calls('runuser')))
 
+    def test_profiles_keep_distinct_accounts_and_base_ros(self):
+        expected = {
+            'fs150-focal-noetic': ('marvsmart', 'focal', '20.04', 'noetic', 'ros-noetic-ros-base'),
+            'scout-bionic-melodic': ('agilex', 'bionic', '18.04', 'melodic', 'ros-melodic-ros-base'),
+            'scout-focal-noetic': ('nvidia', 'focal', '20.04', 'noetic', 'ros-noetic-ros-base'),
+            'wheeltec-bionic-melodic': ('wheeltec', 'bionic', '18.04', 'melodic', 'ros-melodic-ros-base'),
+        }
+        self.assertEqual(set(PROFILES), set(expected))
+        doc = json.loads((BASELINE / 'baselines.json').read_text())
+        self.assertEqual(doc['selection']['defaults']['scout'], 'scout-bionic-melodic')
+        self.assertNotIn('scout-focal-noetic', doc['selection']['defaults'].values())
+        self.assertEqual(doc['selection']['explicit'], ['scout-focal-noetic'])
+        self.assertNotEqual(PROFILES['scout-bionic-melodic']['username'], PROFILES['scout-focal-noetic']['username'])
+        self.assertNotEqual(PROFILES['scout-bionic-melodic']['rosDistro'], PROFILES['scout-focal-noetic']['rosDistro'])
+        for profile, (user, codename, version, distro, package) in expected.items():
+            got = PROFILES[profile]
+            self.assertEqual((got['username'], got['ubuntuCodename'], got['ubuntuVersionId'], got['rosDistro']),
+                             (user, codename, version, distro))
+            self.assertIn(package, got['packages'])
+
+    def test_profile_user_must_match_the_preinstalled_account(self):
+        env = dict(self.env, ONBOARD_BASELINE_USER='wheeltec')
+        self.assertIn('user is marvsmart', self.invoke('check', '--profile', self.profile, env=env, expected=3).stderr)
+        self.assertEqual(self.calls('apt-get'), [])
+        self.state['uid'] = '1000'
+        self.state['name'] = 'nvidia'
+        self.state['missing_user'] = 'marvsmart'
+        self.save()
+        self.assertIn('must run as marvsmart', self.check(expected=3).stderr)
+
     def test_dockerfiles_use_only_shared_apply_and_check_as_robot_user(self):
         for profile in PROFILES:
             text = (BASELINE.parent / ('apps/onboard-sim-%s/Dockerfile' % profile)).read_text()
             p = PROFILES[profile]
+            self.assertIn('ENV ONBOARD_BASELINE_USER=%s' % p['username'], text)
             self.assertIn('ARG PARENT_IMAGE=ros:%s-ros-core-%s' % (p['rosDistro'], p['ubuntuCodename']), text)
             self.assertIn('onboard-baseline.sh apply --profile ' + profile, text)
+            self.assertIn('onboard-baseline.sh install-agent --user "$ONBOARD_BASELINE_USER" --profile ' + profile, text)
             self.assertIn('runuser -u "$ONBOARD_BASELINE_USER" -- /opt/xgc2/onboard-baseline/onboard-baseline.sh check', text)
             self.assertNotIn('apt-get install', text)
             self.assertNotIn('USER root', text)
+            self.assertNotIn('.deb', text)
+        entry = (BASELINE / 'image-entrypoint.sh').read_text()
+        self.assertIn('exec runuser --preserve-environment -u "$agent_user" -- /usr/lib/xgc2/xgc-agent', entry)
+        for forbidden in ('roscore', 'roslaunch', 'systemctl enable', 'systemctl start',
+                          'ONBOARD_BASELINE_AGENT_DEB', 'process-definitions'):
+            self.assertNotIn(forbidden, entry)
+
+    def test_entrypoint_keeps_caller_endpoint_and_drops_old_catalog(self):
+        entry = self.root / 'entrypoint.sh'
+        entry.write_text(self.relocate((BASELINE / 'image-entrypoint.sh').read_text()))
+        env = dict(self.env, ONBOARD_BASELINE_USER='robot-user',
+                   XGC_AGENT_ID='w06-entrypoint-robot',
+                   XGC_CORE_ENDPOINT='.251:9092',
+                   XGC_AGENT_ADVERTISED_ENDPOINT='127.0.0.1:19090',
+                   XGC_AGENT_DATA_DIR=str(self.root / 'data'),
+                   XGC_AGENT_MANAGED_ROOT=str(self.root / 'managed'),
+                   XGC_PROCESS_DEFINITION_PLUGINS='/opt/old/catalog',
+                   XGC_ADAPTER_RUNTIME_UDS='/run/xgc2/adapter/runtime.sock')
+        self.config.write_text('XGC_AGENT_ID=agent-01\nXGC_CORE_ENDPOINT=127.0.0.1:9092\n'
+                               'XGC_PROCESS_DEFINITION_PLUGINS=/usr/share/xgc2-agent/process-definitions\n')
+        prefix = self.root_namespace()
+        result = subprocess.run(prefix + ['bash', str(entry)], env=env, capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        recorded = json.loads((self.root / 'agent-env.json').read_text())
+        self.assertEqual(recorded['argv'], [])
+        self.assertEqual(recorded['id'], 'w06-entrypoint-robot')
+        self.assertEqual(recorded['core'], '.251:9092')
+        self.assertIsNone(recorded['catalog'])
+        self.assertIsNone(recorded['adapter'])
+        self.assertEqual(self.calls('apt-get'), [])
+        self.assertEqual(self.calls('dpkg'), [])
 
 
 if __name__ == '__main__':

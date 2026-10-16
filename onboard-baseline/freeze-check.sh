@@ -19,6 +19,13 @@ bash -n "$ROOT/build-local-image.sh"
 if grep -q '/home/lxk' "$ROOT/build-local-image.sh"; then
   fail "build-local-image.sh contains a machine-local path"
 fi
+bash -n "$ROOT/build-local-project.sh"
+if grep -q '/home/lxk' "$ROOT/build-local-project.sh"; then
+  fail "build-local-project.sh contains a machine-local path"
+fi
+if grep -Eq 'apt-get|apt install|binfmt|privileged' "$ROOT/build-local-project.sh"; then
+  fail "build-local-project.sh mutates host packages or container privileges"
+fi
 if grep -Eq 'mirrors\.ustc|unset HTTP_PROXY' "$BASE"; then
   fail "onboard-baseline.sh rewrites the machine apt environment"
 fi
@@ -130,9 +137,11 @@ printf 'pgm\n' >"$parent/geoids/egm96-5.pgm"
 EOF
   cat >"$bin/id" <<'EOF'
 #!/bin/bash
-if [[ "$*" == '-gn marvsmart' ]]; then echo 0
-elif [[ "$*" == marvsmart ]]; then echo 'uid=1000(marvsmart)'
-else exec /usr/bin/id "$@"; fi
+case "$*" in
+  -gn\ marvsmart|-gn\ agilex|-gn\ nvidia|-gn\ wheeltec) echo 0 ;;
+  marvsmart|agilex|nvidia|wheeltec) echo "uid=1000($*)" ;;
+  *) exec /usr/bin/id "$@" ;;
+esac
 EOF
   chmod 755 "$bin"/*
 }
@@ -261,6 +270,7 @@ run_ns "$sandbox" \
   PATH="$sandbox/bin:/usr/bin:/bin" \
   FAKE_ROS_DISTRO=melodic \
   ONBOARD_BASELINE_OS_RELEASE="$sandbox/os-release" \
+  ONBOARD_BASELINE_USER=agilex \
   "$BASE" check --profile scout-bionic-melodic >"$sandbox/out"
 [[ "$(cat "$sandbox/out")" == *"scout-bionic-melodic matches bionic melodic"* ]] || fail "scout check required a geoid"
 
@@ -305,8 +315,6 @@ need = {
     "XGC_CORE_ENDPOINT": "172.30.251.250:9092",
     "XGC_AGENT_ADVERTISED_ENDPOINT": "172.30.251.10:9090",
     "XGC_AGENT_DISPLAY_NAME": '"FS150 1"',
-    "XGC_PROCESS_DEFINITION_PLUGINS": "/opt/robot/catalog",
-    "XGC_AGENT_DOWNLOAD_HOSTS": "github.com,objects.githubusercontent.com,release-assets.githubusercontent.com",
     "XGC_AGENT_GRPC_ADDR": ":9090",
 }
 found = {}
@@ -318,6 +326,9 @@ for line in text.splitlines():
 missing = {key: value for key, value in need.items() if found.get(key) != value}
 if missing:
     raise SystemExit("default agent.env mismatch %s\n%s" % (missing, text))
+for stale in ("XGC_PROCESS_DEFINITION_PLUGINS", "XGC_AGENT_DOWNLOAD_HOSTS", "XGC_PROCESS_CATALOG_ROOT"):
+    if stale in found:
+        raise SystemExit("old catalog key %s written into agent.env\n%s" % (stale, text))
 if "/usr/share/xgc2/process-definitions" in text:
     raise SystemExit("core catalog leaked into agent.env")
 PY
@@ -575,12 +586,12 @@ python3 - "$sandbox/evidence/exec.env" "$sandbox/evidence/install.invoked" <<'PY
 import pathlib, sys
 env = dict(line.split("=", 1) for line in pathlib.Path(sys.argv[1]).read_text().splitlines())
 install = pathlib.Path(sys.argv[2]).read_text()
-assert env["PLUGINS"] == "/opt/robot/catalog", env
+assert env["PLUGINS"] == "__unset__", env
 assert env["DISPLAY"] == "FS150 1", env
 assert env["MASTER"] == "http://10.64.0.2:11311", env
 assert env["ROS_HOME"] == "/home/marvsmart/.ros", env
 assert env["ROS_LOG"] == "/home/marvsmart/.ros/log", env
-assert env["ADAPTER"] == "/run/xgc2/adapter/runtime.sock", env
+assert env["ADAPTER"] == "__unset__", env
 assert env["DATA"] == "/var/lib/xgc2-agent", env
 assert env["MANAGED"] == "/var/lib/xgc2-managed", env
 assert env["USER"] == "marvsmart", env
@@ -608,7 +619,7 @@ env = dict(line.split("=", 1) for line in pathlib.Path(sys.argv[1]).read_text().
 assert env["ROS_HOME"] == "/home/marvsmart/custom-ros", env
 assert env["ROS_LOG"] == "/home/marvsmart/custom-ros/log", env
 assert env["MASTER"] == "http://172.30.251.250:11311", env
-assert env["PLUGINS"] == "/usr/share/xgc2-agent/process-definitions", env
+assert env["PLUGINS"] == "__unset__", env
 assert env["ADAPTER"] == "__unset__", env
 PY
 install_text="$(cat "$sandbox/evidence/install.invoked")"
@@ -709,7 +720,6 @@ sandbox="$work/apply-local-deb"
 prepare_apt_tree "$sandbox"
 mkdir -p "$sandbox/usr-share"
 printf 'local-acceptance-deb\n' >"$sandbox/agent.deb"
-local_sha="$(sha256sum "$sandbox/agent.deb" | awk '{print $1}')"
 cat >"$sandbox/bin/dpkg" <<'EOF'
 #!/bin/bash
 if [[ "${1:-}" == --print-architecture ]]; then
@@ -724,25 +734,26 @@ printf 'unexpected dpkg\n' >&2
 exit 1
 EOF
 chmod 755 "$sandbox/bin/dpkg"
+set +e
 run_ns "$sandbox" \
   PATH="$sandbox/bin:/usr/bin:/bin" \
   FAKE_ROS_DISTRO=noetic \
   FREEZE_EVIDENCE="$sandbox/evidence" \
   ONBOARD_BASELINE_OS_RELEASE="$sandbox/os-release" \
   ONBOARD_BASELINE_AGENT_DEB="$sandbox/agent.deb" \
-  ONBOARD_BASELINE_AGENT_DEB_SHA256="$local_sha" \
   XGC_AGENT_ID=robot-fs150 \
   XGC_CORE_ENDPOINT=10.64.90.251:9092 \
   XGC_AGENT_ADVERTISED_ENDPOINT=10.64.90.101:9090 \
   XGC_AGENT_DATA_DIR=/var/lib/xgc2-agent \
   XGC_AGENT_MANAGED_ROOT=/var/lib/xgc2-managed \
   "$BASE" install-agent --profile fs150-focal-noetic >"$sandbox/out"
+local_rc=$?
+set -e
+[[ "$local_rc" -ne 0 ]] || fail "copied agent package was accepted"
 grep -q 'archive.ubuntu.com' "$sandbox/apt/sources.list" || fail "local deb apply rewrote the ubuntu source"
-[[ ! -e "$sandbox/apt/sources.list.d/xgc2.list" ]] || fail "local deb apply added the signed index"
-grep -q -- "-i $sandbox/agent.deb" "$sandbox/evidence/dpkg.invoked" || fail "local deb was not installed: $(cat "$sandbox/evidence/dpkg.invoked")"
-if [[ -e "$sandbox/evidence/apt-get.invoked" ]] && grep -q 'xgc2-agent=' "$sandbox/evidence/apt-get.invoked"; then
-  fail "local deb apply also requested the agent from APT"
-fi
+[[ ! -e "$sandbox/apt/sources.list.d/xgc2.list" ]] || fail "copied agent package added the signed index"
+[[ ! -e "$sandbox/evidence/dpkg.invoked" ]] || fail "copied agent package was installed"
+[[ ! -e "$sandbox/evidence/apt-get.invoked" ]] || fail "copied agent package also requested APT"
 
 sandbox="$work/entry-deb-create"
 mkdir -p "$sandbox/bin" "$sandbox/etc-xgc2" "$sandbox/varlib/xgc2-agent" \
@@ -769,15 +780,8 @@ missing="$(run_entry_install "$sandbox")"
 created="$(run_entry_install "$sandbox" \
   ONBOARD_BASELINE_AGENT_DEB=/run/xgc2-install/xgc2-agent.deb \
   ONBOARD_BASELINE_PROFILE=fs150-focal-noetic)"
-[[ "$created" == 0 ]] || fail "local deb create exited ${created}"
-[[ "$(cat "$sandbox/evidence/agent-install.invoked")" == "install-agent --profile fs150-focal-noetic" ]] \
-  || fail "local deb create did not call install-agent --profile: $(cat "$sandbox/evidence/agent-install.invoked")"
-rm -f "$sandbox/evidence/agent-install.invoked" "$sandbox/evidence/exec.env"
-restarted="$(run_entry_install "$sandbox" \
-  ONBOARD_BASELINE_AGENT_DEB=/run/xgc2-install/xgc2-agent.deb \
-  ONBOARD_BASELINE_PROFILE=fs150-focal-noetic)"
-[[ "$restarted" == 0 ]] || fail "restart after local deb exited ${restarted}"
-[[ ! -e "$sandbox/evidence/agent-install.invoked" ]] || fail "restart called install-agent again"
-[[ -s "$sandbox/evidence/exec.env" ]] || fail "restart did not exec the agent"
+[[ "$created" == 1 ]] || fail "copied deb entrypoint exited ${created}"
+[[ ! -e "$sandbox/evidence/agent-install.invoked" ]] || fail "entrypoint installed a copied agent package"
+[[ ! -e "$sandbox/evidence/exec.env" ]] || fail "copied deb entrypoint started the agent"
 
 printf 'freeze-check: passed\n'

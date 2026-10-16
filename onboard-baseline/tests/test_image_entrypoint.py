@@ -184,50 +184,16 @@ class EntrypointTests(unittest.TestCase):
             self.assertEqual((self.root / path.lstrip("/")).stat().st_uid, UID)
         self.assertFalse((self.root / "install-calls").exists())
 
-    def test_first_install_delegates_then_second_entry_skips_installer_without_deb(self):
+    def test_copied_deb_does_not_install_or_start_the_agent(self):
         self.first_install()
         self.env["ONBOARD_BASELINE_PROFILE"] = "fs150-focal-noetic"
-        values = self.success(self.launch())
-        self.assertEqual((self.root / "install-calls").read_text(),
-                         "install-agent\n--profile\nfs150-focal-noetic\n")
-        self.assertEqual((self.root / "install-debs").read_text(),
-                         "/run/xgc2-install/xgc2-agent.deb\n")
-        self.assertEqual(values["XGC_AGENT_ID"], self.env["XGC_AGENT_ID"])
-        self.assertEqual(values["XGC_CORE_ENDPOINT"], "172.28.40.251:19102")
-        (self.root / "run/xgc2-install/xgc2-agent.deb").unlink()
-        self.env["TEST_INSTALL_EXIT"] = "98"
-        self.success(self.launch())
-        self.assertEqual((self.root / "install-calls").read_text().count("install-agent"), 1)
-
-    def test_world_install_does_not_require_a_robot_profile(self):
-        self.first_install()
-        self.env["XGC_AGENT_ID"] = "xgc2e-experiment-a-world"
-        self.success(self.launch())
-        self.assertEqual((self.root / "install-calls").read_text(), "install-agent\n")
+        self.rejected(self.launch(), "xgc2-agent is not installed")
+        self.assertFalse((self.root / "install-calls").exists())
 
     def test_missing_agent_without_deb_never_installs(self):
         (self.root / AGENT.lstrip("/")).unlink()
         self.rejected(self.launch(), "xgc2-agent is not installed")
         self.assertFalse((self.root / "install-calls").exists())
-
-    def test_installer_failure_propagates_without_launch(self):
-        self.first_install()
-        self.env["TEST_INSTALL_EXIT"] = "42"
-        result = self.launch()
-        self.assertEqual(result.returncode, 42)
-        self.assertFalse((self.root / DATA.lstrip("/") / "agent-started").exists())
-
-    def test_installer_success_without_binary_is_rejected(self):
-        self.first_install()
-        self.env["TEST_INSTALL_NO_BINARY"] = "1"
-        self.rejected(self.launch(), "xgc2-agent is not installed")
-
-    def test_missing_deb_file_fails_without_launch(self):
-        self.first_install()
-        (self.root / "run/xgc2-install/xgc2-agent.deb").unlink()
-        result = self.launch()
-        self.assertEqual(result.returncode, 44)
-        self.assertFalse((self.root / DATA.lstrip("/") / "agent-started").exists())
 
     def test_systemd_host_refuses_container_start(self):
         (self.root / "run/systemd/system").mkdir(parents=True)
@@ -275,24 +241,32 @@ class EntrypointTests(unittest.TestCase):
         overrides = {
             "XGC_AGENT_ID": "xgc2e-experiment-b-same-asset",
             "XGC_CORE_ENDPOINT": "172.28.42.251:29102",
-            "XGC_PROCESS_DEFINITION_PLUGINS": "/opt/robot/catalog",
-            "XGC_ADAPTER_CUSTOM_ENDPOINT": "caller-value",
             "XGC_AGENT_IDENTITY_KEY": DATA + "/identity.key",
             "ROS_MASTER_URI": "http://172.28.43.100:11311",
             "ROS_IP": "172.28.43.101",
-            "GAZEBO_MASTER_URI": "http://172.28.43.100:11345",
         }
-        assignments = "".join("export %s=package-value\n" % key for key in overrides)
+        stale = {
+            "XGC_ADAPTER_CUSTOM_ENDPOINT": "caller-value",
+            "GAZEBO_MASTER_URI": "http://172.28.43.100:11345",
+            "XGC_PROCESS_DEFINITION_PLUGINS": "/opt/old/catalog",
+        }
+        assignments = "".join("export %s=package-value\n" % key for key in list(overrides) + list(stale))
         write(self.root, "/etc/xgc2/agent.env", PACKAGE_ENV + assignments)
         write(self.root, "/opt/ros/test/setup.bash", assignments)
-        self.env.update(overrides, ROS_DISTRO="test")
+        self.env.update(overrides, ROS_DISTRO="test", **stale)
         values = self.success(self.launch())
         for key, value in overrides.items():
             self.assertEqual(values[key], value, key)
+        for key in stale:
+            self.assertNotIn(key, values)
 
-    def test_explicit_empty_catalog_is_preserved(self):
-        self.env["XGC_PROCESS_DEFINITION_PLUGINS"] = ""
-        self.assertEqual(self.success(self.launch())["XGC_PROCESS_DEFINITION_PLUGINS"], "")
+    def test_stale_catalog_is_not_passed_to_the_agent(self):
+        self.env["XGC_PROCESS_DEFINITION_PLUGINS"] = "/opt/old/catalog"
+        self.env["XGC_ADAPTER_RUNTIME_UDS"] = "/run/xgc2/adapter/runtime.sock"
+        values = self.success(self.launch())
+        self.assertNotIn("XGC_PROCESS_DEFINITION_PLUGINS", values)
+        self.assertNotIn("XGC_ADAPTER_RUNTIME_UDS", values)
+        self.assertNotIn("roscore", values.get("argv", ""))
 
     def test_home_not_owned_by_robot_is_not_silently_reowned(self):
         home = self.root / "home/robot"

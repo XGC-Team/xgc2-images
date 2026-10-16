@@ -94,6 +94,7 @@ doc = json.load(io.open(sys.argv[1], encoding="utf-8"))
 profile = doc["profiles"].get(sys.argv[2])
 if profile is None:
     raise SystemExit(2)
+print("profile_user=" + quote(profile["username"]))
 print("ubuntu_codename=" + quote(profile["ubuntuCodename"]))
 print("ubuntu_version_id=" + quote(profile["ubuntuVersionId"]))
 print("ros_distro=" + quote(profile["rosDistro"]))
@@ -115,6 +116,13 @@ PY
     [[ "$host_arch" != "$architecture" ]] || arch_supported=1
   done
   [[ "$arch_supported" == 1 ]] || fail "refusing profile ${profile}: unsupported architecture ${host_arch}; expected ${architectures[*]}" 3
+  if [[ -n "${ONBOARD_BASELINE_USER:-}" && "$ONBOARD_BASELINE_USER" != "$profile_user" ]]; then
+    fail "profile ${profile} user is ${profile_user}, not ${ONBOARD_BASELINE_USER}" 3
+  fi
+  if [[ "$mode" == check && "$(id -u)" != 0 && "$(id -un)" != "$profile_user" ]]; then
+    fail "profile ${profile} must run as ${profile_user}" 3
+  fi
+  id "$profile_user" >/dev/null 2>&1 || fail "profile ${profile} account ${profile_user} does not exist" 3
 else
   # install-agent without a robot profile reads the image's own APT suite.
   agent_config="$("$metadata_python" - "$BASELINES" <<'PY'
@@ -203,7 +211,7 @@ fi
 ROS
   )
   check_runtime || fail "runtime check failed for ${profile}" 4
-  printf 'onboard-baseline: %s matches %s %s arch=%s user=%s\n' "$profile" "$ubuntu_codename" "$ros_distro" "$host_arch" "$(id -un)"
+  printf 'onboard-baseline: %s matches %s %s arch=%s user=%s account=%s\n' "$profile" "$ubuntu_codename" "$ros_distro" "$host_arch" "$(id -un)" "$profile_user"
   exit 0
 fi
 
@@ -322,15 +330,15 @@ if [[ "$mode" == "install-sitl" ]]; then
 fi
 
 [[ -n "$agent_user" ]] || fail "install-agent requires --user with the existing robot account" 2
+if [[ -n "${ONBOARD_BASELINE_AGENT_DEB:-}" ]]; then
+  fail "refusing a copied agent package; install live ${agent_package} from APT" 1
+fi
+if [[ -n "$profile" && "$agent_user" != "$profile_user" ]]; then
+  fail "profile ${profile} user is ${profile_user}, not ${agent_user}" 3
+fi
 id "$agent_user" >/dev/null
-agent_deb="${ONBOARD_BASELINE_AGENT_DEB:-}"
 agent_version="${ONBOARD_BASELINE_AGENT_VERSION:-}"
-if [[ -n "$agent_deb" ]]; then
-  [[ -f "$agent_deb" ]] || fail "local agent deb is not a file: ${agent_deb}" 1
-  # The image already contains the deb's install dependencies. Do not apt or
-  # rescan the profile package list on this path; a later start finds the binary.
-  dpkg -i "$agent_deb"
-elif ! package_installed "$agent_package" || [[ -n "$agent_version" ]]; then
+if ! package_installed "$agent_package" || [[ -n "$agent_version" ]]; then
   ensure_xgc2_source
   apt-get update
   if [[ -n "$agent_version" ]]; then
@@ -392,11 +400,9 @@ XGC_AGENT_ID=agent-01
 XGC_AGENT_DISPLAY_NAME="Agent 01"
 XGC_AGENT_GRPC_ADDR=:9090
 XGC_AGENT_ADVERTISED_ENDPOINT=127.0.0.1:9090
-XGC_CORE_ENDPOINT=127.0.0.1:9092
+XGC_CORE_ENDPOINT=.251:9092
 XGC_AGENT_MANAGED_ROOT=/var/lib/xgc2-agent/managed
 XGC_AGENT_DATA_DIR=/var/lib/xgc2-agent
-XGC_AGENT_DOWNLOAD_HOSTS=github.com,objects.githubusercontent.com,release-assets.githubusercontent.com
-XGC_PROCESS_DEFINITION_PLUGINS=/usr/share/xgc2-agent/process-definitions
 EOF
   chown "root:$(id -gn "$agent_user")" "$agent_env"
   chmod 0640 "$agent_env" 2>/dev/null || chmod 0644 "$agent_env"
@@ -418,9 +424,6 @@ if [[ -n "${XGC_AGENT_ID:-}" && -n "${XGC_CORE_ENDPOINT:-}" && -n "${XGC_AGENT_A
     upsert_env_key XGC_AGENT_ADVERTISED_ENDPOINT "$XGC_AGENT_ADVERTISED_ENDPOINT"
     upsert_env_key XGC_AGENT_DATA_DIR "$XGC_AGENT_DATA_DIR"
     upsert_env_key XGC_AGENT_MANAGED_ROOT "$XGC_AGENT_MANAGED_ROOT"
-    if [[ -n "${XGC_PROCESS_DEFINITION_PLUGINS:-}" ]]; then
-      upsert_env_key XGC_PROCESS_DEFINITION_PLUGINS "$XGC_PROCESS_DEFINITION_PLUGINS"
-    fi
     if [[ -n "${XGC_AGENT_DISPLAY_NAME:-}" ]]; then
       upsert_env_key XGC_AGENT_DISPLAY_NAME "\"${XGC_AGENT_DISPLAY_NAME}\""
     fi
@@ -435,6 +438,8 @@ if [[ -f "$agent_env" ]]; then
 fi
 /usr/lib/xgc2/configure-agent-user "$agent_user"
 if [[ -d /run/systemd/system ]]; then
+  # Only the Agent daemon is enabled here. Chassis and algorithm autostart
+  # belongs to a workflow the Agent has saved, not to this installer.
   if systemctl is-active --quiet xgc2-agent.service; then
     printf 'onboard-baseline: xgc2-agent.service already running\n'
   elif [[ "$start_agent" == 1 ]]; then

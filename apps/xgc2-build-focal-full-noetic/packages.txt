@@ -7,3 +7,7 @@ libomp-10-dev
 # Native asynchronous adapter client and its Python gRPC test server.
 libc-ares-dev
 python3-grpcio
+
+# Native Scene resource compilation (SDF XML and authored mesh resources).
+libassimp-dev
+libpugixml-dev
