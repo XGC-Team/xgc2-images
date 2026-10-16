@@ -54,9 +54,48 @@ esac
 tag="onboard-sim-${PROFILE}:base-local${suffix}"
 echo "build-local-image: docker build -t ${tag}"
 # The Dockerfile owns its parent default, including the W06 ros-core choice.
-DOCKER_BUILDKIT=1 docker build --platform "$PLATFORM" --pull=false \
-  --build-arg "ONBOARD_APT_MIRROR=${MIRROR}" \
+# fs150 stays on that APT Agent stage unless ONBOARD_AGENT_DEB names a package.
+build_args=(
+  --platform "$PLATFORM"
+  --pull=false
+  --build-arg "ONBOARD_APT_MIRROR=${MIRROR}"
+)
+agent_context=""
+source_agent=0
+if [[ -n "${ONBOARD_AGENT_DEB:-}" ]]; then
+  [[ "$PROFILE" == "fs150-focal-noetic" ]] || {
+    echo "build-local-image: ONBOARD_AGENT_DEB is only the fs150 source candidate" >&2
+    exit 2
+  }
+  [[ -f "$ONBOARD_AGENT_DEB" ]] || {
+    echo "build-local-image: ONBOARD_AGENT_DEB is not a file" >&2
+    exit 2
+  }
+  package="$(dpkg-deb -f "$ONBOARD_AGENT_DEB" Package)"
+  deb_arch="$(dpkg-deb -f "$ONBOARD_AGENT_DEB" Architecture)"
+  deb_version="$(dpkg-deb -f "$ONBOARD_AGENT_DEB" Version)"
+  [[ "$package" == "xgc2-agent" && "$deb_arch" == "${PLATFORM#linux/}" && -n "$deb_version" ]] || {
+    echo "build-local-image: ONBOARD_AGENT_DEB must be xgc2-agent for ${PLATFORM#linux/}" >&2
+    exit 2
+  }
+  agent_context="$(mktemp -d)"
+  cp "$ONBOARD_AGENT_DEB" "$agent_context/xgc2-agent.deb"
+  build_args+=(--build-arg AGENT_INSTALL=source --build-context "agentdeb=${agent_context}")
+  source_agent=1
+fi
+set +e
+DOCKER_BUILDKIT=1 docker build "${build_args[@]}" \
   -f "${ROOT}/apps/${app}/Dockerfile" -t "$tag" "$ROOT"
+status=$?
+set -e
+if [[ -n "$agent_context" ]]; then
+  rm -rf "$agent_context"
+fi
+[[ "$status" -eq 0 ]] || exit "$status"
 check_platform "$tag"
 docker image inspect "$tag" --format 'tag={{.RepoTags}} id={{.Id}}'
-echo "build-local-image: ${tag} installs live xgc2-agent from APT while building. This script does not publish the image."
+if [[ "$source_agent" == 1 ]]; then
+  echo "build-local-image: ${tag} installs the supplied source-built Agent. This script does not publish the image."
+else
+  echo "build-local-image: ${tag} installs live xgc2-agent from APT while building. This script does not publish the image."
+fi

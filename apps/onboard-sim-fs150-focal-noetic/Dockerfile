@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1.7
 ARG PARENT_IMAGE=ros:noetic-ros-core-focal
+ARG AGENT_INSTALL=apt
 FROM scratch AS runtime-sources
 COPY onboard-baseline/baselines.json /onboard-baseline/baselines.json
 COPY onboard-baseline/onboard-baseline.sh /onboard-baseline/onboard-baseline.sh
@@ -7,7 +8,7 @@ COPY onboard-baseline/image-entrypoint.sh /onboard-baseline/image-entrypoint.sh
 COPY onboard-baseline/image-healthcheck.sh /onboard-baseline/image-healthcheck.sh
 COPY scripts/build/install-ros-apt-source.sh /onboard-baseline/install-ros-apt-source.sh
 
-FROM ${PARENT_IMAGE}
+FROM ${PARENT_IMAGE} AS baseline
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ONBOARD_BASELINE_PROFILE=fs150-focal-noetic
@@ -36,10 +37,26 @@ if [ -n "${ONBOARD_APT_MIRROR:-}" ]; then
   done
 fi
 /opt/xgc2/onboard-baseline/onboard-baseline.sh apply --profile fs150-focal-noetic
-# Live APT Agent only. The entrypoint starts that daemon and nothing else.
-/opt/xgc2/onboard-baseline/onboard-baseline.sh install-agent --user "$ONBOARD_BASELINE_USER" --profile fs150-focal-noetic
-# Validate as the existing robot operator, not the privileged installer.
-runuser -u "$ONBOARD_BASELINE_USER" -- /opt/xgc2/onboard-baseline/onboard-baseline.sh check --profile "$ONBOARD_BASELINE_PROFILE"
 EOF
 
 ENTRYPOINT ["/opt/xgc2/onboard-baseline/image-entrypoint.sh"]
+
+FROM baseline AS apt-agent
+RUN bash <<'EOF'
+set -euo pipefail
+/opt/xgc2/onboard-baseline/onboard-baseline.sh install-agent --user "$ONBOARD_BASELINE_USER" --profile fs150-focal-noetic
+runuser -u "$ONBOARD_BASELINE_USER" -- /opt/xgc2/onboard-baseline/onboard-baseline.sh check --profile "$ONBOARD_BASELINE_PROFILE"
+EOF
+
+FROM baseline AS source-agent
+RUN --mount=type=bind,from=agentdeb,source=xgc2-agent.deb,target=/tmp/xgc2-agent.deb \
+    bash <<'EOF'
+set -euo pipefail
+apt-get update
+apt-get install -y --no-install-recommends /tmp/xgc2-agent.deb
+rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb
+/opt/xgc2/onboard-baseline/onboard-baseline.sh install-agent --user "$ONBOARD_BASELINE_USER" --profile fs150-focal-noetic
+runuser -u "$ONBOARD_BASELINE_USER" -- /opt/xgc2/onboard-baseline/onboard-baseline.sh check --profile "$ONBOARD_BASELINE_PROFILE"
+EOF
+
+FROM ${AGENT_INSTALL}-agent
