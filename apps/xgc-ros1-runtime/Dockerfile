@@ -2,6 +2,11 @@ FROM ghcr.io/xgc-team/xgc2-images/xgc2-build-focal-full-noetic:1.0.0 AS gazebo-r
 COPY apps/xgc-ros1-runtime/scripts/gazebo/ /tmp/gazebo-build/
 RUN bash /tmp/gazebo-build/build-rendering.sh /out /tmp/gazebo-source
 
+FROM ghcr.io/xgc-team/xgc2-images/xgc2-build-focal-full-noetic:1.0.0 AS roscpp-build
+COPY apps/xgc-ros1-runtime/scripts/roscpp/ /tmp/roscpp-build/
+RUN bash /tmp/roscpp-build/build-roscpp.sh /out /tmp/roscpp-source \
+    && bash /tmp/roscpp-build/test-roscpp.sh /out /tmp/roscpp-test
+
 FROM ros:noetic-ros-base-focal
 
 LABEL org.opencontainers.image.title="ROS1 Simulation Kit"
@@ -25,6 +30,18 @@ RUN chmod +x /tmp/install-runtime-deps.sh /usr/local/bin/xgc-ros1-entrypoint /us
     && rm -f /tmp/install-runtime-deps.sh \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+COPY --from=roscpp-build /out/libroscpp.so /tmp/libroscpp.so
+COPY --from=roscpp-build /out/COPYING.roscpp /usr/local/share/doc/roscpp/COPYING
+COPY apps/xgc-ros1-runtime/scripts/roscpp/deferred-tcp-write.patch /usr/local/share/doc/roscpp/
+RUN library=/opt/ros/noetic/lib/libroscpp.so \
+    && mkdir -p /usr/local/share/doc/roscpp/original \
+    && dpkg-divert --local --rename \
+      --divert /usr/local/share/doc/roscpp/original/libroscpp.so --add "${library}" \
+    && install -m 0644 /tmp/libroscpp.so "${library}" \
+    && rm /tmp/libroscpp.so \
+    && ldconfig \
+    && ! ldd "${library}" | grep -F 'not found'
 
 COPY --from=gazebo-rendering-build /out/libgazebo_rendering.so.11.15.1 /tmp/libgazebo_rendering.so.11.15.1
 COPY --from=gazebo-rendering-build /out/COPYING.gazebo /usr/local/share/doc/gazebo-rendering/COPYING

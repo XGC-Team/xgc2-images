@@ -1,0 +1,135 @@
+--- a/clients/roscpp/include/ros/connection.h
++++ b/clients/roscpp/include/ros/connection.h
+@@ -54,0 +55,2 @@
++namespace detail { class DeferredWritePhase; }
++
+@@ -207,0 +210,3 @@
++
++  friend class detail::DeferredWritePhase;
++  __attribute__((visibility("hidden"))) void drainDeferredWrite();
+--- a/clients/roscpp/src/libros/connection.cpp
++++ b/clients/roscpp/src/libros/connection.cpp
+@@ -35,0 +36 @@
++#include "deferred_write.h"
+@@ -307,0 +309,5 @@
++  if (!immediate && detail::DeferredWritePhase::enqueue(this))
++  {
++    return;
++  }
++
+@@ -313,0 +320,15 @@
++  }
++}
++
++void Connection::drainDeferredWrite()
++{
++  static_cast<TransportTCP*>(transport_.get())->dispatchDeferredWrite();
++
++  bool pending;
++  {
++    boost::mutex::scoped_lock lock(write_callback_mutex_);
++    pending = has_write_callback_ != 0;
++  }
++  if (pending && !dropped_)
++  {
++    transport_->enableWrite();
+--- a/clients/roscpp/src/libros/poll_manager.cpp
++++ b/clients/roscpp/src/libros/poll_manager.cpp
+@@ -29,0 +30 @@
++#include "deferred_write.h"
+@@ -34,0 +36,6 @@
++
++namespace detail
++{
++thread_local DeferredWritePhase* deferred_write_phase = 0;
++}
++
+@@ -75,0 +83 @@
++  std::vector<ConnectionPtr> deferred_writes;
+@@ -79,0 +88 @@
++      detail::DeferredWritePhase phase(poll_set_, deferred_writes);
+@@ -87,0 +97 @@
++    detail::DeferredWritePhase::drain(deferred_writes);
+--- /dev/null
++++ b/clients/roscpp/src/libros/deferred_write.h
+@@ -0,0 +1,58 @@
++// Internal to libroscpp. No public API or Connection layout changes.
++#ifndef ROSCPP_DEFERRED_WRITE_H
++#define ROSCPP_DEFERRED_WRITE_H
++
++#include "ros/connection.h"
++#include "ros/transport/transport_tcp.h"
++#include <vector>
++
++namespace ros
++{
++namespace detail
++{
++class DeferredWritePhase;
++extern __attribute__((visibility("hidden"))) thread_local DeferredWritePhase* deferred_write_phase;
++
++class __attribute__((visibility("hidden"))) DeferredWritePhase
++{
++public:
++  DeferredWritePhase(PollSet& owner, std::vector<ConnectionPtr>& writes)
++    : previous_(deferred_write_phase), owner_(&owner), writes_(writes)
++  {
++    deferred_write_phase = this;
++  }
++  ~DeferredWritePhase() { deferred_write_phase = previous_; }
++
++  static bool enqueue(Connection* connection)
++  {
++    if (!deferred_write_phase)
++      return false;
++    TransportTCP* tcp = dynamic_cast<TransportTCP*>(connection->getTransport().get());
++    if (!tcp || tcp->poll_set_ != deferred_write_phase->owner_ ||
++        (tcp->flags_ & TransportTCP::SYNCHRONOUS))
++      return false;
++    deferred_write_phase->writes_.push_back(connection->shared_from_this());
++    return true;
++  }
++
++  static void drain(std::vector<ConnectionPtr>& writes)
++  {
++    struct ClearOnExit
++    {
++      std::vector<ConnectionPtr>& writes;
++      ~ClearOnExit() { writes.clear(); }
++    } clear = {writes};
++    for (const ConnectionPtr& connection : writes)
++      connection->drainDeferredWrite();
++  }
++
++private:
++  DeferredWritePhase(const DeferredWritePhase&) = delete;
++  DeferredWritePhase& operator=(const DeferredWritePhase&) = delete;
++  DeferredWritePhase* previous_;
++  const PollSet* owner_;
++  std::vector<ConnectionPtr>& writes_;
++};
++}
++}
++#endif
+--- a/clients/roscpp/include/ros/transport/transport_tcp.h
++++ b/clients/roscpp/include/ros/transport/transport_tcp.h
+@@ -51,0 +52,2 @@
++class Connection;
++namespace detail { class DeferredWritePhase; }
+@@ -125,0 +128,4 @@
++  friend class Connection;
++  friend class detail::DeferredWritePhase;
++  __attribute__((visibility("hidden"))) void dispatchDeferredWrite();
++
+--- a/clients/roscpp/src/libros/transport/transport_tcp.cpp
++++ b/clients/roscpp/src/libros/transport/transport_tcp.cpp
+@@ -695,0 +696,9 @@
++void TransportTCP::dispatchDeferredWrite()
++{
++  boost::recursive_mutex::scoped_lock lock(close_mutex_);
++  if (!closed_ && write_cb_)
++  {
++    write_cb_(shared_from_this());
++  }
++}
++
