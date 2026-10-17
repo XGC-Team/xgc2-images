@@ -421,7 +421,7 @@ class BaselineTests(unittest.TestCase):
         self.assertTrue(all(row[1][0:2] == ['-u', 'robot-user'] or '--preserve-environment' in row[1]
                             for row in self.calls('runuser')))
 
-    def test_entrypoint_initializes_only_new_or_empty_agent_data_with_private_mode(self):
+    def test_entrypoint_initializes_owned_data_and_preserves_identity_files(self):
         text = (BASELINE / 'image-entrypoint.sh').read_text()
         block = text[text.index('data_dir="${XGC_AGENT_DATA_DIR:'):text.index('# This permission applies')]
         # Exercise the exact directory-preparation body with real install/stat,
@@ -431,12 +431,14 @@ class BaselineTests(unittest.TestCase):
             with self.subTest(state=state):
                 data = self.root / state
                 managed = self.root / (state + '-managed')
-                expected_mode = 0o750 if state == 'saved-insecure' else 0o700
+                expected_mode = 0o700
                 if state != 'missing':
-                    data.mkdir(mode=0o755 if state == 'empty' else expected_mode)
-                    data.chmod(0o755 if state == 'empty' else expected_mode)
+                    initial_mode = 0o755 if state == 'empty' else (0o750 if state == 'saved-insecure' else 0o700)
+                    data.mkdir(mode=initial_mode)
+                    data.chmod(initial_mode)
                 if state.startswith('saved-'):
                     (data / 'database.db').write_bytes(b'preserved database bytes')
+                    (data / 'identity.key').write_bytes(b'preserved identity fixture')
                 env = dict(os.environ, PATH='/usr/bin:/bin', XGC_AGENT_DATA_DIR=str(data),
                            XGC_AGENT_MANAGED_ROOT=str(managed))
                 prefix = 'set -euo pipefail; agent_user=%s; agent_group=%s;\n' % (os.getuid(), os.getgid())
@@ -448,6 +450,32 @@ class BaselineTests(unittest.TestCase):
                 self.assertEqual(managed.stat().st_mode & 0o777, 0o750)
                 if state.startswith('saved-'):
                     self.assertEqual((data / 'database.db').read_bytes(), b'preserved database bytes')
+                    self.assertEqual((data / 'identity.key').read_bytes(), b'preserved identity fixture')
+
+    def test_entrypoint_does_not_adopt_foreign_nonempty_or_follow_symlink(self):
+        text = (BASELINE / 'image-entrypoint.sh').read_text()
+        block = text[text.index('data_dir="${XGC_AGENT_DATA_DIR:'):text.index('install -d -o "$agent_user" -g "$agent_group" -m 0750 -- "$managed_root"')]
+        data = self.root / 'foreign'
+        data.mkdir(mode=0o750)
+        (data / 'identity.key').write_bytes(b'preserve foreign identity')
+        # Compare a real directory owned by this test account against another
+        # real account. Only the data block runs, so no privileged install occurs.
+        other_user = 'nobody' if os.getuid() != 65534 else 'root'
+        env = dict(os.environ, PATH='/usr/bin:/bin', XGC_AGENT_DATA_DIR=str(data))
+        prefix = 'set -euo pipefail; agent_user=%s; agent_group=%s;\n' % (other_user, os.getgid())
+        before = (data.stat().st_mode, data.stat().st_uid, data.stat().st_gid)
+        result = subprocess.run(['bash', '-c', prefix + block], env=env, capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((data.stat().st_mode, data.stat().st_uid, data.stat().st_gid), before)
+        link = self.root / 'linked-data'
+        link.symlink_to(data, target_is_directory=True)
+        env['XGC_AGENT_DATA_DIR'] = str(link)
+        result = subprocess.run(['bash', '-c', prefix + block], env=env, capture_output=True, text=True, timeout=10)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('symlink', result.stderr)
+        self.assertTrue(link.is_symlink())
+        self.assertEqual((data.stat().st_mode, data.stat().st_uid, data.stat().st_gid), before)
+        self.assertEqual((data / 'identity.key').read_bytes(), b'preserve foreign identity')
 
     def test_profiles_keep_distinct_accounts_and_base_ros(self):
         expected = {
