@@ -95,7 +95,17 @@ if [[ ! -v 'incoming[ROS_LOG_DIR]' ]]; then
 fi
 data_dir="${XGC_AGENT_DATA_DIR:-/var/lib/xgc2-agent}"
 managed_root="${XGC_AGENT_MANAGED_ROOT:-/var/lib/xgc2-managed}"
-install -d -o "$agent_user" -g "$agent_group" -m 0750 -- "$data_dir" "$managed_root" /run/xgc2-agent /run/xgc2/adapter
+# An empty Docker volume arrives root-owned. Initialize that directory only;
+# never repair permissions or ownership on an existing nonempty Agent store.
+if [[ ! -e "$data_dir" ]]; then
+  install -d -o "$agent_user" -g "$agent_group" -m 0700 -- "$data_dir"
+elif [[ -d "$data_dir" && ! -L "$data_dir" ]]; then
+  data_entry="$(find "$data_dir" -mindepth 1 -maxdepth 1 -print -quit)"
+  if [[ -z "$data_entry" ]]; then
+    install -d -o "$agent_user" -g "$agent_group" -m 0700 -- "$data_dir"
+  fi
+fi
+install -d -o "$agent_user" -g "$agent_group" -m 0750 -- "$managed_root" /run/xgc2-agent /run/xgc2/adapter
 # This permission applies only to operator-managed experiment containers.
 install -d -m 0755 /etc/sudoers.d
 printf '%s ALL=(root) NOPASSWD: ALL\n' "$agent_user" > /etc/sudoers.d/robot-operator

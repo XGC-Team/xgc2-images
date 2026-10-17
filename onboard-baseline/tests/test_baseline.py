@@ -421,6 +421,34 @@ class BaselineTests(unittest.TestCase):
         self.assertTrue(all(row[1][0:2] == ['-u', 'robot-user'] or '--preserve-environment' in row[1]
                             for row in self.calls('runuser')))
 
+    def test_entrypoint_initializes_only_new_or_empty_agent_data_with_private_mode(self):
+        text = (BASELINE / 'image-entrypoint.sh').read_text()
+        block = text[text.index('data_dir="${XGC_AGENT_DATA_DIR:'):text.index('# This permission applies')]
+        # Exercise the exact directory-preparation body with real install/stat,
+        # as the test account; no namespace privilege, daemon, APT or host paths.
+        block = self.relocate(block)
+        for state in ('missing', 'empty', 'saved-private', 'saved-insecure'):
+            with self.subTest(state=state):
+                data = self.root / state
+                managed = self.root / (state + '-managed')
+                expected_mode = 0o750 if state == 'saved-insecure' else 0o700
+                if state != 'missing':
+                    data.mkdir(mode=0o755 if state == 'empty' else expected_mode)
+                    data.chmod(0o755 if state == 'empty' else expected_mode)
+                if state.startswith('saved-'):
+                    (data / 'database.db').write_bytes(b'preserved database bytes')
+                env = dict(os.environ, PATH='/usr/bin:/bin', XGC_AGENT_DATA_DIR=str(data),
+                           XGC_AGENT_MANAGED_ROOT=str(managed))
+                prefix = 'set -euo pipefail; agent_user=%s; agent_group=%s;\n' % (os.getuid(), os.getgid())
+                result = subprocess.run(['bash', '-c', prefix + block], env=env,
+                                        capture_output=True, text=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(data.stat().st_mode & 0o777, expected_mode)
+                self.assertEqual((data.stat().st_uid, data.stat().st_gid), (os.getuid(), os.getgid()))
+                self.assertEqual(managed.stat().st_mode & 0o777, 0o750)
+                if state.startswith('saved-'):
+                    self.assertEqual((data / 'database.db').read_bytes(), b'preserved database bytes')
+
     def test_profiles_keep_distinct_accounts_and_base_ros(self):
         expected = {
             'fs150-focal-noetic': ('marvsmart', 'focal', '20.04', 'noetic', 'ros-noetic-ros-base'),
