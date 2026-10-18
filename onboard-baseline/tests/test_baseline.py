@@ -14,7 +14,7 @@ PROFILES = json.loads((BASELINE / 'baselines.json').read_text())['profiles']
 # Intercept package/service mutations. Only paths in a disposable script copy
 # are relocated; production gets no test-only skip-check or alternate ROS root.
 STUB = r'''#!/usr/bin/python3
-import json, os, pathlib, subprocess, sys
+import json, os, pathlib, shutil, subprocess, sys
 root = pathlib.Path(ROOT_LITERAL)
 state = json.loads((root / 'state.json').read_text())
 name, args = pathlib.Path(sys.argv[0]).name, sys.argv[1:]
@@ -75,12 +75,35 @@ elif name == 'GeoidEval':
     print('17.16')
 elif name == 'getent':
     print('robot-user:x:1000:1000::%s:/bin/bash' % (root / 'home'))
+elif name == 'curl':
+    if state.get('curl_failure'): sys.exit(22)
+    pathlib.Path(args[args.index('-o') + 1]).write_bytes(b'fixture signing key')
+elif name == 'gpg':
+    if '--show-keys' in args:
+        print('gpg: invalid option "--show-keys"', file=sys.stderr); sys.exit(2)
+    home = pathlib.Path(os.environ['GNUPGHOME'])
+    state.setdefault('gpg_homes', []).append(str(home)); save()
+    if home.stat().st_mode & 0o777 != 0o700: sys.exit(93)
+    if '--import' in args:
+        if state.get('gpg_import_failure'): sys.exit(2)
+        if pathlib.Path(args[-1]).read_bytes() != b'fixture signing key': sys.exit(94)
+        (home / 'imported').write_text('key imported')
+    elif '--list-keys' in args:
+        if not (home / 'imported').exists(): sys.exit(95)
+        print('fpr:::::::::%s:' % state.get('gpg_fingerprint', '2A8E11B36F56D307ADF626D85E5FDC30979EA43F'))
+    else: sys.exit(96)
 elif name == 'install':
+    paths = []
     i = 0
     while i < len(args):
         if args[i] in ('-o', '-g', '-m'): i += 2; continue
-        if not args[i].startswith('-'): pathlib.Path(args[i]).mkdir(parents=True, exist_ok=True)
+        if not args[i].startswith('-'): paths.append(pathlib.Path(args[i]))
         i += 1
+    if '-d' in args:
+        for path in paths: path.mkdir(parents=True, exist_ok=True)
+    else:
+        shutil.copyfile(paths[0], paths[1])
+        if '-m' in args: paths[1].chmod(int(args[args.index('-m') + 1], 8))
 elif name == 'runuser':
     sys.exit(subprocess.call(args[args.index('--') + 1:]))
 elif name == 'xgc-agent':
@@ -374,6 +397,55 @@ class BaselineTests(unittest.TestCase):
         self.assertEqual(self.calls('dpkg'), [])
         self.assertEqual(self.config.read_bytes(), before)
 
+    def test_fresh_agent_install_verifies_key_in_isolated_home_for_bionic_and_focal(self):
+        temporary = self.root / 'temporary'
+        temporary.mkdir()
+        caller_home = self.root / 'caller-gnupg'
+        caller_home.mkdir()
+        (caller_home / 'keep').write_text('caller keyring')
+        env = dict(self.env, TMPDIR=str(temporary), GNUPGHOME=str(caller_home))
+        for profile in ('scout-bionic-melodic', 'wheeltec-bionic-melodic', 'fs150-focal-noetic'):
+            with self.subTest(profile=profile):
+                self.configure(profile)
+                source = self.root / 'etc/apt/sources.list.d/xgc2.list'
+                if source.exists():
+                    source.unlink()
+                before = self.config.read_bytes()
+                self.invoke('install-agent', '--profile', profile, '--user', PROFILES[profile]['username'], env=env)
+                apt_calls = self.calls('apt-get')
+                self.state = json.loads((self.root / 'state.json').read_text())
+                self.assertIn('xgc2-agent', self.state['installed'])
+                self.assertEqual(apt_calls[1][1], ['install', '-y', '--no-install-recommends', 'xgc2-agent'])
+                self.assertEqual(len(apt_calls), 2)
+                self.assertIn(PROFILES[profile]['ubuntuCodename'] + ' main', source.read_text())
+                key = self.root / 'etc/apt/keyrings/xgc2-archive-keyring.gpg'
+                self.assertEqual(key.read_bytes(), b'fixture signing key')
+                self.assertEqual(key.stat().st_mode & 0o777, 0o644)
+                self.assertEqual(len(self.calls('gpg')), 2)
+                self.assertTrue(all(not Path(home).exists() for home in self.state['gpg_homes']))
+                self.assertEqual(list(temporary.iterdir()), [])
+                self.assertEqual((caller_home / 'keep').read_text(), 'caller keyring')
+                self.assertEqual(self.config.read_bytes(), before)
+
+    def test_fresh_agent_install_rejects_key_failures_and_cleans_temporary_home(self):
+        temporary = self.root / 'temporary'
+        temporary.mkdir()
+        env = dict(self.env, TMPDIR=str(temporary))
+        for failure, value, expected in (('gpg_fingerprint', 'BAD', 1),
+                                         ('gpg_import_failure', True, 2), ('curl_failure', True, 22)):
+            with self.subTest(failure=failure):
+                self.configure('scout-bionic-melodic')
+                self.state[failure] = value
+                self.save()
+                result = self.invoke('install-agent', '--profile', self.profile,
+                                     '--user', 'agilex', env=env, expected=expected)
+                if failure == 'gpg_fingerprint':
+                    self.assertIn('fingerprint mismatch', result.stderr)
+                self.assertEqual(self.calls('apt-get'), [])
+                self.assertFalse((self.root / 'etc/apt/sources.list.d/xgc2.list').exists())
+                self.assertFalse((self.root / 'etc/apt/keyrings/xgc2-archive-keyring.gpg').exists())
+                self.assertEqual(list(temporary.iterdir()), [])
+
     def test_copied_agent_package_is_refused(self):
         deb = self.root / 'agent.deb'; deb.write_text('fixture deb')
         env = dict(self.env, ONBOARD_BASELINE_AGENT_DEB=str(deb))
@@ -516,9 +588,26 @@ class BaselineTests(unittest.TestCase):
             self.assertIn('onboard-baseline.sh apply --profile ' + profile, text)
             self.assertIn('onboard-baseline.sh install-agent --user "$ONBOARD_BASELINE_USER" --profile ' + profile, text)
             self.assertIn('runuser -u "$ONBOARD_BASELINE_USER" -- /opt/xgc2/onboard-baseline/onboard-baseline.sh check', text)
-            self.assertNotIn('apt-get install', text)
+            if profile == 'fs150-focal-noetic':
+                self.assertIn('ARG AGENT_INSTALL=apt\n', text)
+                baseline, stages = text.split('FROM baseline AS apt-agent\n')
+                apt_agent, stages = stages.split('FROM baseline AS source-agent\n')
+                source_agent, selection = stages.split('FROM ${AGENT_INSTALL}-agent')
+                for stage in (baseline, apt_agent):
+                    self.assertNotIn('apt-get install', stage)
+                    self.assertNotIn('.deb', stage)
+                self.assertIn('RUN --mount=type=bind,from=agentdeb,source=xgc2-agent.deb,target=/tmp/xgc2-agent.deb', source_agent)
+                self.assertIn('apt-get install -y --no-install-recommends /tmp/xgc2-agent.deb', source_agent)
+                self.assertEqual(source_agent.count('apt-get install'), 1)
+                self.assertNotIn('ros-noetic-', source_agent)
+                for stage in (apt_agent, source_agent):
+                    self.assertIn('onboard-baseline.sh install-agent --user "$ONBOARD_BASELINE_USER" --profile fs150-focal-noetic', stage)
+                    self.assertIn('runuser -u "$ONBOARD_BASELINE_USER" -- /opt/xgc2/onboard-baseline/onboard-baseline.sh check', stage)
+                self.assertEqual(selection.strip(), '')
+            else:
+                self.assertNotIn('apt-get install', text)
+                self.assertNotIn('.deb', text)
             self.assertNotIn('USER root', text)
-            self.assertNotIn('.deb', text)
         entry = (BASELINE / 'image-entrypoint.sh').read_text()
         self.assertIn('exec runuser --preserve-environment -u "$agent_user" -- /usr/lib/xgc2/xgc-agent', entry)
         for forbidden in ('roscore', 'roslaunch', 'systemctl enable', 'systemctl start',

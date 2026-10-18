@@ -277,21 +277,24 @@ ensure_ros_source() {
     "$ros_installer" "$ros_distro" "$ubuntu_codename"
   fi
 }
-ensure_xgc2_source() {
+ensure_xgc2_source() (
   if [[ -e /etc/apt/sources.list.d/xgc2.list ]]; then
     return 0
   fi
   local tmp found
-  tmp="$(mktemp)"
-  curl -fsSL --retry 3 --connect-timeout 20 --max-time 120 https://xgc2.apt.xiaokang.ink/xgc2-archive-keyring.gpg -o "$tmp"
-  found="$(gpg --batch --show-keys --with-fingerprint --with-colons "$tmp" | awk -F: '$1=="fpr"{print toupper($10)}' | sort -u)"
+  tmp="$(mktemp -d)"
+  trap 'rm -rf -- "$tmp"' EXIT
+  export GNUPGHOME="$tmp/gnupg"
+  mkdir -m 0700 "$GNUPGHOME"
+  curl -fsSL --retry 3 --connect-timeout 20 --max-time 120 https://xgc2.apt.xiaokang.ink/xgc2-archive-keyring.gpg -o "$tmp/keyring.gpg"
+  gpg --batch --import "$tmp/keyring.gpg"
+  found="$(gpg --batch --with-fingerprint --with-colons --list-keys | awk -F: '$1=="fpr"{print toupper($10)}' | sort -u)"
   [[ "$found" == "$XGC2_APT_FINGERPRINT" ]] || fail "XGC2 APT key fingerprint mismatch" 1
   install -d -m 0755 /etc/apt/keyrings
-  install -m 0644 "$tmp" /etc/apt/keyrings/xgc2-archive-keyring.gpg
-  rm -f "$tmp"
+  install -m 0644 "$tmp/keyring.gpg" /etc/apt/keyrings/xgc2-archive-keyring.gpg
   printf 'deb [arch=%s signed-by=/etc/apt/keyrings/xgc2-archive-keyring.gpg] https://xgc2.apt.xiaokang.ink %s main\n' \
     "$(dpkg --print-architecture)" "$ubuntu_codename" > /etc/apt/sources.list.d/xgc2.list
-}
+)
 
 if [[ "$mode" == "apply" ]]; then
   if ((${#install_specs[@]})); then
