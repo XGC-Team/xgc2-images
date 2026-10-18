@@ -11,19 +11,27 @@
 +++ b/clients/roscpp/src/libros/connection.cpp
 @@ -35,0 +36 @@
 +#include "deferred_write.h"
-@@ -307,0 +309,5 @@
+@@ -307,0 +309,10 @@
++  if (immediate && detail::deferred_write_connection == this)
++  {
++    return;
++  }
++
 +  if (!immediate && detail::DeferredWritePhase::enqueue(this))
 +  {
 +    return;
 +  }
 +
-@@ -313,0 +320,15 @@
+@@ -313,0 +325,18 @@
 +  }
 +}
 +
 +void Connection::drainDeferredWrite()
 +{
-+  static_cast<TransportTCP*>(transport_.get())->dispatchDeferredWrite();
++  {
++    detail::DeferredWriteConnection scope(this);
++    static_cast<TransportTCP*>(transport_.get())->dispatchDeferredWrite();
++  }
 +
 +  bool pending;
 +  {
@@ -37,22 +45,23 @@
 +++ b/clients/roscpp/src/libros/poll_manager.cpp
 @@ -29,0 +30 @@
 +#include "deferred_write.h"
-@@ -34,0 +36,6 @@
+@@ -34,0 +36,7 @@
 +
 +namespace detail
 +{
 +thread_local DeferredWritePhase* deferred_write_phase = 0;
++thread_local Connection* deferred_write_connection = 0;
 +}
 +
-@@ -75,0 +83 @@
+@@ -75,0 +84 @@
 +  std::vector<ConnectionPtr> deferred_writes;
-@@ -79,0 +88 @@
+@@ -79,0 +89 @@
 +      detail::DeferredWritePhase phase(poll_set_, deferred_writes);
-@@ -87,0 +97 @@
+@@ -87,0 +98 @@
 +    detail::DeferredWritePhase::drain(deferred_writes);
 --- /dev/null
 +++ b/clients/roscpp/src/libros/deferred_write.h
-@@ -0,0 +1,58 @@
+@@ -0,0 +1,76 @@
 +// Internal to libroscpp. No public API or Connection layout changes.
 +#ifndef ROSCPP_DEFERRED_WRITE_H
 +#define ROSCPP_DEFERRED_WRITE_H
@@ -67,6 +76,24 @@
 +{
 +class DeferredWritePhase;
 +extern __attribute__((visibility("hidden"))) thread_local DeferredWritePhase* deferred_write_phase;
++
++extern __attribute__((visibility("hidden"))) thread_local Connection* deferred_write_connection;
++
++class __attribute__((visibility("hidden"))) DeferredWriteConnection
++{
++public:
++  explicit DeferredWriteConnection(Connection* connection)
++    : previous_(deferred_write_connection)
++  {
++    deferred_write_connection = connection;
++  }
++  ~DeferredWriteConnection() { deferred_write_connection = previous_; }
++
++private:
++  DeferredWriteConnection(const DeferredWriteConnection&) = delete;
++  DeferredWriteConnection& operator=(const DeferredWriteConnection&) = delete;
++  Connection* previous_;
++};
 +
 +class __attribute__((visibility("hidden"))) DeferredWritePhase
 +{

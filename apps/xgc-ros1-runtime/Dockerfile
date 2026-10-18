@@ -41,7 +41,8 @@ RUN library=/opt/ros/noetic/lib/libroscpp.so \
     && install -m 0644 /tmp/libroscpp.so "${library}" \
     && rm /tmp/libroscpp.so \
     && ldconfig \
-    && ! ldd "${library}" | grep -F 'not found'
+    && ! LD_LIBRARY_PATH="/opt/ros/noetic/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+      ldd "${library}" | grep -F 'not found'
 
 COPY --from=gazebo-rendering-build /out/libgazebo_rendering.so.11.15.1 /tmp/libgazebo_rendering.so.11.15.1
 COPY --from=gazebo-rendering-build /out/COPYING.gazebo /usr/local/share/doc/gazebo-rendering/COPYING

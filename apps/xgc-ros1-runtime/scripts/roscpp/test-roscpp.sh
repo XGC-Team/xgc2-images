@@ -25,11 +25,11 @@ g++ -std=c++14 -O2 -Wall -Wextra -Werror -UNDEBUG \
   -o "${output_dir}/phase-drain-test"
 
 for case in full partial eagain close chain external immediate io-callback \
-  lifetime foreign-pollset udp; do
+  lifetime foreign-pollset udp nested-immediate nested-pressure cross-immediate; do
   timeout 25s env \
     LD_LIBRARY_PATH="${library_dir}:/opt/ros/noetic/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" \
     LD_PRELOAD="${output_dir}/tcp-counter.so" \
-    "${output_dir}/phase-drain-test" "${case}" candidate \
+    "${output_dir}/phase-drain-test" "${case}" nested \
       "${output_dir}/${case}-maps.txt" \
       > "${output_dir}/${case}.jsonl" 2> "${output_dir}/${case}.log"
   awk -v expected="${library_path}" '$NF == expected { found = 1 } END { exit !found }' \

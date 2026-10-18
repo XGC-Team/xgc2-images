@@ -156,7 +156,8 @@ void print(const std::string& c,const Counts& n){std::cout<<"{\"case\":\""<<c<<"
 int main(int argc,char** argv){try{
  require(argc>=3,"case and library expectation required");::signal(SIGPIPE,SIG_IGN);
  begin_count=reinterpret_cast<Begin>(dlsym(RTLD_DEFAULT,"tcp_count_begin"));get_count=reinterpret_cast<Get>(dlsym(RTLD_DEFAULT,"tcp_count_get"));require(begin_count&&get_count,"counter absent");
- const std::string name=argv[1];const bool candidate=std::string(argv[2])=="candidate";
+ const std::string name=argv[1];const bool candidate=std::string(argv[2])!="baseline";
+ const bool nested=std::string(argv[2])=="nested";
  if(argc>=4){std::ifstream in("/proc/self/maps");std::ofstream out(argv[3]);out<<in.rdbuf();}
  if(name=="full"){
   Fixture f;auto pub=boost::make_shared<ros::Publication>("/proof","bytes","md5","",1,false,false);
@@ -189,6 +190,54 @@ int main(int argc,char** argv){try{
   if(name=="external"){begin_count();f.connection->write(buffer,4096,[&](const ros::ConnectionPtr&){++f.callbacks;},false);}
   else{f.submit([&]{begin_count();f.inside=true;f.connection->write(buffer,4096,[&](const ros::ConnectionPtr&){sync=f.inside.load();++f.callbacks;},true);f.inside=false;});}
   wait([&]{return f.callbacks==1;},"control callback");f.finish_read(4096);f.verify(4096,0x44);auto n=get_count();print(name,n);require(n.epoll_out==1,"legacy POLLOUT path changed");if(name=="immediate")require(sync,"immediate no longer immediate");
+ }else if(name=="nested-immediate"){
+  Fixture f;auto a=data(4096,0x61),b=data(4096,0x62);std::atomic<uint64_t> inner_arm{99};
+  f.read_peer();f.start();f.submit([&]{begin_count();f.connection->write(a,4096,[&](const ros::ConnectionPtr& c){
+   ++f.callbacks;c->write(b,4096,[&](const ros::ConnectionPtr&){++f.callbacks;},true);inner_arm=get_count().epoll_out;
+  },false);});
+  wait([&]{return f.callbacks==2;},"nested immediate callbacks");f.finish_read(8192);f.verify(4096,0x61,4096,0x62);
+  auto n=get_count();print(name,n);require(n.sends==2,"nested immediate sends");
+  require(n.epoll_out==(nested?0u:1u)&&inner_arm==(nested?0u:1u),"nested immediate POLLOUT count");
+ }else if(name=="nested-pressure"){
+  {
+   Fixture f;constexpr size_t n=16*1024*1024;auto a=data(4096,0x61),b=data(n,0x62);std::atomic<uint64_t> inner_arm{99};
+   f.start();f.submit([&]{begin_count();f.connection->write(a,4096,[&](const ros::ConnectionPtr& c){
+    ++f.callbacks;c->write(b,n,[&](const ros::ConnectionPtr&){++f.callbacks;},true);inner_arm=get_count().epoll_out;
+   },false);});
+   wait([&]{return get_count().partial>0&&get_count().epoll_out>0;},"nested real partial not observed");
+   require(f.callbacks==1,"nested partial completed without peer drain");auto before=get_count();
+   f.read_peer();wait([&]{return f.callbacks==2;},"nested partial completion");f.finish_read(4096+n);f.verify(4096,0x61,n,0x62);
+   print("nested-partial-before-read",before);print("nested-partial-complete",get_count());
+   require(before.epoll_out==1&&get_count().epoll_out==1,"nested partial fallback arm");
+   require(inner_arm==(nested?0u:1u),"nested partial armed inside callback");
+  }
+  {
+   Fixture f;auto a=data(4096,0x61),b=data(1024*1024,0x62),filler=data(65536,0x63);
+   std::atomic<size_t> prefix{0};std::atomic<uint64_t> inner_arm{99};
+   f.start();f.submit([&]{begin_count();f.connection->write(a,4096,[&](const ros::ConnectionPtr& c){
+    ++f.callbacks;
+    auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(3);
+    while(get_count().again==0){require(prefix<32*1024*1024,"nested fill byte cap");require(std::chrono::steady_clock::now()<deadline,"nested fill time cap");int n=f.transport->write(filler.get(),65536);require(n>=0,"nested fill error");prefix+=size_t(n);}
+    c->write(b,1024*1024,[&](const ros::ConnectionPtr&){++f.callbacks;},true);inner_arm=get_count().epoll_out;
+   },false);});
+   wait([&]{return get_count().again>=2&&get_count().epoll_out>0;},"nested Connection EAGAIN not observed");
+   require(f.callbacks==1,"nested EAGAIN completed without peer drain");auto before=get_count();
+   f.read_peer();wait([&]{return f.callbacks==2;},"nested EAGAIN fallback");const size_t fill=prefix.load();f.finish_read(4096+fill+1024*1024);
+   for(size_t i=0;i<4096;++i)require(f.received[i]==0x61,"nested EAGAIN first bytes");
+   for(size_t i=4096;i<4096+fill;++i)require(f.received[i]==0x63,"nested EAGAIN fill bytes");
+   for(size_t i=4096+fill;i<f.received.size();++i)require(f.received[i]==0x62,"nested EAGAIN last bytes");
+   print("nested-eagain-before-read",before);print("nested-eagain-complete",get_count());
+   require(before.epoll_out==1&&get_count().epoll_out==1,"nested EAGAIN fallback arm");
+   require(inner_arm==(nested?0u:1u),"nested EAGAIN armed inside callback");
+  }
+ }else if(name=="cross-immediate"){
+  Fixture a,b;auto first=data(4096,0x41),second=data(4096,0x42);a.read_peer();b.read_peer();a.start();b.start();
+  a.submit([&]{begin_count();a.connection->write(first,4096,[&](const ros::ConnectionPtr&){
+   ++a.callbacks;b.connection->write(second,4096,[&](const ros::ConnectionPtr&){++b.callbacks;},true);
+  },false);});
+  wait([&]{return a.callbacks==1&&b.callbacks==1;},"cross Connection immediate stalled");
+  a.finish_read(4096);b.finish_read(4096);a.verify(4096,0x41);b.verify(4096,0x42);
+  auto n=get_count();print(name,n);require(n.sends==2&&n.epoll_out==1,"cross Connection immediate old arm");
  }else if(name=="lifetime"){
   Fixture f;auto state=std::make_shared<LifetimeControl>();
   auto pub=boost::make_shared<ros::Publication>("/lifetime","bytes","md5","",1,false,false);
