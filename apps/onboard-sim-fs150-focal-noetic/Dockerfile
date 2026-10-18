@@ -1,7 +1,6 @@
 # syntax=docker/dockerfile:1.7
 ARG PARENT_IMAGE=ros:noetic-ros-core-focal
 ARG AGENT_INSTALL=apt
-ARG XSIM_PARENT_IMAGE=${AGENT_INSTALL}-agent
 FROM scratch AS runtime-sources
 COPY onboard-baseline/baselines.json /onboard-baseline/baselines.json
 COPY onboard-baseline/onboard-baseline.sh /onboard-baseline/onboard-baseline.sh
@@ -43,6 +42,7 @@ EOF
 ENTRYPOINT ["/opt/xgc2/onboard-baseline/image-entrypoint.sh"]
 
 FROM baseline AS apt-agent
+ARG ONBOARD_BASELINE_AGENT_VERSION
 RUN bash <<'EOF'
 set -euo pipefail
 /opt/xgc2/onboard-baseline/onboard-baseline.sh install-agent --user "$ONBOARD_BASELINE_USER" --profile fs150-focal-noetic
@@ -60,13 +60,12 @@ rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb
 runuser -u "$ONBOARD_BASELINE_USER" -- /opt/xgc2/onboard-baseline/onboard-baseline.sh check --profile "$ONBOARD_BASELINE_PROFILE"
 EOF
 
-# This target requires a curated, same-platform source runtime material context.
-# Its rootfs contains XSim, GPU sensing and their complete runtime closure,
-# never the Core image. GPU sensing is required material for this target.
-FROM ${XSIM_PARENT_IMAGE} AS xsim-simulation
-COPY --from=xsim-runtime /rootfs/ /
+# Optional simulation layer; the shared installer owns both formal runtime packages.
+FROM ${AGENT_INSTALL}-agent AS xsim-simulation
+ARG ONBOARD_BASELINE_XSIM_VERSION=1.4.0-4
 RUN bash <<'EOF'
 set -euo pipefail
+/opt/xgc2/onboard-baseline/onboard-baseline.sh install-xsim --profile fs150-focal-noetic
 set +u
 source /opt/ros/noetic/setup.bash
 set -u

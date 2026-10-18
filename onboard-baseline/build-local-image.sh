@@ -1,9 +1,19 @@
 #!/usr/bin/env bash
-# Local robot base image build. Agent installation happens when the
-# container is prepared. This script does not push a registry tag.
+# Local robot base image build. Agent and optional XSim packages are installed
+# while building, not while running an experiment. This script does not push.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+with_xsim=0
+positional=()
+for argument in "$@"; do
+  if [[ "$argument" == --with-xsim ]]; then
+    with_xsim=1
+  else
+    positional+=("$argument")
+  fi
+done
+set -- "${positional[@]}"
 PROFILE="${1:-}"
 PLATFORM="${2:-linux/amd64}"
 MIRROR="${ONBOARD_APT_MIRROR:-http://mirrors.ustc.edu.cn/ubuntu}"
@@ -11,12 +21,17 @@ MIRROR="${ONBOARD_APT_MIRROR:-http://mirrors.ustc.edu.cn/ubuntu}"
 if [[ -z "$PROFILE" || $# -gt 2 ]]; then
   echo "usage: build-local-image.sh <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic> [linux/amd64|linux/arm64]" >&2
   echo "       PARENT_IMAGE=<image> build-local-image.sh fs150-focal-noetic-sitl [linux/amd64]" >&2
+  echo "       build-local-image.sh fs150-focal-noetic [linux/amd64|linux/arm64] --with-xsim" >&2
   exit 2
 fi
 case "$PLATFORM" in
   linux/amd64|linux/arm64) ;;
   *) echo "unsupported platform $PLATFORM" >&2; exit 2 ;;
 esac
+if [[ "$with_xsim" == 1 && "$PROFILE" != fs150-focal-noetic ]]; then
+  echo "--with-xsim requires the fs150-focal-noetic profile" >&2
+  exit 2
+fi
 # Preserve the legacy omitted-platform tag; explicit targets coexist locally.
 suffix=""
 [[ $# -lt 2 ]] || suffix="-${PLATFORM#linux/}"
@@ -52,6 +67,9 @@ case "$PROFILE" in
 esac
 
 tag="onboard-sim-${PROFILE}:base-local${suffix}"
+if [[ "$with_xsim" == 1 ]]; then
+  tag="onboard-sim-${PROFILE}:base-local-${PLATFORM#linux/}-xsim"
+fi
 echo "build-local-image: docker build -t ${tag}"
 # The Dockerfile owns its parent default, including the W06 ros-core choice.
 # fs150 stays on that APT Agent stage unless ONBOARD_AGENT_DEB names a package.
@@ -60,6 +78,15 @@ build_args=(
   --pull=false
   --build-arg "ONBOARD_APT_MIRROR=${MIRROR}"
 )
+if [[ "$PROFILE" == fs150-focal-noetic && -n "${ONBOARD_BASELINE_AGENT_VERSION:-}" ]]; then
+  build_args+=(--build-arg "ONBOARD_BASELINE_AGENT_VERSION=${ONBOARD_BASELINE_AGENT_VERSION}")
+fi
+if [[ "$with_xsim" == 1 ]]; then
+  build_args+=(--target xsim-simulation)
+  if [[ -n "${ONBOARD_BASELINE_XSIM_VERSION:-}" ]]; then
+    build_args+=(--build-arg "ONBOARD_BASELINE_XSIM_VERSION=${ONBOARD_BASELINE_XSIM_VERSION}")
+  fi
+fi
 agent_context=""
 source_agent=0
 if [[ -n "${ONBOARD_AGENT_DEB:-}" ]]; then

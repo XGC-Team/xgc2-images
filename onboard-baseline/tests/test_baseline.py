@@ -42,14 +42,17 @@ elif name == 'dpkg-query':
     if '${Status}' in args[1]:
         print(state.get('package_status', {}).get(args[-1], 'install ok installed'), end='')
         if state.get('query_failure'): sys.exit(1)
-    elif '${Version}' == args[1][3:]: print('1.0', end='')
+    elif '${Version}' == args[1][3:]: print(state.get('versions', {}).get(args[-1], '1.0'), end='')
     else: print('manual\t%s\t1.0\t%s' % (args[-1], state['arch']))
 elif name == 'apt-mark':
     print('\n'.join(state['installed']))
 elif name == 'apt-get':
     if state.get('apt_failure'): sys.exit(100)
     if args[0] == 'install':
-        state['installed'] += [a for a in args[1:] if not a.startswith('-')]
+        for spec in (a for a in args[1:] if not a.startswith('-')):
+            package, separator, version = spec.partition('=')
+            state['installed'].append(package)
+            if separator: state.setdefault('versions', {})[package] = version
         save()
 elif name == 'install-ros-apt-source.sh':
     (root / 'etc/apt/sources.list.d/ros1.list').write_text('fixture source\n')
@@ -397,6 +400,55 @@ class BaselineTests(unittest.TestCase):
         self.assertEqual(self.calls('dpkg'), [])
         self.assertEqual(self.config.read_bytes(), before)
 
+    def test_xsim_installs_the_formal_runtime_pair_once_on_both_architectures(self):
+        self.env['ONBOARD_BASELINE_XSIM_VERSION'] = '1.4.0-4'
+        for arch in ('amd64', 'arm64'):
+            with self.subTest(arch=arch):
+                self.configure('fs150-focal-noetic', arch)
+                before = self.config.read_bytes()
+                self.invoke('install-xsim', '--profile', self.profile)
+                self.assertEqual(self.calls('apt-get')[-1][1], [
+                    'install', '-y', '--no-install-recommends',
+                    'xsim=1.4.0-4', 'libxgc2-sensing-gpu=1.4.0-4'])
+                installed = self.calls('apt-get')
+                self.invoke('install-xsim', '--profile', self.profile)
+                self.assertEqual(self.calls('apt-get'), installed)
+                self.assertEqual(self.calls('configure-agent-user'), [])
+                self.assertEqual(self.config.read_bytes(), before)
+
+    def test_xsim_repairs_only_the_missing_or_wrong_version_runtime(self):
+        self.env['ONBOARD_BASELINE_XSIM_VERSION'] = '1.4.0-4'
+        self.state['installed'] += ['xsim', 'libxgc2-sensing-gpu']
+        self.state['versions'] = {'xsim': '1.4.0-4', 'libxgc2-sensing-gpu': '1.4.0-3'}
+        self.save()
+        self.invoke('install-xsim', '--profile', self.profile)
+        self.assertEqual(self.calls('apt-get')[-1][1], [
+            'install', '-y', '--no-install-recommends', 'libxgc2-sensing-gpu=1.4.0-4'])
+
+    def test_xsim_requires_an_explicit_version_without_its_own_default(self):
+        self.invoke('install-xsim', '--profile', self.profile, expected=2)
+        self.assertEqual(self.calls('apt-get'), [])
+        self.env['ONBOARD_BASELINE_XSIM_VERSION'] = '1.4.0-5'
+        self.invoke('install-xsim', '--profile', self.profile)
+        self.assertEqual(self.calls('apt-get')[-1][1], [
+            'install', '-y', '--no-install-recommends',
+            'xsim=1.4.0-5', 'libxgc2-sensing-gpu=1.4.0-5'])
+
+    def test_xsim_does_not_extend_other_robot_profiles(self):
+        for profile in PROFILES:
+            if profile == 'fs150-focal-noetic':
+                continue
+            with self.subTest(profile=profile):
+                self.configure(profile)
+                self.invoke('install-xsim', '--profile', profile, expected=2)
+                self.assertEqual(self.calls('apt-get'), [])
+
+    def test_agent_version_uses_the_existing_explicit_version_parameter(self):
+        env = dict(self.env, ONBOARD_BASELINE_AGENT_VERSION='0.1.0-11')
+        self.invoke('install-agent', '--profile', self.profile, '--user', 'marvsmart', env=env)
+        self.assertEqual(self.calls('apt-get')[-1][1], [
+            'install', '-y', '--no-install-recommends', 'xgc2-agent=0.1.0-11'])
+
     def test_fresh_agent_install_verifies_key_in_isolated_home_for_bionic_and_focal(self):
         temporary = self.root / 'temporary'
         temporary.mkdir()
@@ -592,7 +644,8 @@ class BaselineTests(unittest.TestCase):
                 self.assertIn('ARG AGENT_INSTALL=apt\n', text)
                 baseline, stages = text.split('FROM baseline AS apt-agent\n')
                 apt_agent, stages = stages.split('FROM baseline AS source-agent\n')
-                source_agent, selection = stages.split('FROM ${AGENT_INSTALL}-agent')
+                source_agent, simulation = stages.split('FROM ${AGENT_INSTALL}-agent AS xsim-simulation\n')
+                _, selection = simulation.rsplit('FROM ${AGENT_INSTALL}-agent', 1)
                 for stage in (baseline, apt_agent):
                     self.assertNotIn('apt-get install', stage)
                     self.assertNotIn('.deb', stage)

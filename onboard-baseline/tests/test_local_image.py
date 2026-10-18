@@ -66,6 +66,8 @@ class LocalImageTest(unittest.TestCase):
         stub.chmod(0o755)
         self.env = os.environ.copy()
         self.env.pop("ONBOARD_AGENT_DEB", None)
+        self.env.pop("ONBOARD_BASELINE_AGENT_VERSION", None)
+        self.env.pop("ONBOARD_BASELINE_XSIM_VERSION", None)
         self.env["PATH"] = "%s:%s" % (stub_dir, self.env.get("PATH", ""))
         self.env["STUB_LOG"] = str(self.log)
         self.env["STUB_PLATFORM"] = "linux/amd64"
@@ -100,10 +102,61 @@ class LocalImageTest(unittest.TestCase):
         self.assertEqual(len(argv), 1)
         self.assertNotIn("AGENT_INSTALL=source", argv[0])
         self.assertNotIn("--build-context", argv[0])
+        self.assertNotIn("--target", argv[0])
         self.assertIn("--build-arg", argv[0])
         self.assertIn("ONBOARD_APT_MIRROR=%s" % os.environ.get(
             "ONBOARD_APT_MIRROR", "http://mirrors.ustc.edu.cn/ubuntu"), argv[0])
         self.assertIn("installs live xgc2-agent from APT", result.stdout)
+
+    def test_fs150_xsim_variant_selects_the_same_target_on_each_architecture(self):
+        for arch in ("amd64", "arm64"):
+            with self.subTest(arch=arch):
+                self.env["STUB_PLATFORM"] = "linux/" + arch
+                self.env["ONBOARD_BASELINE_AGENT_VERSION"] = "0.1.0-11"
+                result = self.run_image("fs150-focal-noetic", "linux/" + arch, "--with-xsim")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                argv = self.builds()[-1]
+                self.assertEqual(argv[argv.index("--target") + 1], "xsim-simulation")
+                self.assertEqual(argv[argv.index("-t") + 1],
+                                 "onboard-sim-fs150-focal-noetic:base-local-" + arch + "-xsim")
+                self.assertIn("ONBOARD_BASELINE_AGENT_VERSION=0.1.0-11", argv)
+                self.assertFalse(any(arg.startswith("ONBOARD_BASELINE_XSIM_VERSION=") for arg in argv))
+                self.assertNotIn("--build-context", argv)
+                self.assertNotIn("XSIM_PARENT_IMAGE", " ".join(argv))
+
+    def test_xsim_variant_without_an_explicit_platform_is_still_named_by_architecture(self):
+        result = self.run_image("fs150-focal-noetic", "--with-xsim")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("onboard-sim-fs150-focal-noetic:base-local-amd64-xsim", self.builds()[0])
+
+    def test_explicit_xsim_version_changes_only_the_simulation_build_input(self):
+        for version in ("1.4.0-4", "1.4.0-5"):
+            self.env["ONBOARD_BASELINE_XSIM_VERSION"] = version
+            result = self.run_image("fs150-focal-noetic", "linux/amd64", "--with-xsim")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("ONBOARD_BASELINE_XSIM_VERSION=" + version, self.builds()[-1])
+        result = self.run_image("fs150-focal-noetic", "linux/amd64")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(any(arg.startswith("ONBOARD_BASELINE_XSIM_VERSION=") for arg in self.builds()[-1]))
+
+    def test_xsim_option_does_not_enable_other_profiles_or_sitl(self):
+        for profile in ("scout-focal-noetic", "scout-bionic-melodic",
+                        "wheeltec-bionic-melodic", "fs150-focal-noetic-sitl"):
+            with self.subTest(profile=profile):
+                result = self.run_image(profile, "--with-xsim")
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertFalse(self.log.exists())
+
+    def test_agent_version_argument_changes_the_apt_stage_build_input(self):
+        for version in ("0.1.0-10", "0.1.0-11"):
+            self.env["ONBOARD_BASELINE_AGENT_VERSION"] = version
+            result = self.run_image("fs150-focal-noetic", "linux/amd64")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            argv = self.builds()[-1]
+            self.assertIn("ONBOARD_BASELINE_AGENT_VERSION=" + version, argv)
+            self.assertNotIn("--target", argv)
+        apt_stage = DOCKERFILE.read_text().split("FROM baseline AS apt-agent\n", 1)[1].split("FROM baseline AS source-agent\n", 1)[0]
+        self.assertLess(apt_stage.index("ARG ONBOARD_BASELINE_AGENT_VERSION\n"), apt_stage.index("RUN "))
 
     def test_another_profile_without_a_deb_stays_on_apt(self):
         result = self.run_image("scout-bionic-melodic")

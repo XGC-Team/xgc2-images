@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Structural contract for the optional source XSim runtime image target."""
+"""Structural contract for the optional APT XSim runtime image target."""
 import re
 from pathlib import Path
 import subprocess
@@ -52,20 +52,24 @@ class XSimRuntimeImageTest(unittest.TestCase):
             self.assertIn(role + "-agent", visited)
             self.assertIn("baseline", visited)
 
-    def test_simulation_has_one_explicit_runtime_context(self):
+    def test_simulation_installs_the_formal_runtime_pair_through_the_shared_baseline(self):
         self.assertEqual(self.named["xsim-simulation"]["base"],
-                         "${XSIM_PARENT_IMAGE}")
+                         "${AGENT_INSTALL}-agent")
         self.assertEqual(re.findall(r"--from=([^\s]+)", self.simulation),
-                         ["xsim-runtime"])
-        self.assertIn("COPY --from=xsim-runtime /rootfs/ /\n", self.simulation)
+                         [])
+        self.assertIn("onboard-baseline.sh install-xsim --profile fs150-focal-noetic\n", self.simulation)
+        self.assertNotIn("xsim-runtime", self.text)
         self.assertNotIn("--from=core", self.simulation)
         self.assertNotRegex(self.simulation, r"\b(?:apt-get|curl|wget)\b")
+        self.assertIn("ARG ONBOARD_BASELINE_XSIM_VERSION=1.4.0-4\n", self.simulation)
+        self.assertEqual(self.text.count("ARG ONBOARD_BASELINE_XSIM_VERSION="), 1)
+        for stage in self.stages:
+            if stage["name"] != "xsim-simulation":
+                self.assertNotIn("ONBOARD_BASELINE_XSIM_VERSION", stage["body"])
 
     def test_runtime_parent_defaults_to_selected_agent_without_changing_default(self):
-        self.assertIn("ARG AGENT_INSTALL=apt\n"
-                      "ARG XSIM_PARENT_IMAGE=${AGENT_INSTALL}-agent\n",
-                      self.text)
-        self.assertEqual(self.text.count("XSIM_PARENT_IMAGE"), 2)
+        self.assertIn("ARG AGENT_INSTALL=apt\n", self.text)
+        self.assertNotIn("XSIM_PARENT_IMAGE", self.text)
         self.assertEqual(self.stages[-1]["body"], "FROM ${AGENT_INSTALL}-agent\n")
         for role in ("source", "apt"):
             self.assertIn(role + "-agent", self.named)

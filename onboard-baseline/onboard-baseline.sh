@@ -12,6 +12,7 @@ XGC2_APT_FINGERPRINT="2A8E11B36F56D307ADF626D85E5FDC30979EA43F"
 usage() {
   echo "usage: onboard-baseline.sh check|apply|snapshot --profile <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic>" >&2
   echo "       onboard-baseline.sh install-sitl --profile fs150-focal-noetic" >&2
+  echo "       onboard-baseline.sh install-xsim --profile fs150-focal-noetic" >&2
   echo "       onboard-baseline.sh install-agent [--user EXISTING_USER] [--profile <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic>]" >&2
   echo "       onboard-baseline.sh manualdiff --before SNAPSHOT --after SNAPSHOT" >&2
   exit 2
@@ -68,7 +69,7 @@ while (($#)); do
     *) usage ;;
   esac
 done
-[[ "$mode" == "check" || "$mode" == "apply" || "$mode" == "snapshot" || "$mode" == "install-agent" || "$mode" == "install-sitl" ]] || usage
+[[ "$mode" == "check" || "$mode" == "apply" || "$mode" == "snapshot" || "$mode" == "install-agent" || "$mode" == "install-sitl" || "$mode" == "install-xsim" ]] || usage
 if [[ "$mode" != "install-agent" && -z "$profile" ]]; then
   usage
 fi
@@ -154,7 +155,7 @@ package_installed() {
 
 missing=()
 install_specs=()
-if [[ "$mode" != "install-agent" && "$mode" != "install-sitl" ]]; then
+if [[ "$mode" != "install-agent" && "$mode" != "install-sitl" && "$mode" != "install-xsim" ]]; then
 for package in "${packages[@]}"; do
   if ! package_installed "$package"; then
     missing+=("$package")
@@ -329,6 +330,25 @@ if [[ "$mode" == "install-sitl" ]]; then
     apt-get install -y --no-install-recommends "${missing[@]}"
   fi
   printf 'onboard-baseline: FS150 SITL packages installed\n'
+  exit 0
+fi
+
+if [[ "$mode" == "install-xsim" ]]; then
+  [[ "$profile" == "fs150-focal-noetic" ]] || fail "XSim packages require the FS150 Focal/Noetic profile" 2
+  xsim_version="${ONBOARD_BASELINE_XSIM_VERSION:-}"
+  [[ -n "$xsim_version" ]] || fail "install-xsim requires ONBOARD_BASELINE_XSIM_VERSION" 2
+  simulation_packages=("xsim=${xsim_version}" "libxgc2-sensing-gpu=${xsim_version}")
+  missing=()
+  for spec in "${simulation_packages[@]}"; do
+    installed="$(dpkg-query -W -f='${Version}' "${spec%%=*}" 2>/dev/null || true)"
+    [[ "$installed" == "${spec#*=}" ]] || missing+=("$spec")
+  done
+  if ((${#missing[@]})); then
+    ensure_xgc2_source
+    apt-get update
+    apt-get install -y --no-install-recommends "${missing[@]}"
+  fi
+  printf 'onboard-baseline: FS150 XSim runtime packages installed\n'
   exit 0
 fi
 
