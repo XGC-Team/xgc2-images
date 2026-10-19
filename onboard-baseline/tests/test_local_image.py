@@ -169,8 +169,7 @@ class LocalImageTest(unittest.TestCase):
                 self.assertEqual("ONBOARD_BASELINE_AGENT_VERSION=0.1.0-13" in self.builds()[-1],
                                  profile.endswith("focal-noetic"))
                 text = (IMAGES / "apps" / ("onboard-sim-" + profile) / "Dockerfile").read_text()
-                self.assertEqual("ARG ONBOARD_BASELINE_AGENT_VERSION=0.1.0-13\n" in text,
-                                 profile.endswith("focal-noetic"))
+                self.assertIn("ARG ONBOARD_BASELINE_AGENT_VERSION=0.1.0-13\n", text)
 
     def test_another_profile_without_a_deb_stays_on_apt(self):
         result = self.run_image("scout-bionic-melodic")
