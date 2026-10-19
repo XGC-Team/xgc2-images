@@ -84,6 +84,7 @@ if ! command -v "$metadata_python" >/dev/null 2>&1; then
   command -v "$metadata_python" >/dev/null 2>&1 || fail "python3 or the existing Melodic python is required to read baselines.json" 2
 fi
 
+declare -A minimum_versions=()
 if [[ -n "$profile" ]]; then
   profile_config="$("$metadata_python" - "$BASELINES" "$profile" <<'PY'
 import io, json, sys
@@ -102,6 +103,8 @@ print("ros_distro=" + quote(profile["rosDistro"]))
 print("agent_package=" + quote(doc["agentPackage"]))
 print("architectures=(" + " ".join(quote(item) for item in profile["architectures"]) + ")")
 print("packages=(" + " ".join(quote(item) for item in profile["packages"]) + ")")
+print("minimum_versions=(" + " ".join("[" + quote(package) + "]=" + quote(version)
+      for package, version in profile.get("minimumVersions", {}).items()) + ")")
 PY
 )" || fail "invalid or unknown profile ${profile}" 2
   eval "$profile_config"
@@ -148,18 +151,26 @@ PY
 fi
 
 package_installed() {
-  local package="$1" status
-  status="$(dpkg-query -W -f='${Status}' "$package" 2>/dev/null)" || return 1
-  [[ "$status" == "install ok installed" || "$status" == "hold ok installed" ]]
+  local package="$1" record status version minimum
+  record="$(dpkg-query -W -f='${Status}\t${Version}' "$package" 2>/dev/null)" || return 1
+  IFS=$'\t' read -r status version <<<"$record"
+  [[ "$status" == "install ok installed" || "$status" == "hold ok installed" ]] || return 1
+  minimum="${minimum_versions[$package]:-}"
+  [[ -z "$minimum" ]] || dpkg --compare-versions "$version" ge "$minimum"
 }
 
 missing=()
 install_specs=()
+gateway_specs=()
 if [[ "$mode" != "install-agent" && "$mode" != "install-sitl" && "$mode" != "install-xsim" ]]; then
 for package in "${packages[@]}"; do
   if ! package_installed "$package"; then
     missing+=("$package")
-    install_specs+=("$package")
+    if [[ -n "${minimum_versions[$package]:-}" ]]; then
+      gateway_specs+=("$package")
+    else
+      install_specs+=("$package")
+    fi
   fi
 done
 fi
@@ -208,6 +219,19 @@ if [[ "$profile" == fs150-focal-noetic ]]; then
   geoid_dir=/usr/share/GeographicLib/geoids
   [[ -s "$geoid_dir/egm96-5.pgm" && -r "$geoid_dir/egm96-5.pgm" ]] || { echo "missing/unreadable MAVROS geoid: $geoid_dir/egm96-5.pgm" >&2; exit 1; }
   GeoidEval -d "$geoid_dir" -n egm96-5 --input-string '0 0' >/dev/null
+fi
+gateway_node=""
+case "$profile" in
+  fs150-focal-noetic) gateway_node="$ros_prefix/lib/xgc_px4_multirotor_ros1_adapter/xgc_px4_multirotor_ros1_adapter_node" ;;
+  scout-focal-noetic) gateway_node="$ros_prefix/lib/xgc_ugv_ros1_adapter/xgc_ugv_ros1_adapter_node" ;;
+esac
+if [[ -n "$gateway_node" ]]; then
+  [[ -x "$gateway_node" ]] || { echo "missing data gateway executable: $gateway_node" >&2; exit 1; }
+  ldd "$gateway_node" >"$HOME/gateway-ldd.txt"
+  if grep -q 'not found' "$HOME/gateway-ldd.txt"; then
+    cat "$HOME/gateway-ldd.txt" >&2
+    exit 1
+  fi
 fi
 ROS
   )
@@ -302,6 +326,16 @@ if [[ "$mode" == "apply" ]]; then
     ensure_ros_source
     apt-get update
     apt-get install -y --no-install-recommends --no-remove "${install_specs[@]}"
+  fi
+  if ((${#gateway_specs[@]})); then
+    # The base transaction provides curl, GnuPG and CA roots before this source
+    # is configured. Keep package names unpinned so newer gateways stay valid.
+    ensure_xgc2_source
+    apt-get update
+    apt-get install -y --no-install-recommends --no-remove "${gateway_specs[@]}"
+    for package in "${gateway_specs[@]}"; do
+      package_installed "$package" || fail "${package} does not meet minimum version ${minimum_versions[$package]}" 1
+    done
   fi
   geoid_path=/usr/share/GeographicLib/geoids/egm96-5.pgm
   if [[ "$profile" == "fs150-focal-noetic" && ! -s "$geoid_path" ]]; then

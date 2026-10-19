@@ -78,7 +78,7 @@ build_args=(
   --pull=false
   --build-arg "ONBOARD_APT_MIRROR=${MIRROR}"
 )
-if [[ "$PROFILE" == fs150-focal-noetic && -n "${ONBOARD_BASELINE_AGENT_VERSION:-}" ]]; then
+if [[ ( "$PROFILE" == fs150-focal-noetic || "$PROFILE" == scout-focal-noetic ) && -n "${ONBOARD_BASELINE_AGENT_VERSION:-}" ]]; then
   build_args+=(--build-arg "ONBOARD_BASELINE_AGENT_VERSION=${ONBOARD_BASELINE_AGENT_VERSION}")
 fi
 if [[ "$with_xsim" == 1 ]]; then

@@ -17,7 +17,8 @@
       "ubuntuVersionId": "20.04",
       "rosDistro": "noetic",
       "architectures": ["amd64", "arm64"],
-      "packages": ["ca-certificates", "curl", "gnupg", "sudo", "systemd", "init-system-helpers", "iproute2", "util-linux", "procps", "python3", "ros-noetic-ros-base", "ros-noetic-mavros", "geographiclib-tools", "wget", "bzip2"]
+      "packages": ["ca-certificates", "curl", "gnupg", "sudo", "systemd", "init-system-helpers", "iproute2", "util-linux", "procps", "python3", "ros-noetic-ros-base", "ros-noetic-mavros", "geographiclib-tools", "wget", "bzip2", "ros-noetic-xgc2-px4-multirotor-adapter"],
+      "minimumVersions": {"ros-noetic-xgc2-px4-multirotor-adapter": "0.8.0-5"}
     },
     "scout-bionic-melodic": {
       "username": "agilex",
@@ -33,7 +34,8 @@
       "ubuntuVersionId": "20.04",
       "rosDistro": "noetic",
       "architectures": ["amd64", "arm64"],
-      "packages": ["ca-certificates", "curl", "gnupg", "sudo", "systemd", "init-system-helpers", "iproute2", "util-linux", "procps", "python3", "ros-noetic-ros-base"]
+      "packages": ["ca-certificates", "curl", "gnupg", "sudo", "systemd", "init-system-helpers", "iproute2", "util-linux", "procps", "python3", "ros-noetic-ros-base", "ros-noetic-xgc2-ugv-adapter"],
+      "minimumVersions": {"ros-noetic-xgc2-ugv-adapter": "0.8.0-5"}
     },
     "wheeltec-bionic-melodic": {
       "username": "wheeltec",

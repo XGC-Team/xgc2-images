@@ -36,11 +36,15 @@ elif name == 'dpkg':
         print(state['arch'])
     elif args[:1] == ['-i']:
         state['installed'].append('xgc2-agent'); save()
+    elif args[:1] == ['--compare-versions']:
+        sys.exit(subprocess.call(['/usr/bin/dpkg'] + args))
     else: sys.exit(91)
 elif name == 'dpkg-query':
     if args[-1] not in state['installed']: sys.exit(1)
     if '${Status}' in args[1]:
         print(state.get('package_status', {}).get(args[-1], 'install ok installed'), end='')
+        if '${Version}' in args[1]:
+            print('\t' + state.get('versions', {}).get(args[-1], '1.0'), end='')
         if state.get('query_failure'): sys.exit(1)
     elif '${Version}' == args[1][3:]: print(state.get('versions', {}).get(args[-1], '1.0'), end='')
     else: print('manual\t%s\t1.0\t%s' % (args[-1], state['arch']))
@@ -53,6 +57,8 @@ elif name == 'apt-get':
             package, separator, version = spec.partition('=')
             state['installed'].append(package)
             if separator: state.setdefault('versions', {})[package] = version
+            elif package in state.get('available_versions', {}):
+                state.setdefault('versions', {})[package] = state['available_versions'][package]
         save()
 elif name == 'install-ros-apt-source.sh':
     (root / 'etc/apt/sources.list.d/ros1.list').write_text('fixture source\n')
@@ -69,7 +75,9 @@ elif name == 'rospack':
 elif name in ('python', 'python3'):
     if state.get('python_failure'): sys.exit(1)
 elif name == 'ldd':
-    print('libmavconn.so => not found' if state.get('missing_library') else 'libc.so => /lib/libc.so')
+    if state.get('missing_library'): print('libmavconn.so => not found')
+    elif state.get('gateway_missing_library') and 'adapter_node' in args[-1]: print('libgateway.so => not found')
+    else: print('libc.so => /lib/libc.so')
     if state.get('ldd_failure'): sys.exit(1)
 elif name == 'roslaunch':
     if args != ['--files', 'mavros', 'px4.launch'] or state.get('launch_failure'): sys.exit(1)
@@ -161,7 +169,8 @@ class BaselineTests(unittest.TestCase):
     def configure(self, profile, arch='amd64'):
         self.profile = profile
         p = PROFILES[profile]
-        self.state = {'arch': arch, 'installed': p['packages'][:]}
+        self.state = {'arch': arch, 'installed': p['packages'][:],
+                      'versions': p.get('minimumVersions', {}).copy()}
         self.save()
         (self.root / 'os-release').write_text('ID=ubuntu\nVERSION_CODENAME=%s\nVERSION_ID=%s\n' %
                                               (p['ubuntuCodename'], p['ubuntuVersionId']))
@@ -169,6 +178,11 @@ class BaselineTests(unittest.TestCase):
         (ros / 'lib/mavros').mkdir(parents=True, exist_ok=True)
         (ros / 'lib/mavros/mavros_node').write_text('fixture executable')
         (ros / 'lib/mavros/mavros_node').chmod(0o755)
+        for package in ('xgc_px4_multirotor_ros1_adapter', 'xgc_ugv_ros1_adapter'):
+            node = ros / 'lib' / package / (package + '_node')
+            node.parent.mkdir(parents=True, exist_ok=True)
+            node.write_text('fixture executable')
+            node.chmod(0o755)
         (ros / 'setup.bash').write_text(
             '[[ -z "${ROS_DISTRO:-}${ROS_PACKAGE_PATH:-}${CMAKE_PREFIX_PATH:-}${PYTHONPATH:-}${LD_LIBRARY_PATH:-}${ROS_MASTER_URI:-}" ]] || exit 70\n'
             'export ROS_DISTRO=%s\nexport PATH=%s:$PATH\n' %
@@ -304,6 +318,112 @@ class BaselineTests(unittest.TestCase):
                 self.state['package_status'] = {'curl': status}; self.save()
                 self.check(expected=4)
         self.assertEqual(self.calls('apt-get'), [])
+
+    def test_gateway_floors_apply_only_to_the_two_focal_profiles(self):
+        expected = {'fs150-focal-noetic': 'ros-noetic-xgc2-px4-multirotor-adapter',
+                    'scout-focal-noetic': 'ros-noetic-xgc2-ugv-adapter'}
+        for profile, config in PROFILES.items():
+            with self.subTest(profile=profile):
+                if profile in expected:
+                    package = expected[profile]
+                    self.assertIn(package, config['packages'])
+                    self.assertEqual(config['minimumVersions'], {package: '0.8.0-5'})
+                else:
+                    self.assertNotIn('minimumVersions', config)
+                    self.assertFalse(any('noetic' in p or 'adapter' in p for p in config['packages']))
+                self.assertTrue(all('=' not in p for p in config['packages']))
+
+    def test_gateway_minimum_and_future_versions_are_noop_and_query_once_per_package(self):
+        for profile in ('fs150-focal-noetic', 'scout-focal-noetic'):
+            for version in ('0.8.0-5', '0.8.0-6', '1.0.0-1'):
+                with self.subTest(profile=profile, version=version):
+                    self.configure(profile)
+                    package = next(iter(PROFILES[profile]['minimumVersions']))
+                    self.state['versions'][package] = version
+                    self.save()
+                    self.check()
+                    queries = self.calls('dpkg-query')
+                    self.assertEqual(len(queries), len(PROFILES[profile]['packages']))
+                    self.assertTrue(all(c[1][1] == '-f=${Status}\\t${Version}' for c in queries))
+                    self.apply()
+                    self.assertEqual(self.calls('apt-get'), [])
+
+    def test_missing_or_older_gateway_fails_read_only_check(self):
+        package = 'ros-noetic-xgc2-px4-multirotor-adapter'
+        for version in (None, '0.8.0-4'):
+            with self.subTest(version=version):
+                self.configure('fs150-focal-noetic')
+                if version is None:
+                    self.state['installed'].remove(package)
+                else:
+                    self.state['versions'][package] = version
+                self.save()
+                self.assertIn(package, self.check(expected=4).stderr)
+                self.assertEqual(self.calls('rosversion'), [])
+                self.assertEqual(self.calls('apt-get'), [])
+
+    def test_gateway_upgrade_uses_bare_name_and_checks_resulting_floor(self):
+        for profile in ('fs150-focal-noetic', 'scout-focal-noetic'):
+            with self.subTest(profile=profile):
+                self.configure(profile)
+                package = next(iter(PROFILES[profile]['minimumVersions']))
+                self.state['versions'][package] = '0.8.0-4'
+                self.state['available_versions'] = {package: '0.8.0-6'}
+                self.save()
+                self.apply()
+                self.apply()
+                self.assertEqual([c[1] for c in self.calls('apt-get')], [
+                    ['update'], ['install', '-y', '--no-install-recommends', '--no-remove', package]])
+                self.assertEqual(json.loads((self.root / 'state.json').read_text())['versions'][package], '0.8.0-6')
+
+    def test_gateway_still_below_floor_after_install_fails(self):
+        package = 'ros-noetic-xgc2-px4-multirotor-adapter'
+        self.state['versions'][package] = '0.8.0-4'
+        self.save()
+        result = self.apply(expected=1)
+        self.assertIn('does not meet minimum version 0.8.0-5', result.stderr)
+        self.assertNotIn('applied', result.stdout)
+
+    def test_base_tools_install_before_signed_gateway_source_and_gateway(self):
+        package = 'ros-noetic-xgc2-px4-multirotor-adapter'
+        for name in ('ca-certificates', 'curl', 'gnupg', package):
+            self.state['installed'].remove(name)
+        self.state['available_versions'] = {package: '0.8.0-5'}
+        self.save()
+        before = self.config.read_bytes()
+        self.apply()
+        calls = self.calls()
+        installs = [(i, c[1]) for i, c in enumerate(calls) if c[0] == 'apt-get' and c[1][0] == 'install']
+        self.assertEqual([c[1] for c in installs], [
+            ['install', '-y', '--no-install-recommends', '--no-remove', 'ca-certificates', 'curl', 'gnupg'],
+            ['install', '-y', '--no-install-recommends', '--no-remove', package]])
+        self.assertLess(installs[0][0], next(i for i, c in enumerate(calls) if c[0] == 'curl'))
+        self.assertLess(max(i for i, c in enumerate(calls) if c[0] == 'gpg'), installs[1][0])
+        source = self.root / 'etc/apt/sources.list.d/xgc2.list'
+        self.assertIn('signed-by=', source.read_text())
+        self.assertEqual(self.config.read_bytes(), before)
+        self.assertEqual(self.calls('systemctl'), [])
+
+    def test_gateway_install_refuses_untrusted_source_key(self):
+        self.state['installed'].remove('ros-noetic-xgc2-px4-multirotor-adapter')
+        self.state['gpg_fingerprint'] = 'BAD'
+        self.save()
+        self.assertIn('fingerprint mismatch', self.apply(expected=1).stderr)
+        self.assertEqual(self.calls('apt-get'), [])
+
+    def test_missing_gateway_executable_or_library_is_rejected(self):
+        for profile, package in (('fs150-focal-noetic', 'xgc_px4_multirotor_ros1_adapter'),
+                                 ('scout-focal-noetic', 'xgc_ugv_ros1_adapter')):
+            with self.subTest(profile=profile):
+                self.configure(profile)
+                node = self.root / 'opt/ros/noetic/lib' / package / (package + '_node')
+                node.unlink()
+                self.assertIn('missing data gateway executable', self.check(expected=4).stderr)
+                self.configure(profile)
+                self.state['gateway_missing_library'] = True
+                self.save()
+                self.assertIn('libgateway.so => not found', self.check(expected=4).stderr)
+                self.assertEqual(self.calls('apt-get'), [])
 
     def test_check_rejects_missing_setup_despite_ambient_ros(self):
         (self.root / 'opt/ros/noetic/setup.bash').unlink()
