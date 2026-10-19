@@ -418,7 +418,7 @@ class BaselineTests(unittest.TestCase):
                 self.configure(profile)
                 node = self.root / 'opt/ros/noetic/lib' / package / (package + '_node')
                 node.unlink()
-                self.assertIn('missing data gateway executable', self.check(expected=4).stderr)
+                self.assertIn('missing Adapter executable', self.check(expected=4).stderr)
                 self.configure(profile)
                 self.state['gateway_missing_library'] = True
                 self.save()

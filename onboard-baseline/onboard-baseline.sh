@@ -226,7 +226,7 @@ case "$profile" in
   scout-focal-noetic) gateway_node="$ros_prefix/lib/xgc_ugv_ros1_adapter/xgc_ugv_ros1_adapter_node" ;;
 esac
 if [[ -n "$gateway_node" ]]; then
-  [[ -x "$gateway_node" ]] || { echo "missing data gateway executable: $gateway_node" >&2; exit 1; }
+  [[ -x "$gateway_node" ]] || { echo "missing Adapter executable: $gateway_node" >&2; exit 1; }
   ldd "$gateway_node" >"$HOME/gateway-ldd.txt"
   if grep -q 'not found' "$HOME/gateway-ldd.txt"; then
     cat "$HOME/gateway-ldd.txt" >&2
