@@ -42,7 +42,7 @@ EOF
 ENTRYPOINT ["/opt/xgc2/onboard-baseline/image-entrypoint.sh"]
 
 FROM baseline AS apt-agent
-ARG ONBOARD_BASELINE_AGENT_VERSION=0.1.0-12
+ARG ONBOARD_BASELINE_AGENT_VERSION=0.1.0-13
 RUN bash <<'EOF'
 set -euo pipefail
 /opt/xgc2/onboard-baseline/onboard-baseline.sh install-agent --user "$ONBOARD_BASELINE_USER" --profile fs150-focal-noetic

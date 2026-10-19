@@ -148,7 +148,7 @@ class LocalImageTest(unittest.TestCase):
                 self.assertFalse(self.log.exists())
 
     def test_agent_version_argument_changes_the_apt_stage_build_input(self):
-        for version in ("0.1.0-11", "0.1.0-12"):
+        for version in ("0.1.0-12", "0.1.0-13"):
             self.env["ONBOARD_BASELINE_AGENT_VERSION"] = version
             result = self.run_image("fs150-focal-noetic", "linux/amd64")
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -156,20 +156,20 @@ class LocalImageTest(unittest.TestCase):
             self.assertIn("ONBOARD_BASELINE_AGENT_VERSION=" + version, argv)
             self.assertNotIn("--target", argv)
         apt_stage = DOCKERFILE.read_text().split("FROM baseline AS apt-agent\n", 1)[1].split("FROM baseline AS source-agent\n", 1)[0]
-        self.assertLess(apt_stage.index("ARG ONBOARD_BASELINE_AGENT_VERSION=0.1.0-12\n"), apt_stage.index("RUN "))
+        self.assertLess(apt_stage.index("ARG ONBOARD_BASELINE_AGENT_VERSION=0.1.0-13\n"), apt_stage.index("RUN "))
 
     def test_agent_override_is_forwarded_only_to_the_two_focal_profiles(self):
-        self.env["ONBOARD_BASELINE_AGENT_VERSION"] = "0.1.0-12"
+        self.env["ONBOARD_BASELINE_AGENT_VERSION"] = "0.1.0-13"
         self.env["STUB_PLATFORM"] = "linux/arm64"
         for profile in ("fs150-focal-noetic", "scout-focal-noetic",
                         "scout-bionic-melodic", "wheeltec-bionic-melodic"):
             with self.subTest(profile=profile):
                 result = self.run_image(profile, "linux/arm64")
                 self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual("ONBOARD_BASELINE_AGENT_VERSION=0.1.0-12" in self.builds()[-1],
+                self.assertEqual("ONBOARD_BASELINE_AGENT_VERSION=0.1.0-13" in self.builds()[-1],
                                  profile.endswith("focal-noetic"))
                 text = (IMAGES / "apps" / ("onboard-sim-" + profile) / "Dockerfile").read_text()
-                self.assertEqual("ARG ONBOARD_BASELINE_AGENT_VERSION=0.1.0-12\n" in text,
+                self.assertEqual("ARG ONBOARD_BASELINE_AGENT_VERSION=0.1.0-13\n" in text,
                                  profile.endswith("focal-noetic"))
 
     def test_another_profile_without_a_deb_stays_on_apt(self):

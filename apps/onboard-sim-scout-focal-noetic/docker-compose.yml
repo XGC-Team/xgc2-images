@@ -1,6 +1,6 @@
 services:
   onboard-sim-scout-focal-noetic:
-    image: ghcr.io/xgc-team/xgc2-images/onboard-sim-scout-focal-noetic:1.0.2
+    image: ghcr.io/xgc-team/xgc2-images/onboard-sim-scout-focal-noetic:1.0.3
     container_name: ${CONTAINER_NAME}
     stdin_open: true
     tty: true

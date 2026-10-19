@@ -18,7 +18,7 @@ ENV DISABLE_ROS1_EOL_WARNINGS=1
 COPY --from=runtime-sources /onboard-baseline/ /opt/xgc2/onboard-baseline/
 
 ARG ONBOARD_APT_MIRROR
-ARG ONBOARD_BASELINE_AGENT_VERSION=0.1.0-12
+ARG ONBOARD_BASELINE_AGENT_VERSION=0.1.0-13
 RUN bash <<'EOF'
 set -euo pipefail
 useradd --uid 1000 --create-home --shell /bin/bash --user-group "$ONBOARD_BASELINE_USER"
