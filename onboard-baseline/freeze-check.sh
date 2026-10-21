@@ -111,6 +111,28 @@ exit 99
 EOF
   cat >"$bin/curl" <<'EOF'
 #!/bin/bash
+url=""
+out=""
+prev=""
+for arg in "$@"; do
+  if [[ "$prev" == -o ]]; then out="$arg"; fi
+  case "$arg" in
+    https://downloads.sourceforge.net/project/geographiclib/geoids-distrib/egm96-5.tar.bz2*) url="$arg" ;;
+  esac
+  prev="$arg"
+done
+if [[ -n "$url" ]]; then
+  [[ -n "${FREEZE_EVIDENCE:-}" ]] || { printf 'curl must not run in freeze-check\n' >&2; exit 99; }
+  printf '%s\n' "$url" >"${FREEZE_EVIDENCE}/geoid.invoked"
+  [[ -n "$out" ]] || exit 98
+  if [[ -e "${FREEZE_EVIDENCE}/geoid.corrupt" ]]; then
+    printf 'corrupt\n' >"$out"
+    exit 0
+  fi
+  [[ -s "${GEOID_FIXTURE_ARCHIVE:?}" ]]
+  cp "$GEOID_FIXTURE_ARCHIVE" "$out"
+  exit 0
+fi
 printf 'curl must not run in freeze-check\n' >&2
 exit 99
 EOF
@@ -124,16 +146,9 @@ exit 0
 EOF
   cat >"$bin/geographiclib-get-geoids" <<'EOF'
 #!/bin/bash
-parent=""
-prev=""
-for arg in "$@"; do
-  if [[ "$prev" == "-p" ]]; then parent="$arg"; fi
-  prev="$arg"
-done
-printf '%s\n' "$*" >"${FREEZE_EVIDENCE:?}/geoid.invoked"
-[[ "$parent" == /usr/share/GeographicLib ]]
-mkdir -p "$parent/geoids"
-printf 'pgm\n' >"$parent/geoids/egm96-5.pgm"
+printf '%s\n' "$*" >"${FREEZE_EVIDENCE:?}/geoid.tool"
+printf 'geographiclib-get-geoids must not run\n' >&2
+exit 97
 EOF
   cat >"$bin/id" <<'EOF'
 #!/bin/bash
@@ -274,6 +289,30 @@ run_ns "$sandbox" \
   "$BASE" check --profile scout-bionic-melodic >"$sandbox/out"
 [[ "$(cat "$sandbox/out")" == *"scout-bionic-melodic matches bionic melodic"* ]] || fail "scout check required a geoid"
 
+# Real sha256sum and tar against a tiny archive. Only the disposable copy replaces the pin.
+geoid_pin=c46224f8f723dc915d97179f4e1580a98d6c742fe2b82cd8fef0ecaaad13e614
+geoid_url=https://downloads.sourceforge.net/project/geographiclib/geoids-distrib/egm96-5.tar.bz2?use_mirror=autoselect
+grep -F -q "$geoid_pin" "$BASE" || fail "canonical geoid pin missing"
+grep -F -q -- "--retry 2" "$BASE" || fail "canonical geoid curl retry"
+grep -F -q -- "--connect-timeout 10" "$BASE" || fail "canonical geoid connect timeout"
+grep -F -q -- "--max-time 120" "$BASE" || fail "canonical geoid max time"
+grep -F -q -- "--retry-max-time 300" "$BASE" || fail "canonical geoid retry max time"
+mkdir -p "$work/geoid-src/geoids"
+printf 'pgm\n' >"$work/geoid-src/geoids/egm96-5.pgm"
+printf 'wld\n' >"$work/geoid-src/geoids/egm96-5.wld"
+printf 'aux\n' >"$work/geoid-src/geoids/egm96-5.pgm.aux.xml"
+tar -cjf "$work/egm96-5.tar.bz2" -C "$work/geoid-src" \
+  geoids/egm96-5.pgm geoids/egm96-5.wld geoids/egm96-5.pgm.aux.xml
+geoid_fixture_sha="$(sha256sum "$work/egm96-5.tar.bz2" | awk '{print $1}')"
+[[ "$geoid_fixture_sha" != "$geoid_pin" ]] || fail "tiny fixture reused the canonical pin"
+sed "s/${geoid_pin}/${geoid_fixture_sha}/g" "$BASE" >"$work/onboard-baseline.geoid.sh"
+grep -F -q "$geoid_fixture_sha" "$work/onboard-baseline.geoid.sh" || fail "disposable geoid pin"
+if grep -F -q "$geoid_fixture_sha" "$BASE"; then
+  fail "canonical script received the fixture pin"
+fi
+chmod 755 "$work/onboard-baseline.geoid.sh"
+export GEOID_FIXTURE_ARCHIVE="$work/egm96-5.tar.bz2"
+
 # Missing agent.env is seeded with the package catalog, then caller identity overlays it.
 sandbox="$work/apply-default"
 new_sandbox "$sandbox" absent
@@ -290,9 +329,34 @@ run_ns "$sandbox" \
   XGC_AGENT_MANAGED_ROOT=/var/lib/xgc2-agent/managed \
   XGC_AGENT_DISPLAY_NAME='FS150 1' \
   XGC_PROCESS_DEFINITION_PLUGINS=/opt/robot/catalog \
-  "$BASE" apply --profile fs150-focal-noetic >"$sandbox/out"
+  "$work/onboard-baseline.geoid.sh" apply --profile fs150-focal-noetic >"$sandbox/out"
 [[ -s "$sandbox/geoids/egm96-5.pgm" ]] || fail "apply did not install the geoid"
-[[ "$(cat "$sandbox/evidence/geoid.invoked")" == "-p /usr/share/GeographicLib egm96-5" ]] || fail "geoid tool parent"
+[[ "$(cat "$sandbox/geoids/egm96-5.pgm")" == pgm ]] || fail "installed geoid payload"
+[[ -s "$sandbox/geoids/egm96-5.wld" ]] || fail "apply did not install the geoid world file"
+[[ -s "$sandbox/geoids/egm96-5.pgm.aux.xml" ]] || fail "apply did not install the geoid aux"
+[[ "$(cat "$sandbox/evidence/geoid.invoked")" == "$geoid_url" ]] || fail "geoid url"
+[[ ! -e "$sandbox/evidence/geoid.tool" ]] || fail "apply called geographiclib-get-geoids"
+rm -f "$sandbox/evidence/geoid.invoked"
+run_ns "$sandbox" \
+  PATH="$sandbox/bin:/usr/bin:/bin" \
+  FAKE_ROS_DISTRO=noetic \
+  FREEZE_EVIDENCE="$sandbox/evidence" \
+  ONBOARD_BASELINE_OS_RELEASE="$sandbox/os-release" \
+  XGC_AGENT_ID=robot-fs150 \
+  XGC_CORE_ENDPOINT=172.30.251.250:9092 \
+  XGC_AGENT_ADVERTISED_ENDPOINT=172.30.251.10:9090 \
+  XGC_AGENT_DATA_DIR=/var/lib/xgc2-agent \
+  XGC_AGENT_MANAGED_ROOT=/var/lib/xgc2-agent/managed \
+  XGC_AGENT_DISPLAY_NAME='FS150 1' \
+  XGC_PROCESS_DEFINITION_PLUGINS=/opt/robot/catalog \
+  "$work/onboard-baseline.geoid.sh" apply --profile fs150-focal-noetic >"$sandbox/out"
+[[ ! -e "$sandbox/evidence/geoid.invoked" ]] || fail "second apply downloaded the geoid"
+run_ns "$sandbox" \
+  PATH="$sandbox/bin:/usr/bin:/bin" \
+  FAKE_ROS_DISTRO=noetic \
+  ONBOARD_BASELINE_OS_RELEASE="$sandbox/os-release" \
+  "$BASE" check --profile fs150-focal-noetic >"$sandbox/out"
+[[ "$(cat "$sandbox/out")" == *"fs150-focal-noetic matches focal noetic"* ]] || fail "installed geoid failed GeoidEval"
 [[ ! -e "$sandbox/evidence/systemctl.invoked" ]] || fail "apply called systemctl without systemd"
 run_ns "$sandbox" \
   PATH="$sandbox/bin:/usr/bin:/bin" \
@@ -332,6 +396,25 @@ for stale in ("XGC_PROCESS_DEFINITION_PLUGINS", "XGC_AGENT_DOWNLOAD_HOSTS", "XGC
 if "/usr/share/xgc2/process-definitions" in text:
     raise SystemExit("core catalog leaked into agent.env")
 PY
+
+# A corrupt body must fail the real digest check and install nothing.
+sandbox="$work/apply-bad-sha"
+new_sandbox "$sandbox" absent
+write_os "$sandbox/os-release" focal 20.04
+: >"$sandbox/evidence/geoid.corrupt"
+set +e
+run_ns "$sandbox" \
+  PATH="$sandbox/bin:/usr/bin:/bin" \
+  FAKE_ROS_DISTRO=noetic \
+  FREEZE_EVIDENCE="$sandbox/evidence" \
+  ONBOARD_BASELINE_OS_RELEASE="$sandbox/os-release" \
+  "$work/onboard-baseline.geoid.sh" apply --profile fs150-focal-noetic >"$sandbox/out" 2>"$sandbox/err"
+rc=$?
+set -e
+[[ "$rc" -eq 1 ]] || fail "corrupt geoid archive rc=$rc $(cat "$sandbox/err")"
+[[ ! -e "$sandbox/geoids/egm96-5.pgm" ]] || fail "corrupt archive installed the pgm"
+[[ ! -e "$sandbox/geoids/egm96-5.wld" ]] || fail "corrupt archive installed a sidecar"
+[[ ! -e "$sandbox/geoids/egm96-5.pgm.aux.xml" ]] || fail "corrupt archive installed aux"
 
 # A different robot ID is not replaced, and the placeholder is not started.
 sandbox="$work/apply-keep"

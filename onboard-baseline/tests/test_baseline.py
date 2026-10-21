@@ -1,15 +1,48 @@
 #!/usr/bin/env python3
 """Offline process/fixture tests; not evidence of ROS, Docker or hardware success."""
+import hashlib
+import io
 import json
 import os
 from pathlib import Path
 import shlex
 import subprocess
+import tarfile
 import tempfile
 import unittest
 
 BASELINE = Path(__file__).resolve().parents[1]
 PROFILES = json.loads((BASELINE / 'baselines.json').read_text())['profiles']
+CANONICAL_GEOID_SHA256 = 'c46224f8f723dc915d97179f4e1580a98d6c742fe2b82cd8fef0ecaaad13e614'
+CANONICAL_GEOID_URL = 'https://downloads.sourceforge.net/project/geographiclib/geoids-distrib/egm96-5.tar.bz2?use_mirror=autoselect'
+
+
+def geoid_archive(members):
+    raw = io.BytesIO()
+    with tarfile.open(fileobj=raw, mode='w:bz2') as archive:
+        for name, payload in members:
+            info = tarfile.TarInfo(name)
+            info.size = len(payload)
+            archive.addfile(info, io.BytesIO(payload))
+    return raw.getvalue()
+
+
+FIXTURE_GEOID_MEMBERS = (
+    ('geoids/egm96-5.pgm', b'valid fixture'),
+    ('geoids/egm96-5.wld', b'fixture wld\n'),
+    ('geoids/egm96-5.pgm.aux.xml', b'<PAMDataset/>\n'),
+)
+FIXTURE_GEOID_ARCHIVE = geoid_archive(FIXTURE_GEOID_MEMBERS)
+FIXTURE_GEOID_SHA256 = hashlib.sha256(FIXTURE_GEOID_ARCHIVE).hexdigest()
+EMPTY_MEMBER_ARCHIVE = geoid_archive((
+    ('geoids/egm96-5.pgm', b'valid fixture'),
+    ('geoids/egm96-5.wld', b'fixture wld\n'),
+    ('geoids/egm96-5.pgm.aux.xml', b''),
+))
+MISSING_MEMBER_ARCHIVE = geoid_archive((
+    ('geoids/egm96-5.pgm', b'valid fixture'),
+    ('geoids/egm96-5.wld', b'fixture wld\n'),
+))
 
 # Intercept package/service mutations. Only paths in a disposable script copy
 # are relocated; production gets no test-only skip-check or alternate ROS root.
@@ -88,7 +121,16 @@ elif name == 'getent':
     print('robot-user:x:1000:1000::%s:/bin/bash' % (root / 'home'))
 elif name == 'curl':
     if state.get('curl_failure'): sys.exit(22)
-    pathlib.Path(args[args.index('-o') + 1]).write_bytes(b'fixture signing key')
+    output = pathlib.Path(args[args.index('-o') + 1])
+    if any('egm96-5.tar.bz2' in arg for arg in args):
+        if state.get('geoid_download_failure'): sys.exit(9)
+        if state.get('geoid_sha256_failure'):
+            output.write_bytes(b'corrupt archive bytes')
+        else:
+            kind = state.get('geoid_archive', 'ok')
+            output.write_bytes((root / ('fixture-geoid-%s.tar.bz2' % kind)).read_bytes())
+    else:
+        output.write_bytes(b'fixture signing key')
 elif name == 'gpg':
     if '--show-keys' in args:
         print('gpg: invalid option "--show-keys"', file=sys.stderr); sys.exit(2)
@@ -164,7 +206,16 @@ class BaselineTests(unittest.TestCase):
                      '/usr/lib/xgc2', '/etc/apt', '/etc/xgc2', '/etc/sudoers.d',
                      '/run/systemd', '/run/xgc2'):
             text = text.replace(path, str(self.root) + path)
-        return text
+        return text.replace(CANONICAL_GEOID_SHA256, FIXTURE_GEOID_SHA256)
+
+    def geoid_curls(self):
+        return [row for row in self.calls('curl') if any('egm96-5.tar.bz2' in arg for arg in row[1])]
+
+    def pin_disposable(self, digest):
+        text = self.script.read_text()
+        self.assertIn(FIXTURE_GEOID_SHA256, text)
+        self.assertNotIn(CANONICAL_GEOID_SHA256, text)
+        self.script.write_text(text.replace(FIXTURE_GEOID_SHA256, digest))
 
     def configure(self, profile, arch='amd64'):
         self.profile = profile
@@ -192,6 +243,9 @@ class BaselineTests(unittest.TestCase):
         self.config = self.root / 'etc/xgc2/agent.env'
         self.config.write_text('XGC_AGENT_ID=existing-robot\n# preserve user configuration\n')
         (self.root / 'calls.jsonl').write_text('')
+        (self.root / 'fixture-geoid-ok.tar.bz2').write_bytes(FIXTURE_GEOID_ARCHIVE)
+        (self.root / 'fixture-geoid-empty-member.tar.bz2').write_bytes(EMPTY_MEMBER_ARCHIVE)
+        (self.root / 'fixture-geoid-missing-member.tar.bz2').write_bytes(MISSING_MEMBER_ARCHIVE)
 
     def save(self):
         (self.root / 'state.json').write_text(json.dumps(self.state))
@@ -474,6 +528,18 @@ class BaselineTests(unittest.TestCase):
         self.geoid.write_text('nonempty but invalid geoid')
         self.check(expected=4)
         self.assertEqual(self.calls('geographiclib-get-geoids'), [])
+        self.assertEqual(self.geoid_curls(), [])
+
+    def test_canonical_geoid_pin_stays_on_the_observed_archive(self):
+        text = (BASELINE / 'onboard-baseline.sh').read_text()
+        self.assertIn(CANONICAL_GEOID_SHA256, text)
+        self.assertIn(CANONICAL_GEOID_URL, text)
+        self.assertIn('curl -fsSL --retry 2 --connect-timeout 10 --max-time 120 --retry-max-time 300 ', text)
+        self.assertNotIn(FIXTURE_GEOID_SHA256, text)
+        self.assertNotIn('geographiclib-get-geoids', text)
+        disposable = self.script.read_text()
+        self.assertIn(FIXTURE_GEOID_SHA256, disposable)
+        self.assertNotIn(CANONICAL_GEOID_SHA256, disposable)
 
     def test_apply_requires_privilege(self):
         self.state['uid'] = '1000'; self.save()
@@ -494,12 +560,34 @@ class BaselineTests(unittest.TestCase):
         self.apply(); self.apply()
         self.assertEqual(self.calls('apt-get'), [])
         self.assertEqual(self.calls('geographiclib-get-geoids'), [])
+        self.assertEqual(self.geoid_curls(), [])
 
     def test_geoid_installs_once_without_unnecessary_apt(self):
         self.geoid.unlink()
-        self.apply(); self.apply()
-        self.assertEqual(len(self.calls('geographiclib-get-geoids')), 1)
+        temporary = self.root / 'geoid-tmp'
+        temporary.mkdir()
+        self.env['TMPDIR'] = str(temporary)
+        self.apply()
+        self.assertEqual(list(temporary.iterdir()), [])
+        geoid = self.geoid.parent
+        self.assertEqual((geoid / 'egm96-5.pgm').read_bytes(), b'valid fixture')
+        self.assertEqual((geoid / 'egm96-5.wld').read_bytes(), b'fixture wld\n')
+        self.assertEqual((geoid / 'egm96-5.pgm.aux.xml').read_bytes(), b'<PAMDataset/>\n')
+        for name in ('egm96-5.pgm', 'egm96-5.wld', 'egm96-5.pgm.aux.xml'):
+            self.assertEqual((geoid / name).stat().st_mode & 0o777, 0o644)
+        self.check()
+        self.apply()
+        curls = self.geoid_curls()
+        self.assertEqual(len(curls), 1)
+        argv = curls[0][1]
+        self.assertIn(CANONICAL_GEOID_URL, argv)
+        self.assertEqual(argv[argv.index('--retry') + 1], '2')
+        self.assertEqual(argv[argv.index('--connect-timeout') + 1], '10')
+        self.assertEqual(argv[argv.index('--max-time') + 1], '120')
+        self.assertEqual(argv[argv.index('--retry-max-time') + 1], '300')
+        self.assertEqual(self.calls('geographiclib-get-geoids'), [])
         self.assertEqual(self.calls('apt-get'), [])
+        self.assertEqual(list(temporary.iterdir()), [])
 
     def test_apt_failure_is_propagated(self):
         self.state['installed'].remove('curl')
@@ -508,8 +596,56 @@ class BaselineTests(unittest.TestCase):
 
     def test_geoid_download_failure_is_propagated(self):
         self.geoid.unlink()
+        temporary = self.root / 'geoid-tmp'
+        temporary.mkdir()
+        self.env['TMPDIR'] = str(temporary)
         self.state['geoid_download_failure'] = True; self.save()
         self.assertNotIn('applied', self.apply(expected=9).stdout)
+        self.assertFalse(self.geoid.exists())
+        self.assertEqual(list(temporary.iterdir()), [])
+        self.assertEqual(self.calls('geographiclib-get-geoids'), [])
+
+    def test_geoid_sha256_mismatch_is_propagated(self):
+        self.geoid.unlink()
+        temporary = self.root / 'geoid-tmp'
+        temporary.mkdir()
+        self.env['TMPDIR'] = str(temporary)
+        self.state['geoid_sha256_failure'] = True; self.save()
+        result = self.apply(expected=1)
+        self.assertNotIn('applied', result.stdout)
+        self.assertIn('EGM96-5 archive SHA256 mismatch', result.stderr)
+        self.assertFalse(self.geoid.exists())
+        self.assertFalse((self.geoid.parent / 'egm96-5.wld').exists())
+        self.assertFalse((self.geoid.parent / 'egm96-5.pgm.aux.xml').exists())
+        self.assertEqual(list(temporary.iterdir()), [])
+
+    def test_geoid_empty_member_installs_nothing(self):
+        self.geoid.unlink()
+        temporary = self.root / 'geoid-tmp'
+        temporary.mkdir()
+        self.env['TMPDIR'] = str(temporary)
+        self.pin_disposable(hashlib.sha256(EMPTY_MEMBER_ARCHIVE).hexdigest())
+        self.state['geoid_archive'] = 'empty-member'; self.save()
+        result = self.apply(expected=1)
+        self.assertNotIn('applied', result.stdout)
+        self.assertIn('egm96-5.pgm.aux.xml', result.stderr)
+        self.assertFalse(self.geoid.exists())
+        self.assertFalse((self.geoid.parent / 'egm96-5.wld').exists())
+        self.assertFalse((self.geoid.parent / 'egm96-5.pgm.aux.xml').exists())
+        self.assertEqual(list(temporary.iterdir()), [])
+
+    def test_geoid_missing_member_installs_nothing(self):
+        self.geoid.unlink()
+        temporary = self.root / 'geoid-tmp'
+        temporary.mkdir()
+        self.env['TMPDIR'] = str(temporary)
+        self.pin_disposable(hashlib.sha256(MISSING_MEMBER_ARCHIVE).hexdigest())
+        self.state['geoid_archive'] = 'missing-member'; self.save()
+        result = self.apply(expected=2)
+        self.assertNotIn('applied', result.stdout)
+        self.assertFalse(self.geoid.exists())
+        self.assertFalse((self.geoid.parent / 'egm96-5.wld').exists())
+        self.assertEqual(list(temporary.iterdir()), [])
 
     def test_install_agent_uses_existing_user_without_base_apt(self):
         self.state['installed'].append('xgc2-agent'); self.save()

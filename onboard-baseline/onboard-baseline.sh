@@ -8,6 +8,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BASELINES="${ROOT}/baselines.json"
 OS_RELEASE="${ONBOARD_BASELINE_OS_RELEASE:-/etc/os-release}"
 XGC2_APT_FINGERPRINT="2A8E11B36F56D307ADF626D85E5FDC30979EA43F"
+EGM96_5_URL="https://downloads.sourceforge.net/project/geographiclib/geoids-distrib/egm96-5.tar.bz2?use_mirror=autoselect"
+# Observed SHA256 of that official archive. Not a signed upstream digest.
+EGM96_5_ARCHIVE_SHA256="c46224f8f723dc915d97179f4e1580a98d6c742fe2b82cd8fef0ecaaad13e614"
 
 usage() {
   echo "usage: onboard-baseline.sh check|apply|snapshot --profile <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic>" >&2
@@ -320,6 +323,24 @@ ensure_xgc2_source() (
   printf 'deb [arch=%s signed-by=/etc/apt/keyrings/xgc2-archive-keyring.gpg] https://xgc2.apt.xiaokang.ink %s main\n' \
     "$(dpkg --print-architecture)" "$ubuntu_codename" > /etc/apt/sources.list.d/xgc2.list
 )
+install_fs150_geoid() (
+  local tmp actual member
+  tmp="$(mktemp -d)"
+  trap 'rm -rf -- "$tmp"' EXIT
+  curl -fsSL --retry 2 --connect-timeout 10 --max-time 120 --retry-max-time 300 "$EGM96_5_URL" -o "$tmp/egm96-5.tar.bz2"
+  actual="$(sha256sum "$tmp/egm96-5.tar.bz2" | awk '{print tolower($1)}')"
+  [[ "$actual" == "$EGM96_5_ARCHIVE_SHA256" ]] || fail "EGM96-5 archive SHA256 mismatch" 1
+  tar -xjf "$tmp/egm96-5.tar.bz2" -C "$tmp" \
+    geoids/egm96-5.pgm geoids/egm96-5.wld geoids/egm96-5.pgm.aux.xml
+  for member in egm96-5.pgm egm96-5.wld egm96-5.pgm.aux.xml; do
+    [[ -s "$tmp/geoids/$member" ]] || fail "EGM96-5 archive member missing or empty: ${member}" 1
+  done
+  install -d -m 0755 /usr/share/GeographicLib/geoids
+  # A nonempty pgm is the apply skip key, so it is installed only after both sidecars.
+  for member in egm96-5.wld egm96-5.pgm.aux.xml egm96-5.pgm; do
+    install -m 0644 "$tmp/geoids/$member" "/usr/share/GeographicLib/geoids/$member"
+  done
+)
 
 if [[ "$mode" == "apply" ]]; then
   if ((${#install_specs[@]})); then
@@ -339,7 +360,7 @@ if [[ "$mode" == "apply" ]]; then
   fi
   geoid_path=/usr/share/GeographicLib/geoids/egm96-5.pgm
   if [[ "$profile" == "fs150-focal-noetic" && ! -s "$geoid_path" ]]; then
-    geographiclib-get-geoids -p /usr/share/GeographicLib egm96-5
+    install_fs150_geoid
   fi
   if [[ "$profile" == "fs150-focal-noetic" && ! -s "$geoid_path" ]]; then
     fail "MAVROS geoid was not installed at ${geoid_path}" 1
