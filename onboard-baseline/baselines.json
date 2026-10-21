@@ -12,6 +12,7 @@
   },
   "profiles": {
     "fs150-focal-noetic": {
+      "robotKind": "px4_multirotor",
       "username": "marvsmart",
       "ubuntuCodename": "focal",
       "ubuntuVersionId": "20.04",
@@ -21,6 +22,7 @@
       "minimumVersions": {"ros-noetic-xgc2-px4-multirotor-adapter": "0.8.0-5"}
     },
     "scout-bionic-melodic": {
+      "robotKind": "scout_mini",
       "username": "agilex",
       "ubuntuCodename": "bionic",
       "ubuntuVersionId": "18.04",
@@ -29,6 +31,7 @@
       "packages": ["ca-certificates", "curl", "gnupg", "sudo", "systemd", "init-system-helpers", "iproute2", "util-linux", "procps", "python3", "ros-melodic-ros-base"]
     },
     "scout-focal-noetic": {
+      "robotKind": "scout_mini",
       "username": "nvidia",
       "ubuntuCodename": "focal",
       "ubuntuVersionId": "20.04",
@@ -38,6 +41,7 @@
       "minimumVersions": {"ros-noetic-xgc2-ugv-adapter": "0.8.0-5"}
     },
     "wheeltec-bionic-melodic": {
+      "robotKind": "mecanum_ugv",
       "username": "wheeltec",
       "ubuntuCodename": "bionic",
       "ubuntuVersionId": "18.04",
