@@ -260,13 +260,6 @@ EOF
   chmod 0644 /etc/profile.d/xgc2-dev-toolchain.sh
 }
 
-install_node
-install_go
-install_uv
-install_rust
-install_bun
-install_gh
-install_buf
 install_meson() {
   # mavlink-router needs meson 1.3; focal/jammy apt ships 0.53/0.61.
   # noble already has 1.3 from apt. bionic stays on archive meson (unused).
@@ -339,8 +332,26 @@ install_casadi() {
   python3 -c "import casadi, deprecated; print('casadi', casadi.__version__)"
 }
 
-install_skopeo
-install_meson
-install_python_proto_generators
-install_casadi
-write_profile
+case "${1:-ci}" in
+  onboard-build)
+    install_go
+    install_uv
+    install_rust
+    install_casadi
+    ;;
+  ci)
+    install_node
+    install_go
+    install_uv
+    install_rust
+    install_bun
+    install_gh
+    install_buf
+    install_skopeo
+    install_meson
+    install_python_proto_generators
+    install_casadi
+    write_profile
+    ;;
+  *) echo "usage: $0 [ci|onboard-build]" >&2; exit 2 ;;
+esac
