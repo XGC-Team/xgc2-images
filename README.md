@@ -9,10 +9,7 @@ GitHub hosts the catalog; GitHub Container Registry hosts the images.
 `onboard-sim-{fs150-focal-noetic,scout-bionic-melodic,scout-focal-noetic,wheeltec-bionic-melodic}:latest`
 are third-party Ubuntu/ROS environments with matching robot accounts. They contain
 no XGC2 products, physical hardware drivers or machine identity. They open a ROS
-shell and are not directly usable as Agent robot environments. A local source
-runtime is named `onboard-sim-<profile>:full`; its Agent uses
-`/opt/xgc2/onboard-baseline/image-entrypoint.sh`. Task processes belong to saved
-workflows. Build/pull bases separately from preparing source runtime images.
+shell and are not directly usable as Agent robot environments. Product compilation, deployment and startup are explicit saved workflow steps.
 
 ## Apps
 
@@ -190,35 +187,26 @@ scripts/gc-ghcr-images.sh --owner XGC-Team --repo xgc2-images
 ## Onboard simulation baselines
 
 `onboard-baseline/onboard-baseline.sh` is the only base-environment recipe.
-The optional FS150 simulator packages use `install-sitl --profile fs150-focal-noetic`;
-`Dockerfile.sitl` calls that same installer. It can also run from a container
-terminal after uploading the script and `baselines.json`.
 Image Dockerfiles call `apply`. A machine can call `check` or `apply` for one
 profile. An OS mismatch exits 3 and does not upgrade the system. The script
-does not start a chassis or an experiment. Pin an experiment to one profile
-id: `fs150-focal-noetic`, `scout-bionic-melodic`, `scout-focal-noetic`, or
-`wheeltec-bionic-melodic`. `apply` installs that base only. `install-agent` is the explicit Agent
-install for a machine or a container create/update. A restart does not run it.
-The container entrypoint only starts an Agent that is already installed.
+aligns third-party dependencies and the robot account; it does not install
+Agent, XSim, adapters, controllers, algorithms or physical drivers.
+Profiles are `fs150-focal-noetic`, `scout-bionic-melodic`,
+`scout-focal-noetic`, and `wheeltec-bionic-melodic`.
 
 FS150 `check` requires `/usr/share/GeographicLib/geoids/egm96-5.pgm`. `apply`
 installs it with `geographiclib-get-geoids -p /usr/share/GeographicLib egm96-5`.
-A missing `agent.env` is seeded with the package default, including
-`XGC_PROCESS_DEFINITION_PLUGINS=/usr/share/xgc2-agent/process-definitions`.
-Docker environment passed to `image-entrypoint.sh` replaces that file for the
-agent process. The Agent, terminal, files and algorithms use the onboard account:
-FS150 `marvsmart`, Scout Xavier `agilex`, Scout Orin `nvidia`, Wheeltec `wheeltec`.
-Images create that account with UID 1000; real-machine installation selects an
-existing account with `install-agent --user NAME`. ROS logs use that user’s home.
-Experiment containers grant that operator sudo for environment setup; machine
-installation keeps the existing sudo policy.
-`snapshot` prints that env plus manual package rows. `manualdiff` compares two
-snapshots. `bash onboard-baseline/freeze-check.sh` covers these without apt or
-an image build.
+Images create the onboard account with UID 1000: FS150 `marvsmart`, Scout Xavier
+`agilex`, Scout Orin `nvidia`, Wheeltec `wheeltec`. Real machines retain their
+existing board environment and account policy.
+
+`snapshot` records the base and manual package rows; `manualdiff` compares two
+snapshots. `bash onboard-baseline/freeze-check.sh` runs the baseline/base-boundary
+checks without installing packages on the host. Source products use the explicit
+Builder/Deployer workflow described below, rather than extra baseline modes.
 
 For local builds, use `bash onboard-baseline/build-local-image.sh PROFILE linux/amd64`
-or `linux/arm64`. Explicit platforms produce distinct `:base-local-amd64` and
-`:base-local-arm64` tags. Omitting the platform preserves `:base-local` for amd64.
+or `linux/arm64`. The selected profile uses its stable `:latest` tag. Omitting the platform builds amd64.
 The helper uses each Dockerfile's parent default and checks the built image's
 OS/architecture. `fs150-focal-noetic-sitl` is admitted only for amd64; its default
 parent uses the same tag suffix, or `PARENT_IMAGE` names an existing local amd64
@@ -272,38 +260,12 @@ docker run --rm ghcr.io/xgc-team/xgc2-images/xgc2-latex-toolchain:1.0.0 \
 
 See `LICENSE`.
 
-## Local robot source runtime
+## Source builds and deployment
 
-Run from a DevOps checkout containing the existing product source submodules:
-
-```bash
-./onboard-baseline/build-local-full-image.sh fs150-focal-noetic --plan
-./onboard-baseline/build-local-full-image.sh fs150-focal-noetic
-```
-
-The same command accepts `scout-bionic-melodic`, `scout-focal-noetic` and
-`wheeltec-bionic-melodic`. Use `--platform linux/amd64` or `linux/arm64` to select
-an available native/emulated Docker build target. The tool never registers host
-emulators. `--devops-root` selects another local checkout.
-
-Each invocation pulls the robot's remote `latest`, resolves an immutable digest,
-and snapshots tracked plus nonignored local source files, including local edits.
-The declared build image is cached separately from the runtime base. Product
-source build/install entries and CMake/Go dependency constraints own the build
-rules; the composer does not call product APT publication wrappers. Required
-first-party libraries and Go modules come from that same local source snapshot.
-Bionic retains ROS Melodic and builds its newer required third-party libraries
-for Bionic, rather than copying Focal binaries.
-
-The default components are Agent, XSim/GPU sensing, the profile's Adapter and
-controller. `--components agent,xsim,adapter` selects a smaller explicit runtime;
-Agent is required, and Adapter includes its declared XSim dependency. Source and
-compiler caches stay outside the runtime. Repeated matching inputs reuse `full`;
-`--rebuild` explicitly repeats the build. BuildKit caches are separate by compiler
-image, ROS distribution and architecture.
-
-The tool validates a candidate offline before moving
-`onboard-sim-<profile>:full`. Build or validation failure does not replace the
-existing tag. It does not publish `full`, restart/rebuild robot containers, or
-change their data volumes. Existing containers keep using their original image;
-explicit container Rebuild adopts the updated tag.
+Robot runtime containers use the matching `onboard-sim-<profile>:latest` base.
+Source compilation and deployment are explicit workflow steps. The generic
+Builder receives source directories, a project script, an image/platform and
+an output directory. The Deployer copies the output locally, into a running
+container or to an SSH host with SCP, and can run the supplied install script.
+Product-owned source build and install entries remain separate from CI package
+publication. No combined robot `full` image is produced.

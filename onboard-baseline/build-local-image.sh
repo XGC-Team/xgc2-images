@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Build only the third-party robot base. Never overwrite a deployed full tag.
+# Build only the third-party robot base. Products use explicit build/deploy workflows.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROFILE="${1:-}"
 PLATFORM="${2:-linux/amd64}"
 if [[ $# -gt 2 ]]; then
-  echo 'Only a profile and platform are accepted; product installation belongs to the local full image.' >&2
+  echo 'Only a profile and platform are accepted; product installation belongs to an explicit source build/deploy workflow.' >&2
   exit 2
 fi
 case "$PROFILE" in
@@ -18,7 +18,7 @@ case "$PLATFORM" in
 esac
 for variable in ONBOARD_AGENT_DEB ONBOARD_BASELINE_AGENT_VERSION ONBOARD_BASELINE_XSIM_VERSION; do
   if [[ -n "${!variable:-}" ]]; then
-    echo "$variable belongs to a product/full build, not a third-party base." >&2
+    echo "$variable belongs to a source product build, not a third-party base." >&2
     exit 2
   fi
 done

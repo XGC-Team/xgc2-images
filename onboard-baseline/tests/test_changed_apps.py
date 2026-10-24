@@ -1,4 +1,4 @@
-"""Changes to local full tooling must not republish clean CI robot bases."""
+"""Changes to local developer tooling must not republish clean CI robot bases."""
 import json
 from pathlib import Path
 import shutil
@@ -37,10 +37,9 @@ class ChangedAppsTest(unittest.TestCase):
         self.git('-c','user.name=Test','-c','user.email=test@localhost','commit','-qm','change')
         return json.loads(subprocess.check_output(['bash',str(SCRIPT),self.base,'HEAD'],cwd=self.root,text=True))['apps']
 
-    def test_local_full_and_tests_do_not_rebuild_robot_latest(self):
-        self.write('onboard-baseline/full/Dockerfile','local composition')
-        self.write('onboard-baseline/build-local-full-image.sh','local tool')
-        self.write('onboard-baseline/tests/test_full_image.py','test')
+    def test_local_tools_and_tests_do_not_rebuild_robot_latest(self):
+        self.write('onboard-baseline/build-local-project.sh','source build tool')
+        self.write('onboard-baseline/tests/test_source_tool.py','test')
         self.assertEqual(self.changed(), [])
 
     def test_base_inputs_rebuild_all_four_profiles(self):

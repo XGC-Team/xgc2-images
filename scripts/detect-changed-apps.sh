@@ -29,7 +29,7 @@ while IFS= read -r file; do
     rebuild_all_build_images=true
   fi
   # Only files actually copied into the CI base invalidate robot latest.
-  # Local full recipes, source tooling and their tests have a separate lifecycle.
+  # Local developer recipes, source tooling and their tests have a separate lifecycle.
   if [[ "$path" == onboard-baseline/baselines.json ||
         "$path" == onboard-baseline/onboard-baseline.sh ||
         "$path" == onboard-baseline/image-entrypoint.sh ||

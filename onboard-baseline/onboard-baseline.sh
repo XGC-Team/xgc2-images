@@ -7,16 +7,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BASELINES="${ROOT}/baselines.json"
 OS_RELEASE="${ONBOARD_BASELINE_OS_RELEASE:-/etc/os-release}"
-XGC2_APT_FINGERPRINT="2A8E11B36F56D307ADF626D85E5FDC30979EA43F"
 EGM96_5_URL="https://downloads.sourceforge.net/project/geographiclib/geoids-distrib/egm96-5.tar.bz2?use_mirror=autoselect"
 # Observed SHA256 of that official archive. Not a signed upstream digest.
 EGM96_5_ARCHIVE_SHA256="c46224f8f723dc915d97179f4e1580a98d6c742fe2b82cd8fef0ecaaad13e614"
 
 usage() {
   echo "usage: onboard-baseline.sh check|apply|snapshot --profile <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic>" >&2
-  echo "       onboard-baseline.sh install-sitl --profile fs150-focal-noetic" >&2
-  echo "       onboard-baseline.sh install-xsim --profile fs150-focal-noetic" >&2
-  echo "       onboard-baseline.sh install-agent [--user EXISTING_USER] [--profile <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic>]" >&2
   echo "       onboard-baseline.sh manualdiff --before SNAPSHOT --after SNAPSHOT" >&2
   exit 2
 }
@@ -64,16 +60,14 @@ PY
   exit "$rc"
 fi
 profile=""
-agent_user="${ONBOARD_BASELINE_USER:-${SUDO_USER:-}}"
 while (($#)); do
   case "$1" in
     --profile) [[ $# -ge 2 && -n "$2" && "$2" != --* ]] || usage; profile="$2"; shift 2 ;;
-    --user) [[ $# -ge 2 && -n "$2" && "$2" != --* ]] || usage; agent_user="$2"; shift 2 ;;
     *) usage ;;
   esac
 done
-[[ "$mode" == "check" || "$mode" == "apply" || "$mode" == "snapshot" || "$mode" == "install-agent" || "$mode" == "install-sitl" || "$mode" == "install-xsim" ]] || usage
-if [[ "$mode" != "install-agent" && -z "$profile" ]]; then
+[[ "$mode" == "check" || "$mode" == "apply" || "$mode" == "snapshot" ]] || usage
+if [[ -z "$profile" ]]; then
   usage
 fi
 [[ -f "$BASELINES" ]] || usage
@@ -103,7 +97,6 @@ print("profile_user=" + quote(profile["username"]))
 print("ubuntu_codename=" + quote(profile["ubuntuCodename"]))
 print("ubuntu_version_id=" + quote(profile["ubuntuVersionId"]))
 print("ros_distro=" + quote(profile["rosDistro"]))
-print("agent_package=" + quote(doc["agentPackage"]))
 print("architectures=(" + " ".join(quote(item) for item in profile["architectures"]) + ")")
 print("packages=(" + " ".join(quote(item) for item in profile["packages"]) + ")")
 print("minimum_versions=(" + " ".join("[" + quote(package) + "]=" + quote(version)
@@ -130,27 +123,6 @@ PY
     fail "profile ${profile} must run as ${profile_user}" 3
   fi
   id "$profile_user" >/dev/null 2>&1 || fail "profile ${profile} account ${profile_user} does not exist" 3
-else
-  # install-agent without a robot profile reads the image's own APT suite.
-  agent_config="$("$metadata_python" - "$BASELINES" <<'PY'
-import io, json, sys
-try:
-    from shlex import quote
-except ImportError:  # Python 2 on the Melodic ROS core parent
-    from pipes import quote
-doc = json.load(io.open(sys.argv[1], encoding="utf-8"))
-print("agent_package=" + quote(doc["agentPackage"]))
-print("ros_distro=" + quote(""))
-print("packages=()")
-PY
-)" || fail "agent package name is missing" 2
-  eval "$agent_config"
-  unset VERSION_CODENAME VERSION_ID
-  # shellcheck disable=SC1090
-  . "$OS_RELEASE"
-  ubuntu_codename="${VERSION_CODENAME:-}"
-  ubuntu_version_id="${VERSION_ID:-}"
-  [[ -n "$ubuntu_codename" ]] || fail "os-release has no VERSION_CODENAME" 3
 fi
 
 package_installed() {
@@ -164,14 +136,12 @@ package_installed() {
 
 missing=()
 install_specs=()
-if [[ "$mode" != "install-agent" && "$mode" != "install-sitl" && "$mode" != "install-xsim" ]]; then
 for package in "${packages[@]}"; do
   if ! package_installed "$package"; then
     missing+=("$package")
     install_specs+=("$package")
   fi
 done
-fi
 
 if [[ "$mode" == "check" ]]; then
   if ((${#missing[@]})); then
@@ -234,38 +204,6 @@ if [[ "$mode" == "snapshot" ]]; then
   else
     printf 'geoid=absent\n'
   fi
-  if [[ -f /usr/share/xgc2-agent/install-source ]]; then
-    cat /usr/share/xgc2-agent/install-source
-  else
-    printf 'agent_source=unset\n'
-  fi
-  python3 - <<'PY'
-import pathlib
-path = pathlib.Path("/etc/xgc2/agent.env")
-keys = [
-    "XGC_AGENT_ID",
-    "XGC_AGENT_DISPLAY_NAME",
-    "XGC_AGENT_GRPC_ADDR",
-    "XGC_CORE_ENDPOINT",
-    "XGC_AGENT_ADVERTISED_ENDPOINT",
-    "XGC_AGENT_DATA_DIR",
-    "XGC_AGENT_MANAGED_ROOT",
-    "XGC_PROCESS_DEFINITION_PLUGINS",
-]
-found = {}
-if path.is_file():
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        found[key] = value
-    print("envfile=present")
-else:
-    print("envfile=absent")
-for key in keys:
-    if key in found:
-        print("env\t%s\t%s" % (key, found[key]))
-PY
   if command -v apt-mark >/dev/null 2>&1; then
     while read -r package; do
       [[ -n "$package" ]] || continue
@@ -288,24 +226,6 @@ ensure_ros_source() {
     "$ros_installer" "$ros_distro" "$ubuntu_codename"
   fi
 }
-ensure_xgc2_source() (
-  if [[ -e /etc/apt/sources.list.d/xgc2.list ]]; then
-    return 0
-  fi
-  local tmp found
-  tmp="$(mktemp -d)"
-  trap 'rm -rf -- "$tmp"' EXIT
-  export GNUPGHOME="$tmp/gnupg"
-  mkdir -m 0700 "$GNUPGHOME"
-  curl -fsSL --retry 3 --connect-timeout 20 --max-time 120 https://xgc2.apt.xiaokang.ink/xgc2-archive-keyring.gpg -o "$tmp/keyring.gpg"
-  gpg --batch --import "$tmp/keyring.gpg"
-  found="$(gpg --batch --with-fingerprint --with-colons --list-keys | awk -F: '$1=="fpr"{print toupper($10)}' | sort -u)"
-  [[ "$found" == "$XGC2_APT_FINGERPRINT" ]] || fail "XGC2 APT key fingerprint mismatch" 1
-  install -d -m 0755 /etc/apt/keyrings
-  install -m 0644 "$tmp/keyring.gpg" /etc/apt/keyrings/xgc2-archive-keyring.gpg
-  printf 'deb [arch=%s signed-by=/etc/apt/keyrings/xgc2-archive-keyring.gpg] https://xgc2.apt.xiaokang.ink %s main\n' \
-    "$(dpkg --print-architecture)" "$ubuntu_codename" > /etc/apt/sources.list.d/xgc2.list
-)
 install_fs150_geoid() (
   local tmp actual member
   tmp="$(mktemp -d)"
@@ -341,166 +261,3 @@ if [[ "$mode" == "apply" ]]; then
   printf 'onboard-baseline: applied %s\n' "$profile"
   exit 0
 fi
-
-# The optional simulator layer shares this installer with Dockerfile.sitl.
-# Physical-machine apply never installs SITL or touches the running Agent.
-if [[ "$mode" == "install-sitl" ]]; then
-  [[ "$profile" == "fs150-focal-noetic" ]] || fail "SITL packages require the FS150 Focal/Noetic profile" 2
-  simulation_packages=(ros-noetic-xgc2-gazebo-sim-fs150-sitl=1.1.0-23 ros-noetic-xgc2-px4-sitl-1-12=1.12.3-27)
-  missing=()
-  for spec in "${simulation_packages[@]}"; do
-    installed="$(dpkg-query -W -f='${Version}' "${spec%%=*}" 2>/dev/null || true)"
-    [[ "$installed" == "${spec#*=}" ]] || missing+=("$spec")
-  done
-  if ((${#missing[@]})); then
-    ensure_xgc2_source
-    apt-get update
-    apt-get install -y --no-install-recommends "${missing[@]}"
-  fi
-  printf 'onboard-baseline: FS150 SITL packages installed\n'
-  exit 0
-fi
-
-if [[ "$mode" == "install-xsim" ]]; then
-  [[ "$profile" == "fs150-focal-noetic" ]] || fail "XSim packages require the FS150 Focal/Noetic profile" 2
-  xsim_version="${ONBOARD_BASELINE_XSIM_VERSION:-}"
-  [[ -n "$xsim_version" ]] || fail "install-xsim requires ONBOARD_BASELINE_XSIM_VERSION" 2
-  simulation_packages=("xsim=${xsim_version}" "libxgc2-sensing-gpu=${xsim_version}")
-  missing=()
-  for spec in "${simulation_packages[@]}"; do
-    installed="$(dpkg-query -W -f='${Version}' "${spec%%=*}" 2>/dev/null || true)"
-    [[ "$installed" == "${spec#*=}" ]] || missing+=("$spec")
-  done
-  if ((${#missing[@]})); then
-    ensure_xgc2_source
-    apt-get update
-    apt-get install -y --no-install-recommends "${missing[@]}"
-  fi
-  printf 'onboard-baseline: FS150 XSim runtime packages installed\n'
-  exit 0
-fi
-
-[[ -n "$agent_user" ]] || fail "install-agent requires --user with the existing robot account" 2
-if [[ -n "${ONBOARD_BASELINE_AGENT_DEB:-}" ]]; then
-  fail "refusing a copied agent package; install live ${agent_package} from APT" 1
-fi
-if [[ -n "$profile" && "$agent_user" != "$profile_user" ]]; then
-  fail "profile ${profile} user is ${profile_user}, not ${agent_user}" 3
-fi
-id "$agent_user" >/dev/null
-agent_version="${ONBOARD_BASELINE_AGENT_VERSION:-}"
-if ! package_installed "$agent_package" || [[ -n "$agent_version" ]]; then
-  ensure_xgc2_source
-  apt-get update
-  if [[ -n "$agent_version" ]]; then
-    apt-get install -y --no-install-recommends "${agent_package}=${agent_version}"
-  else
-    apt-get install -y --no-install-recommends "$agent_package"
-  fi
-else
-  printf 'onboard-baseline: %s is already installed\n' "$agent_package"
-fi
-package_installed "$agent_package" || fail "package ${agent_package} is not installed" 1
-if [[ -n "$agent_version" ]]; then
-  installed_version="$(dpkg-query -W -f='${Version}' "$agent_package")"
-  [[ "$installed_version" == "$agent_version" ]] || fail "installed ${agent_package} ${installed_version}, want ${agent_version}" 1
-fi
-
-agent_env=/etc/xgc2/agent.env
-# Package conffile: agent-01 and loopback are not a robot identity.
-# A different robot ID already in the file is left unchanged, including its catalog line.
-agent_id_from_file() {
-  python3 - "$1" <<'PY'
-import pathlib, sys
-path = pathlib.Path(sys.argv[1])
-if not path.is_file():
-    raise SystemExit(0)
-for line in path.read_text(encoding="utf-8").splitlines():
-    if line.startswith("XGC_AGENT_ID="):
-        value = line.split("=", 1)[1].strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-            value = value[1:-1]
-        print(value)
-        break
-PY
-}
-upsert_env_key() {
-  python3 - "$agent_env" "$1" "$2" <<'PY'
-import pathlib, sys
-path, key, value = sys.argv[1:]
-file = pathlib.Path(path)
-lines = file.read_text(encoding="utf-8").splitlines() if file.exists() else []
-prefix = key + "="
-replaced = False
-out = []
-for line in lines:
-    if line.startswith(prefix):
-        out.append(prefix + value)
-        replaced = True
-    else:
-        out.append(line)
-if not replaced:
-    out.append(prefix + value)
-file.write_text("\n".join(out) + "\n", encoding="utf-8")
-PY
-}
-write_default_agent_env() {
-  cat >"$agent_env" <<'EOF'
-# Headless XGC2 Agent. agent-01 is the package placeholder, not a robot identity.
-XGC_AGENT_ID=agent-01
-XGC_AGENT_DISPLAY_NAME="Agent 01"
-XGC_AGENT_GRPC_ADDR=:9090
-XGC_AGENT_ADVERTISED_ENDPOINT=127.0.0.1:9090
-XGC_CORE_ENDPOINT=.251:9092
-XGC_AGENT_MANAGED_ROOT=/var/lib/xgc2-agent/managed
-XGC_AGENT_DATA_DIR=/var/lib/xgc2-agent
-EOF
-  chown "root:$(id -gn "$agent_user")" "$agent_env"
-  chmod 0640 "$agent_env" 2>/dev/null || chmod 0644 "$agent_env"
-}
-start_agent=0
-if [[ -n "${XGC_AGENT_ID:-}" && -n "${XGC_CORE_ENDPOINT:-}" && -n "${XGC_AGENT_ADVERTISED_ENDPOINT:-}" && -n "${XGC_AGENT_DATA_DIR:-}" && -n "${XGC_AGENT_MANAGED_ROOT:-}" ]]; then
-  install -d -m 0755 /etc/xgc2
-  if [[ ! -f "$agent_env" ]]; then
-    umask 027
-    write_default_agent_env
-  fi
-  current_id="$(agent_id_from_file "$agent_env")"
-  if [[ -n "$current_id" && "$current_id" != "agent-01" && "$current_id" != "$XGC_AGENT_ID" ]]; then
-    printf 'onboard-baseline: keeping existing agent identity %s\n' "$current_id"
-  else
-    start_agent=1
-    upsert_env_key XGC_AGENT_ID "$XGC_AGENT_ID"
-    upsert_env_key XGC_CORE_ENDPOINT "$XGC_CORE_ENDPOINT"
-    upsert_env_key XGC_AGENT_ADVERTISED_ENDPOINT "$XGC_AGENT_ADVERTISED_ENDPOINT"
-    upsert_env_key XGC_AGENT_DATA_DIR "$XGC_AGENT_DATA_DIR"
-    upsert_env_key XGC_AGENT_MANAGED_ROOT "$XGC_AGENT_MANAGED_ROOT"
-    if [[ -n "${XGC_AGENT_DISPLAY_NAME:-}" ]]; then
-      upsert_env_key XGC_AGENT_DISPLAY_NAME "\"${XGC_AGENT_DISPLAY_NAME}\""
-    fi
-    if [[ -n "${XGC_AGENT_GRPC_ADDR:-}" ]]; then
-      upsert_env_key XGC_AGENT_GRPC_ADDR "$XGC_AGENT_GRPC_ADDR"
-    fi
-  fi
-fi
-current_id=""
-if [[ -f "$agent_env" ]]; then
-  current_id="$(agent_id_from_file "$agent_env")"
-fi
-/usr/lib/xgc2/configure-agent-user "$agent_user"
-if [[ -d /run/systemd/system ]]; then
-  # Only the Agent daemon is enabled here. Chassis and algorithm autostart
-  # belongs to a workflow the Agent has saved, not to this installer.
-  if systemctl is-active --quiet xgc2-agent.service; then
-    printf 'onboard-baseline: xgc2-agent.service already running\n'
-  elif [[ "$start_agent" == 1 ]]; then
-    systemctl enable --now xgc2-agent.service
-  elif [[ -n "$current_id" && "$current_id" != "agent-01" ]]; then
-    printf 'onboard-baseline: agent identity %s is configured; not restarting\n' "$current_id"
-  else
-    printf 'onboard-baseline: placeholder agent.env is not a robot identity; not starting xgc2-agent.service\n'
-  fi
-else
-  printf 'onboard-baseline: no systemd; container entrypoint starts /usr/lib/xgc2/xgc-agent\n'
-fi
-printf 'onboard-baseline: installed %s on %s\n' "$agent_package" "${profile:-$ubuntu_codename}"

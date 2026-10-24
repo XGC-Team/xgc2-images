@@ -1,7 +1,6 @@
 {
   "owner": "onboard-baseline/onboard-baseline.sh",
-  "agentPackage": "xgc2-agent",
-  "note": "Third-party onboard base environments. Profiles align distribution, ROS and robot account, not a complete physical root filesystem. Base images contain no XGC2 products or physical hardware drivers. Agent and simulation/algorithm products belong to a separate local source-built full image.",
+  "note": "Third-party onboard base environments. Profiles align distribution, ROS and robot account, not a complete physical root filesystem. Base images contain no XGC2 products or physical hardware drivers. Products are source-built and installed through explicit Builder/Deployer workflows.",
   "selection": {
     "defaults": {
       "fs150": "fs150-focal-noetic",

@@ -19,7 +19,6 @@ jobs:
         run: python3 scripts/ci/check-workflow-bootstrap.py .
       - name: Checker unit fixtures
         run: bash scripts/ci/test-check-workflow-bootstrap.sh
-      - name: Local source image tooling checks
+      - name: Image change selection checks
         run: |
-          python3 -m unittest discover -s onboard-baseline/tests -p test_full_image.py -v
           python3 -m unittest discover -s onboard-baseline/tests -p test_changed_apps.py -v

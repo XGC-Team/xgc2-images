@@ -542,125 +542,15 @@ class BaselineTests(unittest.TestCase):
         self.assertFalse((self.geoid.parent / 'egm96-5.wld').exists())
         self.assertEqual(list(temporary.iterdir()), [])
 
-    def test_install_agent_uses_existing_user_without_base_apt(self):
-        self.state['installed'].append('xgc2-agent'); self.save()
-        before = self.config.read_bytes()
-        self.invoke('install-agent', '--user', 'robot-user')
-        self.assertEqual(self.calls('configure-agent-user')[0][1], ['robot-user'])
-        self.assertEqual(self.calls('apt-get'), [])
-        self.assertEqual(self.calls('dpkg'), [])
-        self.assertEqual(self.config.read_bytes(), before)
 
-    def test_xsim_installs_the_formal_runtime_pair_once_on_both_architectures(self):
-        self.env['ONBOARD_BASELINE_XSIM_VERSION'] = '1.4.0-4'
-        for arch in ('amd64', 'arm64'):
-            with self.subTest(arch=arch):
-                self.configure('fs150-focal-noetic', arch)
-                before = self.config.read_bytes()
-                self.invoke('install-xsim', '--profile', self.profile)
-                self.assertEqual(self.calls('apt-get')[-1][1], [
-                    'install', '-y', '--no-install-recommends',
-                    'xsim=1.4.0-4', 'libxgc2-sensing-gpu=1.4.0-4'])
-                installed = self.calls('apt-get')
-                self.invoke('install-xsim', '--profile', self.profile)
-                self.assertEqual(self.calls('apt-get'), installed)
-                self.assertEqual(self.calls('configure-agent-user'), [])
-                self.assertEqual(self.config.read_bytes(), before)
 
-    def test_xsim_repairs_only_the_missing_or_wrong_version_runtime(self):
-        self.env['ONBOARD_BASELINE_XSIM_VERSION'] = '1.4.0-4'
-        self.state['installed'] += ['xsim', 'libxgc2-sensing-gpu']
-        self.state['versions'] = {'xsim': '1.4.0-4', 'libxgc2-sensing-gpu': '1.4.0-3'}
-        self.save()
-        self.invoke('install-xsim', '--profile', self.profile)
-        self.assertEqual(self.calls('apt-get')[-1][1], [
-            'install', '-y', '--no-install-recommends', 'libxgc2-sensing-gpu=1.4.0-4'])
 
-    def test_xsim_requires_an_explicit_version_without_its_own_default(self):
-        self.invoke('install-xsim', '--profile', self.profile, expected=2)
-        self.assertEqual(self.calls('apt-get'), [])
-        self.env['ONBOARD_BASELINE_XSIM_VERSION'] = '1.4.0-5'
-        self.invoke('install-xsim', '--profile', self.profile)
-        self.assertEqual(self.calls('apt-get')[-1][1], [
-            'install', '-y', '--no-install-recommends',
-            'xsim=1.4.0-5', 'libxgc2-sensing-gpu=1.4.0-5'])
 
-    def test_xsim_does_not_extend_other_robot_profiles(self):
-        for profile in PROFILES:
-            if profile == 'fs150-focal-noetic':
-                continue
-            with self.subTest(profile=profile):
-                self.configure(profile)
-                self.invoke('install-xsim', '--profile', profile, expected=2)
-                self.assertEqual(self.calls('apt-get'), [])
 
-    def test_agent_version_uses_the_existing_explicit_version_parameter(self):
-        env = dict(self.env, ONBOARD_BASELINE_AGENT_VERSION='0.1.0-11')
-        self.invoke('install-agent', '--profile', self.profile, '--user', 'marvsmart', env=env)
-        self.assertEqual(self.calls('apt-get')[-1][1], [
-            'install', '-y', '--no-install-recommends', 'xgc2-agent=0.1.0-11'])
 
-    def test_fresh_agent_install_verifies_key_in_isolated_home_for_bionic_and_focal(self):
-        temporary = self.root / 'temporary'
-        temporary.mkdir()
-        caller_home = self.root / 'caller-gnupg'
-        caller_home.mkdir()
-        (caller_home / 'keep').write_text('caller keyring')
-        env = dict(self.env, TMPDIR=str(temporary), GNUPGHOME=str(caller_home))
-        for profile in ('scout-bionic-melodic', 'wheeltec-bionic-melodic', 'fs150-focal-noetic'):
-            with self.subTest(profile=profile):
-                self.configure(profile)
-                source = self.root / 'etc/apt/sources.list.d/xgc2.list'
-                if source.exists():
-                    source.unlink()
-                before = self.config.read_bytes()
-                self.invoke('install-agent', '--profile', profile, '--user', PROFILES[profile]['username'], env=env)
-                apt_calls = self.calls('apt-get')
-                self.state = json.loads((self.root / 'state.json').read_text())
-                self.assertIn('xgc2-agent', self.state['installed'])
-                self.assertEqual(apt_calls[1][1], ['install', '-y', '--no-install-recommends', 'xgc2-agent'])
-                self.assertEqual(len(apt_calls), 2)
-                self.assertIn(PROFILES[profile]['ubuntuCodename'] + ' main', source.read_text())
-                key = self.root / 'etc/apt/keyrings/xgc2-archive-keyring.gpg'
-                self.assertEqual(key.read_bytes(), b'fixture signing key')
-                self.assertEqual(key.stat().st_mode & 0o777, 0o644)
-                self.assertEqual(len(self.calls('gpg')), 2)
-                self.assertTrue(all(not Path(home).exists() for home in self.state['gpg_homes']))
-                self.assertEqual(list(temporary.iterdir()), [])
-                self.assertEqual((caller_home / 'keep').read_text(), 'caller keyring')
-                self.assertEqual(self.config.read_bytes(), before)
 
-    def test_fresh_agent_install_rejects_key_failures_and_cleans_temporary_home(self):
-        temporary = self.root / 'temporary'
-        temporary.mkdir()
-        env = dict(self.env, TMPDIR=str(temporary))
-        for failure, value, expected in (('gpg_fingerprint', 'BAD', 1),
-                                         ('gpg_import_failure', True, 2), ('curl_failure', True, 22)):
-            with self.subTest(failure=failure):
-                self.configure('scout-bionic-melodic')
-                self.state[failure] = value
-                self.save()
-                result = self.invoke('install-agent', '--profile', self.profile,
-                                     '--user', 'agilex', env=env, expected=expected)
-                if failure == 'gpg_fingerprint':
-                    self.assertIn('fingerprint mismatch', result.stderr)
-                self.assertEqual(self.calls('apt-get'), [])
-                self.assertFalse((self.root / 'etc/apt/sources.list.d/xgc2.list').exists())
-                self.assertFalse((self.root / 'etc/apt/keyrings/xgc2-archive-keyring.gpg').exists())
-                self.assertEqual(list(temporary.iterdir()), [])
 
-    def test_copied_agent_package_is_refused(self):
-        deb = self.root / 'agent.deb'; deb.write_text('fixture deb')
-        env = dict(self.env, ONBOARD_BASELINE_AGENT_DEB=str(deb))
-        self.assertIn('copied agent package', self.invoke('install-agent', '--user', 'robot-user', env=env, expected=1).stderr)
-        self.assertEqual(self.calls('dpkg'), [])
-        self.assertEqual(self.calls('apt-get'), [])
 
-    def test_install_agent_rejects_missing_or_unknown_user(self):
-        self.invoke('install-agent', expected=2)
-        self.invoke('install-agent', '--user', 'not-existing', expected=1)
-        self.assertEqual(self.calls('apt-get'), [])
-        self.assertEqual(self.calls('useradd'), [])
 
     def test_snapshot_and_manualdiff_remain_compatible(self):
         result = self.invoke('snapshot', '--profile', self.profile)

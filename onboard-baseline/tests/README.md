@@ -19,7 +19,7 @@ Package, ROS and Docker command doubles run in disposable directories. The base
 boundary suite exercises installed-product/physical-driver rejection, each
 profile's package list and the shell-only Dockerfiles. Local image tests reject
 product inputs and retain a stable `latest` tag. These tests do not establish
-real ROS, image publication, source-full runtime or physical-device readiness.
+real ROS, image publication, source-built product runtime or physical-device readiness.
 
 The downstream Agent entrypoint has separate real chroot/account-switching
 checks. Run these as root inside a disposable Linux container or test runner:
@@ -28,8 +28,8 @@ checks. Run these as root inside a disposable Linux container or test runner:
 python3 -m unittest discover -s onboard-baseline/tests -p test_image_entrypoint.py -v
 ```
 
-The namespace-based `freeze-check.sh` additionally requires working unprivileged
-user/mount namespaces. An unavailable namespace is an execution limitation.
+`freeze-check.sh` runs the shell syntax, baseline and base-boundary suites.
+Some baseline tests require working unprivileged namespaces and skip when unavailable.
 
 Build and inspect an actual base without starting any robot task:
 
@@ -41,4 +41,4 @@ Build and inspect an actual base without starting any robot task:
 The image smoke uses a private network, a read-only root and temporary caches.
 It checks repeated base preparation, package state and ROS as the robot account.
 Agent, adapters, XSim, controllers and algorithms are absent from this base; their
-source-built runtime image uses the separate local `full` tag.
+source-built artifacts are installed through an explicit Builder/Deployer workflow.
