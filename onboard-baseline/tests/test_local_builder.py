@@ -284,7 +284,7 @@ class LocalBuilderTest(unittest.TestCase):
                     result = self.run_builder(source, output, cache, profile, arch)
                     self.assertEqual(result.returncode, 0, result.stderr)
                     argv = json.loads(self.argv_path.read_text())
-                    image = "onboard-sim-%s:base-local-%s" % (profile, arch)
+                    image = "onboard-sim-%s:latest" % profile
                     self.assertEqual(argv[0], "run")
                     self.assertIn("-i", argv)
                     self.assertIn("--rm", argv)

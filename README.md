@@ -4,6 +4,16 @@ Container images for XGC2 simulation, deployment, development, and CI builds.
 
 GitHub hosts the catalog; GitHub Container Registry hosts the images.
 
+## Robot onboard images
+
+`onboard-sim-{fs150-focal-noetic,scout-bionic-melodic,scout-focal-noetic,wheeltec-bionic-melodic}:latest`
+are third-party Ubuntu/ROS environments with matching robot accounts. They contain
+no XGC2 products, physical hardware drivers or machine identity. They open a ROS
+shell and are not directly usable as Agent robot environments. A local source
+runtime is named `onboard-sim-<profile>:full`; its Agent uses
+`/opt/xgc2/onboard-baseline/image-entrypoint.sh`. Task processes belong to saved
+workflows. Build/pull bases separately from preparing source runtime images.
+
 ## Apps
 
 App categories:

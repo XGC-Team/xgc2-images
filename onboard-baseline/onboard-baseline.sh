@@ -164,16 +164,11 @@ package_installed() {
 
 missing=()
 install_specs=()
-gateway_specs=()
 if [[ "$mode" != "install-agent" && "$mode" != "install-sitl" && "$mode" != "install-xsim" ]]; then
 for package in "${packages[@]}"; do
   if ! package_installed "$package"; then
     missing+=("$package")
-    if [[ -n "${minimum_versions[$package]:-}" ]]; then
-      gateway_specs+=("$package")
-    else
-      install_specs+=("$package")
-    fi
+    install_specs+=("$package")
   fi
 done
 fi
@@ -223,19 +218,7 @@ if [[ "$profile" == fs150-focal-noetic ]]; then
   [[ -s "$geoid_dir/egm96-5.pgm" && -r "$geoid_dir/egm96-5.pgm" ]] || { echo "missing/unreadable MAVROS geoid: $geoid_dir/egm96-5.pgm" >&2; exit 1; }
   GeoidEval -d "$geoid_dir" -n egm96-5 --input-string '0 0' >/dev/null
 fi
-gateway_node=""
-case "$profile" in
-  fs150-focal-noetic) gateway_node="$ros_prefix/lib/xgc_px4_multirotor_ros1_adapter/xgc_px4_multirotor_ros1_adapter_node" ;;
-  scout-focal-noetic) gateway_node="$ros_prefix/lib/xgc_ugv_ros1_adapter/xgc_ugv_ros1_adapter_node" ;;
-esac
-if [[ -n "$gateway_node" ]]; then
-  [[ -x "$gateway_node" ]] || { echo "missing Adapter executable: $gateway_node" >&2; exit 1; }
-  ldd "$gateway_node" >"$HOME/gateway-ldd.txt"
-  if grep -q 'not found' "$HOME/gateway-ldd.txt"; then
-    cat "$HOME/gateway-ldd.txt" >&2
-    exit 1
-  fi
-fi
+
 ROS
   )
   check_runtime || fail "runtime check failed for ${profile}" 4
@@ -347,16 +330,6 @@ if [[ "$mode" == "apply" ]]; then
     ensure_ros_source
     apt-get update
     apt-get install -y --no-install-recommends --no-remove "${install_specs[@]}"
-  fi
-  if ((${#gateway_specs[@]})); then
-    # The base transaction provides curl, GnuPG and CA roots before this source
-    # is configured. Keep package names unpinned so newer gateways stay valid.
-    ensure_xgc2_source
-    apt-get update
-    apt-get install -y --no-install-recommends --no-remove "${gateway_specs[@]}"
-    for package in "${gateway_specs[@]}"; do
-      package_installed "$package" || fail "${package} does not meet minimum version ${minimum_versions[$package]}" 1
-    done
   fi
   geoid_path=/usr/share/GeographicLib/geoids/egm96-5.pgm
   if [[ "$profile" == "fs150-focal-noetic" && ! -s "$geoid_path" ]]; then

@@ -410,7 +410,7 @@ apps:
     name: Onboard sim FS150 Focal Noetic
     version: 1.0.0
     type: simulation
-    image: ghcr.io/xgc-team/xgc2-images/onboard-sim-fs150-focal-noetic:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/onboard-sim-fs150-focal-noetic:latest
     app: ../apps/onboard-sim-fs150-focal-noetic/app.yml
     data: ../apps/onboard-sim-fs150-focal-noetic/data.yml
     compose: ../apps/onboard-sim-fs150-focal-noetic/docker-compose.yml
@@ -423,7 +423,7 @@ apps:
     name: Onboard sim Scout Bionic Melodic
     version: 1.0.0
     type: simulation
-    image: ghcr.io/xgc-team/xgc2-images/onboard-sim-scout-bionic-melodic:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/onboard-sim-scout-bionic-melodic:latest
     app: ../apps/onboard-sim-scout-bionic-melodic/app.yml
     data: ../apps/onboard-sim-scout-bionic-melodic/data.yml
     compose: ../apps/onboard-sim-scout-bionic-melodic/docker-compose.yml
@@ -436,7 +436,7 @@ apps:
     name: Onboard sim Scout Focal Noetic
     version: 1.0.0
     type: simulation
-    image: ghcr.io/xgc-team/xgc2-images/onboard-sim-scout-focal-noetic:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/onboard-sim-scout-focal-noetic:latest
     app: ../apps/onboard-sim-scout-focal-noetic/app.yml
     data: ../apps/onboard-sim-scout-focal-noetic/data.yml
     compose: ../apps/onboard-sim-scout-focal-noetic/docker-compose.yml
@@ -449,7 +449,7 @@ apps:
     name: Onboard sim Wheeltec Bionic Melodic
     version: 1.0.0
     type: simulation
-    image: ghcr.io/xgc-team/xgc2-images/onboard-sim-wheeltec-bionic-melodic:1.0.0
+    image: ghcr.io/xgc-team/xgc2-images/onboard-sim-wheeltec-bionic-melodic:latest
     app: ../apps/onboard-sim-wheeltec-bionic-melodic/app.yml
     data: ../apps/onboard-sim-wheeltec-bionic-melodic/data.yml
     compose: ../apps/onboard-sim-wheeltec-bionic-melodic/docker-compose.yml

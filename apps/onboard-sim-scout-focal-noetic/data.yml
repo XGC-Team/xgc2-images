@@ -7,7 +7,7 @@ additionalProperties:
     - Simulation
   shortDescEn: Scout Orin NX focal noetic onboard simulation base
   description:
-    en: Scout Orin NX focal noetic onboard simulation base. Shared onboard baseline, no chassis or experiment autostart.
+    en: Scout Orin NX focal noetic onboard simulation base. Third-party ROS baseline; no XGC2 products or physical drivers.
   type: simulation
   crossVersionUpdate: false
   limit: 0

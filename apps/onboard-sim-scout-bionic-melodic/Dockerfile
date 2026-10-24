@@ -5,6 +5,7 @@ COPY onboard-baseline/baselines.json /onboard-baseline/baselines.json
 COPY onboard-baseline/onboard-baseline.sh /onboard-baseline/onboard-baseline.sh
 COPY onboard-baseline/image-entrypoint.sh /onboard-baseline/image-entrypoint.sh
 COPY onboard-baseline/image-healthcheck.sh /onboard-baseline/image-healthcheck.sh
+COPY onboard-baseline/assert-base-only.sh /onboard-baseline/assert-base-only.sh
 COPY scripts/build/install-ros-apt-source.sh /onboard-baseline/install-ros-apt-source.sh
 
 FROM ${PARENT_IMAGE}
@@ -18,7 +19,6 @@ ENV DISABLE_ROS1_EOL_WARNINGS=1
 COPY --from=runtime-sources /onboard-baseline/ /opt/xgc2/onboard-baseline/
 
 ARG ONBOARD_APT_MIRROR
-ARG ONBOARD_BASELINE_AGENT_VERSION=0.1.0-13
 RUN bash <<'EOF'
 set -euo pipefail
 useradd --uid 1000 --create-home --shell /bin/bash --user-group "$ONBOARD_BASELINE_USER"
@@ -37,10 +37,12 @@ if [ -n "${ONBOARD_APT_MIRROR:-}" ]; then
   done
 fi
 /opt/xgc2/onboard-baseline/onboard-baseline.sh apply --profile scout-bionic-melodic
-# Live APT Agent only. The entrypoint starts that daemon and nothing else.
-/opt/xgc2/onboard-baseline/onboard-baseline.sh install-agent --user "$ONBOARD_BASELINE_USER" --profile scout-bionic-melodic
 # Validate as the existing robot operator, not the privileged installer.
 runuser -u "$ONBOARD_BASELINE_USER" -- /opt/xgc2/onboard-baseline/onboard-baseline.sh check --profile "$ONBOARD_BASELINE_PROFILE"
 EOF
 
-ENTRYPOINT ["/opt/xgc2/onboard-baseline/image-entrypoint.sh"]
+
+RUN /opt/xgc2/onboard-baseline/assert-base-only.sh
+
+ENTRYPOINT ["/ros_entrypoint.sh"]
+CMD ["bash"]

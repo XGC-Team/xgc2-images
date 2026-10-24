@@ -2,7 +2,7 @@
 # Local project builder on an existing onboard-baseline profile.
 #
 # The image tag is the one build-local-image.sh already writes
-# (onboard-sim-<profile>:base-local-<arch>). This script does not build or
+# (onboard-sim-<profile>:latest). This script does not build or
 # publish that image. A foreign architecture is the engine's existing
 # platform switch; this script does not select a cross compiler and does not
 # register host interpreters.
@@ -386,7 +386,7 @@ mkdir -p "$cache_dir" "$work_dir"
 rm -rf "$stage_dir"
 mkdir -p "$stage_dir"
 
-image="onboard-sim-${profile}:base-local-${arch}"
+image="onboard-sim-${profile}:latest"
 cidfile="${slot}/cid"
 rm -f "$cidfile"
 argv=(
