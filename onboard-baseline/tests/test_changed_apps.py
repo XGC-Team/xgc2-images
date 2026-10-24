@@ -38,7 +38,7 @@ class ChangedAppsTest(unittest.TestCase):
         return json.loads(subprocess.check_output(['bash',str(SCRIPT),self.base,'HEAD'],cwd=self.root,text=True))['apps']
 
     def test_local_tools_and_tests_do_not_rebuild_robot_latest(self):
-        self.write('onboard-baseline/build-local-project.sh','source build tool')
+        self.write('onboard-baseline/tests/developer-tool.sh','source build tool')
         self.write('onboard-baseline/tests/test_source_tool.py','test')
         self.assertEqual(self.changed(), [])
 
