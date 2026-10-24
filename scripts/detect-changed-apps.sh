@@ -32,6 +32,7 @@ while IFS= read -r file; do
   # Local developer recipes, source tooling and their tests have a separate lifecycle.
   if [[ "$path" == onboard-baseline/baselines.json ||
         "$path" == onboard-baseline/onboard-baseline.sh ||
+        "$path" == onboard-baseline/configure-ubuntu-mirror.sh ||
         "$path" == onboard-baseline/image-entrypoint.sh ||
         "$path" == onboard-baseline/image-healthcheck.sh ||
         "$path" == onboard-baseline/assert-base-only.sh ]]; then

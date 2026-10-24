@@ -184,6 +184,7 @@ class BaselineTests(unittest.TestCase):
         self.script = self.root / 'onboard-baseline.sh'
         self.script.write_text(self.relocate((BASELINE / 'onboard-baseline.sh').read_text()))
         self.script.chmod(0o755)
+        (self.root / 'configure-ubuntu-mirror.sh').write_text(self.relocate((BASELINE / 'configure-ubuntu-mirror.sh').read_text()))
         (self.root / 'baselines.json').write_bytes((BASELINE / 'baselines.json').read_bytes())
         stub = self.root / 'stub.py'
         stub.write_text(STUB.replace('ROOT_LITERAL', repr(str(self.root))))

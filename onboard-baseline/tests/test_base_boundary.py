@@ -40,3 +40,38 @@ class BaseBoundaryTest(unittest.TestCase):
                 app = (ROOT/'apps'/('onboard-sim-'+profile)/'app.yml').read_text()
                 self.assertIn('version: latest\n', app)
                 self.assertIn(':latest\n', app)
+
+
+BASELINE=ROOT/'onboard-baseline'
+
+class MirrorTests(unittest.TestCase):
+    def test_architectures_suites_signatures_and_idempotency(self):
+        for arch,archive in [('amd64','ubuntu'),('arm64','ubuntu-ports')]:
+            with self.subTest(arch=arch), tempfile.TemporaryDirectory() as directory:
+                root=Path(directory)
+                apt=root/'apt'; (apt/'sources.list.d').mkdir(parents=True)
+                bin=root/'bin';bin.mkdir()
+                (bin/'dpkg').write_text('#!/bin/sh\necho '+arch+'\n');(bin/'dpkg').chmod(0o755)
+                legacy=apt/'sources.list'
+                legacy.write_text('deb [signed-by=/key.gpg] http://archive.ubuntu.com/ubuntu focal main universe\n'
+                                  'deb https://security.ubuntu.com/ubuntu focal-security main\n'
+                                  'deb http://ports.ubuntu.com/ubuntu-ports bionic-updates main\n'
+                                  'deb http://packages.ros.org/ros/ubuntu focal main\n')
+                modern=apt/'sources.list.d/ubuntu.sources'
+                modern.write_text('Types: deb\nURIs: https://mirrors.ustc.edu.cn/ubuntu\nSuites: focal focal-updates\nSigned-By: /ubuntu.gpg\n')
+                script=root/'mirror.sh'
+                script.write_text((BASELINE/'configure-ubuntu-mirror.sh').read_text().replace('/etc/apt',str(apt)))
+                env=dict(os.environ,PATH=str(bin)+':'+os.environ['PATH']);env.pop('ONBOARD_APT_MIRROR',None)
+                def run(): subprocess.run(['bash',str(script)],env=env,check=True)
+                run()
+                expected='https://mirrors.tuna.tsinghua.edu.cn/'+archive+'/'
+                self.assertEqual(legacy.read_text().count(expected),3)
+                self.assertIn('focal-security main',legacy.read_text())
+                self.assertIn('bionic-updates main',legacy.read_text())
+                self.assertIn('signed-by=/key.gpg',legacy.read_text())
+                self.assertIn('http://packages.ros.org/ros/ubuntu',legacy.read_text())
+                self.assertIn('URIs: '+expected,modern.read_text())
+                before=(legacy.read_text(),modern.read_text());run()
+                self.assertEqual((legacy.read_text(),modern.read_text()),before)
+                env['ONBOARD_APT_MIRROR']='https://mirror.example/ubuntu'
+                run();self.assertIn('https://mirror.example/ubuntu/',legacy.read_text())

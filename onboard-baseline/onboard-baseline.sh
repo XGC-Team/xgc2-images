@@ -246,6 +246,7 @@ install_fs150_geoid() (
 )
 
 if [[ "$mode" == "apply" ]]; then
+  bash "$ROOT/configure-ubuntu-mirror.sh"
   if ((${#install_specs[@]})); then
     ensure_ros_source
     apt-get update

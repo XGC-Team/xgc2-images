@@ -24,7 +24,7 @@ for variable in ONBOARD_AGENT_DEB ONBOARD_BASELINE_AGENT_VERSION ONBOARD_BASELIN
 done
 tag="onboard-sim-${PROFILE}:latest"
 DOCKER_BUILDKIT=1 docker build --platform "$PLATFORM" --pull \
-  --build-arg "ONBOARD_APT_MIRROR=${ONBOARD_APT_MIRROR:-http://mirrors.ustc.edu.cn/ubuntu}" \
+  --build-arg "ONBOARD_APT_MIRROR=${ONBOARD_APT_MIRROR:-}" \
   -f "${ROOT}/apps/onboard-sim-${PROFILE}/Dockerfile" -t "$tag" "$ROOT"
 actual="$(docker image inspect "$tag" --format '{{.Os}}/{{.Architecture}}')"
 [[ "$actual" == "$PLATFORM" ]] || { echo "Expected $PLATFORM, found $actual" >&2; exit 1; }
