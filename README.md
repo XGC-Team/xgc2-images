@@ -271,3 +271,39 @@ docker run --rm ghcr.io/xgc-team/xgc2-images/xgc2-latex-toolchain:1.0.0 \
 ## License
 
 See `LICENSE`.
+
+## Local robot source runtime
+
+Run from a DevOps checkout containing the existing product source submodules:
+
+```bash
+./onboard-baseline/build-local-full-image.sh fs150-focal-noetic --plan
+./onboard-baseline/build-local-full-image.sh fs150-focal-noetic
+```
+
+The same command accepts `scout-bionic-melodic`, `scout-focal-noetic` and
+`wheeltec-bionic-melodic`. Use `--platform linux/amd64` or `linux/arm64` to select
+an available native/emulated Docker build target. The tool never registers host
+emulators. `--devops-root` selects another local checkout.
+
+Each invocation pulls the robot's remote `latest`, resolves an immutable digest,
+and snapshots tracked plus nonignored local source files, including local edits.
+The declared build image is cached separately from the runtime base. Product
+source build/install entries and CMake/Go dependency constraints own the build
+rules; the composer does not call product APT publication wrappers. Required
+first-party libraries and Go modules come from that same local source snapshot.
+Bionic retains ROS Melodic and builds its newer required third-party libraries
+for Bionic, rather than copying Focal binaries.
+
+The default components are Agent, XSim/GPU sensing, the profile's Adapter and
+controller. `--components agent,xsim,adapter` selects a smaller explicit runtime;
+Agent is required, and Adapter includes its declared XSim dependency. Source and
+compiler caches stay outside the runtime. Repeated matching inputs reuse `full`;
+`--rebuild` explicitly repeats the build. BuildKit caches are separate by compiler
+image, ROS distribution and architecture.
+
+The tool validates a candidate offline before moving
+`onboard-sim-<profile>:full`. Build or validation failure does not replace the
+existing tag. It does not publish `full`, restart/rebuild robot containers, or
+change their data volumes. Existing containers keep using their original image;
+explicit container Rebuild adopts the updated tag.

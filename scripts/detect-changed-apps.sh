@@ -28,7 +28,13 @@ while IFS= read -r file; do
   if [[ "$path" =~ ^scripts/build/ ]] || [[ "$path" == ".github/workflows/build.yml" ]] || [[ "$path" == ".github/workflows/reusable-build-images.yml" ]] || [[ "$path" == ".github/workflows/reusable-build-chain.yml" ]] || [[ "$path" == "scripts/detect-ci-matrices.rb" ]]; then
     rebuild_all_build_images=true
   fi
-  if [[ "$path" == onboard-baseline/* ]]; then
+  # Only files actually copied into the CI base invalidate robot latest.
+  # Local full recipes, source tooling and their tests have a separate lifecycle.
+  if [[ "$path" == onboard-baseline/baselines.json ||
+        "$path" == onboard-baseline/onboard-baseline.sh ||
+        "$path" == onboard-baseline/image-entrypoint.sh ||
+        "$path" == onboard-baseline/image-healthcheck.sh ||
+        "$path" == onboard-baseline/assert-base-only.sh ]]; then
     for app in onboard-sim-fs150-focal-noetic onboard-sim-scout-bionic-melodic onboard-sim-scout-focal-noetic onboard-sim-wheeltec-bionic-melodic; do
       if [[ ! " ${apps[*]} " =~ " ${app} " ]]; then
         apps+=("$app")
