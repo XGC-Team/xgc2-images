@@ -408,7 +408,7 @@ apps:
       - Jazzy
   - key: onboard-sim-fs150-focal-noetic
     name: Onboard sim FS150 Focal Noetic
-    version: 1.0.0
+    version: latest
     type: simulation
     image: ghcr.io/xgc-team/xgc2-images/onboard-sim-fs150-focal-noetic:latest
     app: ../apps/onboard-sim-fs150-focal-noetic/app.yml
@@ -421,7 +421,7 @@ apps:
       - FS150
   - key: onboard-sim-scout-bionic-melodic
     name: Onboard sim Scout Bionic Melodic
-    version: 1.0.0
+    version: latest
     type: simulation
     image: ghcr.io/xgc-team/xgc2-images/onboard-sim-scout-bionic-melodic:latest
     app: ../apps/onboard-sim-scout-bionic-melodic/app.yml
@@ -434,7 +434,7 @@ apps:
       - Scout
   - key: onboard-sim-scout-focal-noetic
     name: Onboard sim Scout Focal Noetic
-    version: 1.0.0
+    version: latest
     type: simulation
     image: ghcr.io/xgc-team/xgc2-images/onboard-sim-scout-focal-noetic:latest
     app: ../apps/onboard-sim-scout-focal-noetic/app.yml
@@ -447,7 +447,7 @@ apps:
       - Scout
   - key: onboard-sim-wheeltec-bionic-melodic
     name: Onboard sim Wheeltec Bionic Melodic
-    version: 1.0.0
+    version: latest
     type: simulation
     image: ghcr.io/xgc-team/xgc2-images/onboard-sim-wheeltec-bionic-melodic:latest
     app: ../apps/onboard-sim-wheeltec-bionic-melodic/app.yml
