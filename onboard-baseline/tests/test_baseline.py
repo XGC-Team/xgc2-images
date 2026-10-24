@@ -84,6 +84,7 @@ elif name == 'dpkg-query':
 elif name == 'apt-mark':
     print('\n'.join(state['installed']))
 elif name == 'apt-get':
+    while args[:1] == ['-o']: args=args[2:]
     if state.get('apt_failure'): sys.exit(100)
     if args[0] == 'install':
         for spec in (a for a in args[1:] if not a.startswith('-')):
@@ -95,6 +96,9 @@ elif name == 'apt-get':
         save()
 elif name == 'install-ros-apt-source.sh':
     (root / 'etc/apt/sources.list.d/ros1.list').write_text('fixture source\n')
+elif name == 'onboard-source-deps':
+    state['observed_proxy']={k:os.environ.get(k) for k in ('HTTP_PROXY','HTTPS_PROXY','http_proxy','https_proxy')}; save()
+    if state.get('source_deps_failure'): sys.exit(7)
 elif name == 'geographiclib-get-geoids':
     if state.get('geoid_download_failure'): sys.exit(9)
     (root / 'usr/share/GeographicLib/geoids/egm96-5.pgm').write_text('valid fixture')
@@ -185,13 +189,14 @@ class BaselineTests(unittest.TestCase):
         self.script.write_text(self.relocate((BASELINE / 'onboard-baseline.sh').read_text()))
         self.script.chmod(0o755)
         (self.root / 'configure-ubuntu-mirror.sh').write_text(self.relocate((BASELINE / 'configure-ubuntu-mirror.sh').read_text()))
+        (self.root / 'install-source-deps.sh').write_text('#!/bin/sh\nexec '+shlex.quote(str(self.root / 'bin/onboard-source-deps'))+' \"$@\"\n')
         (self.root / 'baselines.json').write_bytes((BASELINE / 'baselines.json').read_bytes())
         stub = self.root / 'stub.py'
         stub.write_text(STUB.replace('ROOT_LITERAL', repr(str(self.root))))
         stub.chmod(0o755)
         for name in ('id', 'dpkg', 'dpkg-query', 'apt-mark', 'apt-get',
                      'geographiclib-get-geoids', 'getent', 'install', 'runuser',
-                     'curl', 'gpg', 'systemctl', 'useradd'):
+                     'curl', 'gpg', 'systemctl', 'useradd', 'onboard-source-deps'):
             (self.root / 'bin' / name).symlink_to(stub)
         for name in ('rosversion', 'rospack', 'python', 'python3', 'ldd', 'roslaunch', 'GeoidEval'):
             (self.root / 'runtime-bin' / name).symlink_to(stub)
@@ -298,7 +303,7 @@ class BaselineTests(unittest.TestCase):
         self.env['BASH_ENV'] = str(wrapper)
         self.apply()
         self.assertEqual(self.calls('apt-get')[-1][1],
-                         ['install', '-y', '--no-install-recommends', '--no-remove', 'python3'])
+                         ['-o', 'Acquire::Retries=3', 'install', '-y', '--no-install-recommends', '--no-remove', 'python3'])
 
     def test_unknown_profile_fails_before_side_effects_even_with_inherited_values(self):
         self.env.update(ubuntu_codename='focal', ubuntu_version_id='20.04', ros_distro='noetic')
@@ -442,12 +447,21 @@ class BaselineTests(unittest.TestCase):
         self.apply(expected=1)
         self.assertEqual(self.calls('apt-get'), [])
 
+    def test_proxy_is_an_explicit_per_invocation_input(self):
+        url='http://192.0.2.4:7897'
+        before=self.config.read_bytes()
+        self.invoke('apply','--profile',self.profile,'--proxy',url)
+        state=json.loads((self.root/'state.json').read_text())
+        self.assertEqual(set(state['observed_proxy'].values()),{url})
+        self.assertEqual(self.config.read_bytes(),before)
+        self.assertNotIn('HTTP_PROXY',self.env)
+
     def test_apply_installs_only_missing_packages_then_is_noop(self):
         self.state['installed'].remove('curl'); self.save()
         before = self.config.read_bytes()
         self.apply(); self.apply()
         self.assertEqual([c[1] for c in self.calls('apt-get')],
-                         [['update'], ['install', '-y', '--no-install-recommends', '--no-remove', 'curl']])
+                         [['-o', 'Acquire::Retries=3', 'update'], ['-o', 'Acquire::Retries=3', 'install', '-y', '--no-install-recommends', '--no-remove', 'curl']])
         self.assertEqual(self.config.read_bytes(), before)
         self.assertEqual(self.calls('useradd'), [])
         self.assertEqual(self.calls('systemctl'), [])

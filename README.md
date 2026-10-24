@@ -7,7 +7,8 @@ GitHub hosts the catalog; GitHub Container Registry hosts the images.
 ## Robot onboard images
 
 `onboard-sim-{fs150-focal-noetic,scout-bionic-melodic,scout-focal-noetic,wheeltec-bionic-melodic}:latest`
-are third-party Ubuntu/ROS environments with matching robot accounts. They contain
+are prepared third-party Ubuntu/ROS runtime and build environments with matching
+robot accounts, compilers, toolchains and native dependency SDKs. They contain
 no XGC2 products, physical hardware drivers or machine identity. They open a ROS
 shell and are not directly usable as Agent robot environments. Product compilation, deployment and startup are explicit saved workflow steps.
 
@@ -188,14 +189,16 @@ scripts/gc-ghcr-images.sh --owner XGC-Team --repo xgc2-images
 
 `onboard-baseline/onboard-baseline.sh` is the only base-environment recipe.
 Image Dockerfiles call `apply`. A machine can call `check` or `apply` for one
-profile. An OS mismatch exits 3 and does not upgrade the system. The script
-aligns third-party dependencies and the robot account; it does not install
+profile. An OS mismatch exits 3 and does not upgrade the system. A proxy can be
+passed with `--proxy http://PROXY_HOST:PORT`; it applies only to that invocation.
+Without this argument, standard proxy environment variables are preserved. The script
+aligns third-party runtime/build dependencies and toolchains; it does not install
 Agent, XSim, adapters, controllers, algorithms or physical drivers.
 Profiles are `fs150-focal-noetic`, `scout-bionic-melodic`,
 `scout-focal-noetic`, and `wheeltec-bionic-melodic`.
 
 FS150 `check` requires `/usr/share/GeographicLib/geoids/egm96-5.pgm`. `apply`
-installs it with `geographiclib-get-geoids -p /usr/share/GeographicLib egm96-5`.
+downloads the upstream GeographicLib EGM96-5 dataset.
 Images create the onboard account with UID 1000: FS150 `marvsmart`, Scout Xavier
 `agilex`, Scout Orin `nvidia`, Wheeltec `wheeltec`. Real machines retain their
 existing board environment and account policy.
@@ -208,10 +211,8 @@ Builder/Deployer workflow described below, rather than extra baseline modes.
 For local builds, use `bash onboard-baseline/build-local-image.sh PROFILE linux/amd64`
 or `linux/arm64`. The selected profile uses its stable `:latest` tag. Omitting the platform builds amd64.
 The helper uses each Dockerfile's parent default and checks the built image's
-OS/architecture. `fs150-focal-noetic-sitl` is admitted only for amd64; its default
-parent uses the same tag suffix, or `PARENT_IMAGE` names an existing local amd64
-parent. Neither this helper nor an architecture check proves target operation.
-No image is pushed.
+OS/architecture. Neither this helper nor an architecture check proves target
+operation. No image is pushed.
 
 ## Local Smoke
 
@@ -268,4 +269,7 @@ Builder receives source directories, a project script, an image/platform and
 an output directory. The Deployer copies the output locally, into a running
 container or to an SSH host with SCP, and can run the supplied install script.
 Product-owned source build and install entries remain separate from CI package
-publication. No combined robot `full` image is produced.
+publication. Normal source compilation and artifact installation do not run
+APT/pip or prepare the environment; run the matching baseline first. The native
+third-party acados SDK is reused while product-owned integration comes from
+current sources. No combined robot `full` image is produced.

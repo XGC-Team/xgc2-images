@@ -56,7 +56,8 @@ class MirrorTests(unittest.TestCase):
                 legacy.write_text('deb [signed-by=/key.gpg] http://archive.ubuntu.com/ubuntu focal main universe\n'
                                   'deb https://security.ubuntu.com/ubuntu focal-security main\n'
                                   'deb http://ports.ubuntu.com/ubuntu-ports bionic-updates main\n'
-                                  'deb http://packages.ros.org/ros/ubuntu focal main\n')
+                                  'deb http://packages.ros.org/ros/ubuntu focal main\n'
+                                  'deb http://mirrors.tuna.tsinghua.edu.cn/ros/ubuntu focal main\n')
                 modern=apt/'sources.list.d/ubuntu.sources'
                 modern.write_text('Types: deb\nURIs: https://mirrors.ustc.edu.cn/ubuntu\nSuites: focal focal-updates\nSigned-By: /ubuntu.gpg\n')
                 script=root/'mirror.sh'
@@ -70,6 +71,7 @@ class MirrorTests(unittest.TestCase):
                 self.assertIn('bionic-updates main',legacy.read_text())
                 self.assertIn('signed-by=/key.gpg',legacy.read_text())
                 self.assertIn('http://packages.ros.org/ros/ubuntu',legacy.read_text())
+                self.assertIn('https://mirrors.tuna.tsinghua.edu.cn/ros/ubuntu',legacy.read_text())
                 self.assertIn('URIs: '+expected,modern.read_text())
                 before=(legacy.read_text(),modern.read_text());run()
                 self.assertEqual((legacy.read_text(),modern.read_text()),before)

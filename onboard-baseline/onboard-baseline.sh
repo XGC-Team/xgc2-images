@@ -12,7 +12,7 @@ EGM96_5_URL="https://downloads.sourceforge.net/project/geographiclib/geoids-dist
 EGM96_5_ARCHIVE_SHA256="c46224f8f723dc915d97179f4e1580a98d6c742fe2b82cd8fef0ecaaad13e614"
 
 usage() {
-  echo "usage: onboard-baseline.sh check|apply|snapshot --profile <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic>" >&2
+  echo "usage: onboard-baseline.sh check|apply|snapshot --profile <fs150-focal-noetic|scout-bionic-melodic|scout-focal-noetic|wheeltec-bionic-melodic> [--proxy URL]" >&2
   echo "       onboard-baseline.sh manualdiff --before SNAPSHOT --after SNAPSHOT" >&2
   exit 2
 }
@@ -60,9 +60,11 @@ PY
   exit "$rc"
 fi
 profile=""
+proxy=""
 while (($#)); do
   case "$1" in
     --profile) [[ $# -ge 2 && -n "$2" && "$2" != --* ]] || usage; profile="$2"; shift 2 ;;
+    --proxy) [[ $# -ge 2 && -n "$2" && "$2" != --* ]] || usage; proxy="$2"; shift 2 ;;
     *) usage ;;
   esac
 done
@@ -71,6 +73,10 @@ if [[ -z "$profile" ]]; then
   usage
 fi
 [[ -f "$BASELINES" ]] || usage
+if [[ -n "$proxy" ]]; then
+  # Per-invocation transport only. No global APT, shell or network configuration.
+  export HTTP_PROXY="$proxy" HTTPS_PROXY="$proxy" http_proxy="$proxy" https_proxy="$proxy"
+fi
 
 # Melodic's ROS core parent has Python 2, not necessarily Python 3 yet.
 # Read the same JSON with its existing interpreter; apply then installs python3
@@ -143,6 +149,8 @@ for package in "${packages[@]}"; do
   fi
 done
 
+export ONBOARD_BASELINE_PROFILE="$profile"
+
 if [[ "$mode" == "check" ]]; then
   if ((${#missing[@]})); then
     fail "missing packages: ${missing[*]}" 4
@@ -192,6 +200,7 @@ fi
 ROS
   )
   check_runtime || fail "runtime check failed for ${profile}" 4
+  bash "$ROOT/install-source-deps.sh" check || fail "source build dependencies are incomplete" 4
   printf 'onboard-baseline: %s matches %s %s arch=%s user=%s account=%s\n' "$profile" "$ubuntu_codename" "$ros_distro" "$host_arch" "$(id -un)" "$profile_user"
   exit 0
 fi
@@ -249,9 +258,10 @@ if [[ "$mode" == "apply" ]]; then
   bash "$ROOT/configure-ubuntu-mirror.sh"
   if ((${#install_specs[@]})); then
     ensure_ros_source
-    apt-get update
-    apt-get install -y --no-install-recommends --no-remove "${install_specs[@]}"
+    apt-get -o Acquire::Retries=3 update
+    apt-get -o Acquire::Retries=3 install -y --no-install-recommends --no-remove "${install_specs[@]}"
   fi
+  bash "$ROOT/install-source-deps.sh" apply
   geoid_path=/usr/share/GeographicLib/geoids/egm96-5.pgm
   if [[ "$profile" == "fs150-focal-noetic" && ! -s "$geoid_path" ]]; then
     install_fs150_geoid

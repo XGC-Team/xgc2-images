@@ -33,6 +33,8 @@ while IFS= read -r file; do
   if [[ "$path" == onboard-baseline/baselines.json ||
         "$path" == onboard-baseline/onboard-baseline.sh ||
         "$path" == onboard-baseline/configure-ubuntu-mirror.sh ||
+        "$path" == onboard-baseline/install-source-deps.sh ||
+        "$path" == scripts/build/install-toolchains.sh ||
         "$path" == onboard-baseline/image-entrypoint.sh ||
         "$path" == onboard-baseline/image-healthcheck.sh ||
         "$path" == onboard-baseline/assert-base-only.sh ]]; then

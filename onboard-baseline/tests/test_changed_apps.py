@@ -54,6 +54,10 @@ class ChangedAppsTest(unittest.TestCase):
         self.write('onboard-baseline/configure-ubuntu-mirror.sh','mirror')
         self.assertEqual(set(self.changed()), set(APPS))
 
+    def test_source_sdk_is_a_real_image_input(self):
+        self.write('onboard-baseline/install-source-deps.sh','sdk')
+        self.assertEqual(set(self.changed()), set(APPS))
+
     def test_one_robot_dockerfile_only_rebuilds_that_profile(self):
         self.write('apps/'+APPS[0]+'/Dockerfile','FROM other\n')
         self.assertEqual(self.changed(), [APPS[0]])
