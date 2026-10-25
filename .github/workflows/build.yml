@@ -256,7 +256,12 @@ jobs:
 
       - name: Select shared environment scripts
         id: tool-scripts
-        run: echo "context=$(python3 scripts/tool-scripts-context.py)" >> "$GITHUB_OUTPUT"
+        run: |
+          script_lock=tool-scripts.json
+          if [[ '${{ matrix.app }}' == onboard-sim-* ]]; then
+            script_lock=onboard-baseline/tool-scripts.json
+          fi
+          echo "context=$(python3 scripts/tool-scripts-context.py --lock "$script_lock")" >> "$GITHUB_OUTPUT"
 
       - uses: docker/build-push-action@v6
         with:
@@ -437,7 +442,12 @@ jobs:
 
       - name: Select shared environment scripts
         id: tool-scripts
-        run: echo "context=$(python3 scripts/tool-scripts-context.py)" >> "$GITHUB_OUTPUT"
+        run: |
+          script_lock=tool-scripts.json
+          if [[ '${{ matrix.app }}' == onboard-sim-* ]]; then
+            script_lock=onboard-baseline/tool-scripts.json
+          fi
+          echo "context=$(python3 scripts/tool-scripts-context.py --lock "$script_lock")" >> "$GITHUB_OUTPUT"
 
       - uses: docker/build-push-action@v6
         with:

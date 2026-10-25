@@ -65,6 +65,10 @@ class ChangedAppsTest(unittest.TestCase):
         self.write('tool-scripts.json','sdk')
         self.assertEqual(self.changed(), ['compiler'])
 
+    def test_build_workflow_revalidates_robot_consumers_without_rebuilding_compilers(self):
+        self.write('.github/workflows/build.yml', 'context selection')
+        self.assertEqual(set(self.changed()), set(APPS))
+
     def test_one_robot_dockerfile_only_rebuilds_that_profile(self):
         self.write('apps/'+APPS[0]+'/Dockerfile','FROM other\n')
         self.assertEqual(self.changed(), [APPS[0]])
