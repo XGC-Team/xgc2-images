@@ -9,3 +9,5 @@ __pycache__/
 onboard-baseline/.local/
 onboard-baseline/FREEZE.md
 onboard-baseline/OWNED-FILES.sha256
+
+.work/

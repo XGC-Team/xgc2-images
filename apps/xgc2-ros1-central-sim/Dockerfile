@@ -54,8 +54,8 @@ COPY apps/xgc2-ros1-central-sim/scripts/healthcheck.sh /usr/local/bin/xgc2-centr
 COPY apps/xgc2-ros1-central-sim/scripts/smoke-simulation.sh /usr/local/bin/xgc2-central-sim-smoke
 COPY apps/xgc2-ros1-central-sim/scripts/qgroundcontrol.sh /usr/local/bin/qgroundcontrol
 COPY apps/xgc2-ros1-central-sim/scripts/xgc-process-launcher /usr/local/bin/xgc-process-launcher
-COPY onboard-baseline/baselines.json /opt/xgc2/onboard-baseline/baselines.json
-COPY onboard-baseline/onboard-baseline.sh /opt/xgc2/onboard-baseline/onboard-baseline.sh
+COPY --from=tool-scripts onboard-baseline/baselines.json /opt/xgc2/onboard-baseline/baselines.json
+COPY --from=tool-scripts onboard-baseline/onboard-baseline.sh /opt/xgc2/onboard-baseline/onboard-baseline.sh
 COPY onboard-baseline/image-entrypoint.sh /opt/xgc2/onboard-baseline/image-entrypoint.sh
 COPY --from=execution-runner-build /out/xgc-process-runner /usr/local/bin/xgc-process-runner
 

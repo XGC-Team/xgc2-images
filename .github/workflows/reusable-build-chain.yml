@@ -154,6 +154,7 @@ jobs:
 
             echo "::group::Build ${app} ${ARCH}"
             docker buildx build \
+              --build-context "tool-scripts=$(python3 scripts/tool-scripts-context.py)" \
               --file "${file}" \
               --platform "${PLATFORM}" \
               --load \

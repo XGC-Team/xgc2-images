@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-ARG PARENT_IMAGE=ghcr.io/xgc-team/xgc2-images/xgc2-build-bionic-dev:1.0.0
+ARG PARENT_IMAGE=ghcr.io/xgc-team/xgc2-images/xgc2-build-bionic-dev:1.0.1
 FROM ${PARENT_IMAGE}
 
 LABEL org.opencontainers.image.title="XGC2 bionic melodic CI ros"
@@ -18,6 +18,8 @@ ENV UV_PYTHON_INSTALL_DIR=/usr/local/share/uv/python
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY scripts/build/ /tmp/xgc2-build/
+COPY --from=tool-scripts onboard-baseline/configure-ubuntu-mirror.sh /tmp/xgc2-build/
+COPY --from=tool-scripts scripts/build/install-ros-apt-source.sh /tmp/xgc2-build/
 COPY apps/xgc2-build-bionic-ros-melodic/scripts/healthcheck.sh /usr/local/bin/xgc2-build-healthcheck
 
 RUN chmod +x /tmp/xgc2-build/*.sh /usr/local/bin/xgc2-build-healthcheck \

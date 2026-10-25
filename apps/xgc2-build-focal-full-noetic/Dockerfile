@@ -18,6 +18,7 @@ ENV UV_PYTHON_INSTALL_DIR=/usr/local/share/uv/python
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY scripts/build/ /tmp/xgc2-build/
+COPY --from=tool-scripts onboard-baseline/configure-ubuntu-mirror.sh /tmp/xgc2-build/
 COPY apps/xgc2-build-focal-full-noetic/scripts/healthcheck.sh /usr/local/bin/xgc2-build-healthcheck
 COPY apps/xgc2-build-focal-full-noetic/packages.txt /tmp/xgc2-full-noetic-packages.txt
 COPY apps/xgc2-build-focal-full-noetic/python-vision-requirements.lock.txt /tmp/xgc2-python-vision-requirements.lock.txt

@@ -68,6 +68,7 @@ if [[ -f /etc/os-release ]]; then
   fi
 fi
 
+bash "$(dirname "${BASH_SOURCE[0]}")/configure-ubuntu-mirror.sh"
 apt-get update
 apt-get install -y --no-install-recommends "${packages[@]}"
 apt-get clean

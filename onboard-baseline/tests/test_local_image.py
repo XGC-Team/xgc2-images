@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import textwrap
 import unittest
@@ -26,10 +27,7 @@ if args[:2] == ["image", "inspect"]:
         sys.stdout.write("tag=local id=sha256:abc\n")
     raise SystemExit(0)
 if args[:1] == ["build"]:
-    if "--build-context" in args:
-        value = args[args.index("--build-context") + 1]
-        context = value.split("=", 1)[1]
-        open(os.path.join(context, "xgc2-agent.deb"), "rb").read(1)
+    assert os.path.isfile(os.path.join(args[args.index("--build-context") + 1].split("=", 1)[1], "onboard-baseline", "baselines.json"))
     raise SystemExit(0)
 raise SystemExit("unexpected docker argv")
 '''
@@ -64,6 +62,12 @@ class LocalImageTest(unittest.TestCase):
         stub = stub_dir / "docker"
         stub.write_text(DOCKER_STUB)
         stub.chmod(0o755)
+        context = self.root / 'context/onboard-baseline'
+        context.mkdir(parents=True)
+        (context / 'baselines.json').write_text('{}')
+        python = stub_dir / 'python3'
+        python.write_text('#!/bin/sh\ncase "$1" in */scripts/tool-scripts-context.py) printf "%s\\n" "' + str(context.parent) + '";; *) exec "' + sys.executable + '" "$@";; esac\n')
+        python.chmod(0o755)
         self.env = os.environ.copy()
         self.env.pop("ONBOARD_AGENT_DEB", None)
         self.env.pop("ONBOARD_BASELINE_AGENT_VERSION", None)

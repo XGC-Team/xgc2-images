@@ -22,3 +22,4 @@ jobs:
       - name: Image change selection checks
         run: |
           python3 -m unittest discover -s onboard-baseline/tests -p test_changed_apps.py -v
+          python3 -m unittest discover -s onboard-baseline/tests -p test_tool_scripts_context.py -v

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-ARG PARENT_IMAGE=ghcr.io/xgc-team/xgc2-images/xgc2-build-noble-base:1.0.0
+ARG PARENT_IMAGE=ghcr.io/xgc-team/xgc2-images/xgc2-build-noble-base:1.0.1
 FROM ${PARENT_IMAGE}
 
 LABEL org.opencontainers.image.title="XGC2 noble CI dev"
@@ -16,6 +16,8 @@ ENV UV_PYTHON_INSTALL_DIR=/usr/local/share/uv/python
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY scripts/build/ /tmp/xgc2-build/
+COPY --from=tool-scripts onboard-baseline/configure-ubuntu-mirror.sh /tmp/xgc2-build/
+COPY --from=tool-scripts scripts/build/install-toolchains.sh /tmp/xgc2-build/
 COPY apps/xgc2-build-noble-dev/scripts/healthcheck.sh /usr/local/bin/xgc2-build-healthcheck
 COPY apps/xgc2-build-focal-dev/xrpc/ /tmp/xgc2-xrpc-deps/
 

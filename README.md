@@ -187,7 +187,7 @@ scripts/gc-ghcr-images.sh --owner XGC-Team --repo xgc2-images
 
 ## Onboard simulation baselines
 
-`onboard-baseline/onboard-baseline.sh` is the only base-environment recipe.
+The selected tool-scripts context supplies the only base-environment recipe.
 Image Dockerfiles call `apply`. A machine can call `check` or `apply` for one
 profile. An OS mismatch exits 3 and does not upgrade the system. A proxy can be
 passed with `--proxy http://PROXY_HOST:PORT`; it applies only to that invocation.
@@ -240,7 +240,7 @@ The centralized XGC2 ROS1 simulation image additionally verifies its locked
 product set and launch files:
 
 ```bash
-docker build -t xgc2-ros1-central-sim:local apps/xgc2-ros1-central-sim
+docker build --build-context "tool-scripts=$(python3 scripts/tool-scripts-context.py)" -f apps/xgc2-ros1-central-sim/Dockerfile -t xgc2-ros1-central-sim:local .
 docker run --rm xgc2-ros1-central-sim:local \
   /usr/local/bin/xgc2-central-sim-healthcheck
 docker run --rm xgc2-ros1-central-sim:local \
@@ -273,3 +273,25 @@ publication. Normal source compilation and artifact installation do not run
 APT/pip or prepare the environment; run the matching baseline first. The native
 third-party acados SDK is reused while product-owned integration comes from
 current sources. No combined robot `full` image is produced.
+
+## Shared environment scripts
+
+`tool-scripts.json` selects an immutable, allowlisted public script build context
+from tool-scripts. `scripts/tool-scripts-context.py` downloads and safely expands
+that release into `.work/tool-scripts/<revision>/`, a disposable image-build cache
+ignored by Git. HTTP named contexts do not unpack archives, so builds use this
+materialized directory. All image builds using shared scripts require the named context:
+
+```sh
+docker buildx build --build-context "tool-scripts=$(python3 scripts/tool-scripts-context.py)" -f apps/<app>/Dockerfile .
+```
+
+The standard CI workflows and `onboard-baseline/build-local-image.sh` supply it.
+Update the committed context URL after the corresponding tool-scripts publication
+has passed HTTPS readback. Do not restore local copies of baseline or toolchain
+implementations. Image orchestration, entrypoints and image-specific package lists
+remain here; baseline behavior tests live with tool-scripts. Robot images install
+third-party runtime/build dependencies, suppress installation-time daemon startup,
+and contain no Agent/XSim or other first-party products.
+
+Build app scaffolding (`scripts/build/generate-build-apps.py`) creates only missing app trees; existing definitions and release versions are maintained in their app.yml/Dockerfile and are never regenerated over local changes. Build APT preparation also calls the selected shared mirror helper.

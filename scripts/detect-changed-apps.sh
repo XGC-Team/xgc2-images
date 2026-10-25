@@ -25,16 +25,13 @@ while IFS= read -r file; do
   [[ -z "$file" ]] && continue
   status="${file%%$'\t'*}"
   path="${file#*$'\t'}"
-  if [[ "$path" =~ ^scripts/build/ ]] || [[ "$path" == ".github/workflows/build.yml" ]] || [[ "$path" == ".github/workflows/reusable-build-images.yml" ]] || [[ "$path" == ".github/workflows/reusable-build-chain.yml" ]] || [[ "$path" == "scripts/detect-ci-matrices.rb" ]]; then
+  if [[ "$path" == tool-scripts.json || "$path" == scripts/tool-scripts-context.py ]] || [[ "$path" =~ ^scripts/build/ ]] || [[ "$path" == ".github/workflows/build.yml" ]] || [[ "$path" == ".github/workflows/reusable-build-images.yml" ]] || [[ "$path" == ".github/workflows/reusable-build-chain.yml" ]] || [[ "$path" == "scripts/detect-ci-matrices.rb" ]]; then
     rebuild_all_build_images=true
   fi
   # Only files actually copied into the CI base invalidate robot latest.
   # Local developer recipes, source tooling and their tests have a separate lifecycle.
-  if [[ "$path" == onboard-baseline/baselines.json ||
-        "$path" == onboard-baseline/onboard-baseline.sh ||
-        "$path" == onboard-baseline/configure-ubuntu-mirror.sh ||
-        "$path" == onboard-baseline/install-source-deps.sh ||
-        "$path" == scripts/build/install-toolchains.sh ||
+  if [[ "$path" == tool-scripts.json ||
+        "$path" == scripts/tool-scripts-context.py ||
         "$path" == onboard-baseline/image-entrypoint.sh ||
         "$path" == onboard-baseline/image-healthcheck.sh ||
         "$path" == onboard-baseline/assert-base-only.sh ]]; then
@@ -43,6 +40,11 @@ while IFS= read -r file; do
         apps+=("$app")
       fi
     done
+  fi
+  if [[ "$path" == tool-scripts.json || "$path" == scripts/tool-scripts-context.py || "$path" == onboard-baseline/image-entrypoint.sh ]] && [[ -d apps/xgc2-ros1-central-sim ]]; then
+    if [[ ! " ${apps[*]} " =~ " xgc2-ros1-central-sim " ]]; then
+      apps+=(xgc2-ros1-central-sim)
+    fi
   fi
   if [[ "$path" =~ ^apps/([^/]+)/ ]]; then
     app="${BASH_REMATCH[1]}"

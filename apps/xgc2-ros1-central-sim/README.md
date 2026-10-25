@@ -56,7 +56,7 @@ intentionally excluded. This image is released and accepted for amd64 only.
 ## Local build
 
 ```bash
-docker build -t xgc2-ros1-central-sim:local .
+docker build --build-context "tool-scripts=$(python3 scripts/tool-scripts-context.py)" -f apps/xgc2-ros1-central-sim/Dockerfile -t xgc2-ros1-central-sim:local .
 docker run --rm xgc2-ros1-central-sim:local \
   /usr/local/bin/xgc2-central-sim-healthcheck
 docker run --rm xgc2-ros1-central-sim:local \

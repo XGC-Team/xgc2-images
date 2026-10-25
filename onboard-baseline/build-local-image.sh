@@ -24,6 +24,7 @@ for variable in ONBOARD_AGENT_DEB ONBOARD_BASELINE_AGENT_VERSION ONBOARD_BASELIN
 done
 tag="onboard-sim-${PROFILE}:latest"
 DOCKER_BUILDKIT=1 docker build --platform "$PLATFORM" --pull \
+  --build-context "tool-scripts=$(python3 "$ROOT/scripts/tool-scripts-context.py")" \
   --build-arg "ONBOARD_APT_MIRROR=${ONBOARD_APT_MIRROR:-}" \
   -f "${ROOT}/apps/onboard-sim-${PROFILE}/Dockerfile" -t "$tag" "$ROOT"
 actual="$(docker image inspect "$tag" --format '{{.Os}}/{{.Architecture}}')"

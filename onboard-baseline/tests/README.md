@@ -7,9 +7,7 @@ Run the nonprivileged checks from the image repository root:
 
 ```bash
 python3 -m unittest discover -s onboard-baseline/tests -p test_base_boundary.py -v
-python3 -m unittest discover -s onboard-baseline/tests -p test_baseline.py -v
 python3 -m unittest discover -s onboard-baseline/tests -p test_local_image.py -v
-bash -n onboard-baseline/onboard-baseline.sh
 bash -n onboard-baseline/build-local-image.sh
 git diff --check
 ```
@@ -41,3 +39,5 @@ The image smoke uses a private network, a read-only root and temporary caches.
 It checks repeated base preparation, package state and ROS as the robot account.
 Agent, adapters, XSim, controllers and algorithms are absent from this base; their
 source-built artifacts are installed through an explicit Builder/Deployer workflow.
+
+Baseline and mirror behavior tests now belong to tool-scripts; images tests cover image ownership, entrypoints, selected context and build arguments.

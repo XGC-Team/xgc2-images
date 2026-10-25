@@ -1,15 +1,15 @@
 # syntax=docker/dockerfile:1.7
 ARG PARENT_IMAGE=ros:noetic-ros-core-focal
 FROM scratch AS runtime-sources
-COPY onboard-baseline/baselines.json /onboard-baseline/baselines.json
-COPY onboard-baseline/onboard-baseline.sh /onboard-baseline/onboard-baseline.sh
-COPY onboard-baseline/configure-ubuntu-mirror.sh /onboard-baseline/configure-ubuntu-mirror.sh
-COPY onboard-baseline/install-source-deps.sh /onboard-baseline/install-source-deps.sh
-COPY scripts/build/install-toolchains.sh /onboard-baseline/install-toolchains.sh
+COPY --from=tool-scripts onboard-baseline/baselines.json /onboard-baseline/baselines.json
+COPY --from=tool-scripts onboard-baseline/onboard-baseline.sh /onboard-baseline/onboard-baseline.sh
+COPY --from=tool-scripts onboard-baseline/configure-ubuntu-mirror.sh /onboard-baseline/configure-ubuntu-mirror.sh
+COPY --from=tool-scripts onboard-baseline/install-source-deps.sh /onboard-baseline/install-source-deps.sh
+COPY --from=tool-scripts scripts/build/install-toolchains.sh /onboard-baseline/install-toolchains.sh
 COPY onboard-baseline/image-entrypoint.sh /onboard-baseline/image-entrypoint.sh
 COPY onboard-baseline/image-healthcheck.sh /onboard-baseline/image-healthcheck.sh
 COPY onboard-baseline/assert-base-only.sh /onboard-baseline/assert-base-only.sh
-COPY scripts/build/install-ros-apt-source.sh /onboard-baseline/install-ros-apt-source.sh
+COPY --from=tool-scripts scripts/build/install-ros-apt-source.sh /onboard-baseline/install-ros-apt-source.sh
 
 FROM ${PARENT_IMAGE}
 
@@ -28,7 +28,10 @@ RUN bash <<'EOF'
 set -euo pipefail
 useradd --uid 1000 --create-home --shell /bin/bash --user-group "$ONBOARD_BASELINE_USER"
 chmod 0755 /opt/xgc2/onboard-baseline/*.sh
-/opt/xgc2/onboard-baseline/onboard-baseline.sh apply --profile fs150-focal-noetic
+# No daemon startup during image preparation.
+printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d
+chmod 0755 /usr/sbin/policy-rc.d
+/opt/xgc2/onboard-baseline/onboard-baseline.sh apply --profile fs150-focal-noetic --replace-timesyncd
 runuser -u "$ONBOARD_BASELINE_USER" -- /opt/xgc2/onboard-baseline/onboard-baseline.sh check --profile "$ONBOARD_BASELINE_PROFILE"
 rm -rf /var/cache/xgc2-onboard /var/lib/apt/lists/*
 EOF

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Generate the xgc2-build-* app trees from the shared package lists."""
+"""Scaffold missing build apps; never overwrite maintained image definitions."""
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[2]
 APPS = ROOT / "apps"
@@ -36,6 +37,16 @@ TREES = [
         "layers": ("base", "dev", "ros", "full"),
     },
 ]
+
+
+def selected_version(key: str) -> str:
+    metadata = APPS / key / "app.yml"
+    if metadata.is_file():
+        match = re.search(r"^version:\s*(\S+)", metadata.read_text(), re.M)
+        if not match:
+            raise ValueError("Missing version: " + str(metadata))
+        return match[1]
+    return VERSION
 
 
 def app_key(ubuntu: str, layer: str, ros: str | None) -> str:
@@ -80,7 +91,7 @@ def description(ubuntu: str, layer: str, ros: str | None) -> str:
 
 def dockerfile(ubuntu: str, layer: str, ros: str | None, from_os: str, parent: str | None) -> str:
     if parent:
-        default_parent = f"{REGISTRY}/{parent}:{VERSION}"
+        default_parent = f"{REGISTRY}/{parent}:{selected_version(parent)}"
     else:
         default_parent = from_os
     env = [
@@ -151,6 +162,11 @@ def dockerfile(ubuntu: str, layer: str, ros: str | None, from_os: str, parent: s
         ]
     )
     run = " \\\n && ".join(run_parts)
+    shared_copies = ""
+    if layer == "dev":
+        shared_copies = "COPY --from=tool-scripts scripts/build/install-toolchains.sh /tmp/xgc2-build/"
+    elif layer == "ros":
+        shared_copies = "COPY --from=tool-scripts scripts/build/install-ros-apt-source.sh /tmp/xgc2-build/"
     return f"""# syntax=docker/dockerfile:1.7
 ARG PARENT_IMAGE={default_parent}
 FROM ${{PARENT_IMAGE}}
@@ -163,6 +179,8 @@ LABEL org.opencontainers.image.source="https://github.com/XGC-Team/xgc2-images"
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY scripts/build/ /tmp/xgc2-build/
+COPY --from=tool-scripts onboard-baseline/configure-ubuntu-mirror.sh /tmp/xgc2-build/
+{shared_copies}
 COPY apps/{app_key(ubuntu, layer, ros)}/scripts/healthcheck.sh /usr/local/bin/xgc2-build-healthcheck
 
 RUN {run}
@@ -350,7 +368,9 @@ def write_app(ubuntu: str, layer: str, ros: str | None, from_os: str) -> str:
     key = app_key(ubuntu, layer, ros)
     parent = parent_key(ubuntu, layer, ros)
     dest = APPS / key
-    dest.mkdir(parents=True, exist_ok=True)
+    if dest.exists():
+        return key
+    dest.mkdir(parents=True)
     (dest / "scripts").mkdir(exist_ok=True)
     (dest / "Dockerfile").write_text(dockerfile(ubuntu, layer, ros, from_os, parent))
     (dest / "app.yml").write_text(app_yml(ubuntu, layer, ros, parent, from_os))
@@ -362,38 +382,13 @@ def write_app(ubuntu: str, layer: str, ros: str | None, from_os: str) -> str:
     return key
 
 
-def catalog_entries() -> list[str]:
-    blocks = []
-    for tree in TREES:
-        for layer in tree["layers"]:
-            ros = tree["ros"] if layer in {"ros", "full"} else None
-            key = app_key(tree["ubuntu"], layer, ros)
-            tags = ["Build", "CI", tree["ubuntu"].capitalize()]
-            if ros:
-                tags.append(ros.capitalize())
-            tag_yaml = "\n".join(f"      - {t}" for t in tags)
-            blocks.append(
-                f"""  - key: {key}
-    name: {title(tree["ubuntu"], layer, ros)}
-    version: {VERSION}
-    type: build
-    image: {REGISTRY}/{key}:{VERSION}
-    app: ../apps/{key}/app.yml
-    data: ../apps/{key}/data.yml
-    compose: ../apps/{key}/docker-compose.yml
-    tags:
-{tag_yaml}"""
-            )
-    return blocks
-
-
 def main() -> None:
     keys = []
     for tree in TREES:
         for layer in tree["layers"]:
             ros = tree["ros"] if layer in {"ros", "full"} else None
             keys.append(write_app(tree["ubuntu"], layer, ros, tree["from_os"]))
-    print("generated", len(keys), "apps")
+    print("available", len(keys), "apps (existing definitions preserved)")
     for key in keys:
         print(" ", key)
 

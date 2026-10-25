@@ -19,7 +19,7 @@ class ChangedAppsTest(unittest.TestCase):
             path = self.root/'apps'/app
             path.mkdir(parents=True)
             (path/'Dockerfile').write_text('FROM scratch\n')
-        self.write('onboard-baseline/baselines.json', '{}')
+        self.write('tool-scripts.json', '{}')
         self.git('add','.')
         self.git('-c','user.name=Test','-c','user.email=test@localhost','commit','-qm','fixture')
         self.base = self.git('rev-parse','HEAD')
@@ -43,7 +43,7 @@ class ChangedAppsTest(unittest.TestCase):
         self.assertEqual(self.changed(), [])
 
     def test_base_inputs_rebuild_all_four_profiles(self):
-        self.write('onboard-baseline/baselines.json','{"changed":true}')
+        self.write('tool-scripts.json','{"changed":true}')
         self.assertEqual(set(self.changed()), set(APPS))
 
     def test_base_entrypoint_is_a_real_image_input(self):
@@ -51,11 +51,11 @@ class ChangedAppsTest(unittest.TestCase):
         self.assertEqual(set(self.changed()), set(APPS))
 
     def test_mirror_policy_is_a_real_image_input(self):
-        self.write('onboard-baseline/configure-ubuntu-mirror.sh','mirror')
+        self.write('scripts/tool-scripts-context.py','mirror')
         self.assertEqual(set(self.changed()), set(APPS))
 
     def test_source_sdk_is_a_real_image_input(self):
-        self.write('onboard-baseline/install-source-deps.sh','sdk')
+        self.write('tool-scripts.json','sdk')
         self.assertEqual(set(self.changed()), set(APPS))
 
     def test_one_robot_dockerfile_only_rebuilds_that_profile(self):

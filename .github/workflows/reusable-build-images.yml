@@ -77,8 +77,13 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Select shared environment scripts
+        id: tool-scripts
+        run: echo "context=$(python3 scripts/tool-scripts-context.py)" >> "$GITHUB_OUTPUT"
+
       - uses: docker/build-push-action@v6
         with:
+          build-contexts: tool-scripts=${{ steps.tool-scripts.outputs.context }}
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
           platforms: ${{ matrix.platform }}

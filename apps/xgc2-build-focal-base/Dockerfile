@@ -12,6 +12,7 @@ ENV LC_ALL=en_US.UTF-8
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY scripts/build/ /tmp/xgc2-build/
+COPY --from=tool-scripts onboard-baseline/configure-ubuntu-mirror.sh /tmp/xgc2-build/
 COPY apps/xgc2-build-focal-base/scripts/healthcheck.sh /usr/local/bin/xgc2-build-healthcheck
 
 RUN chmod +x /tmp/xgc2-build/*.sh /usr/local/bin/xgc2-build-healthcheck \
