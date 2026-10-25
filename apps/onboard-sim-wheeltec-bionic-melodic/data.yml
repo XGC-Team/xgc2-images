@@ -7,7 +7,7 @@ additionalProperties:
     - Simulation
   shortDescEn: Wheeltec Nano bionic melodic onboard simulation base
   description:
-    en: Wheeltec Nano bionic melodic onboard simulation base. Third-party ROS baseline; no XGC2 products or physical drivers.
+    en: Wheeltec Nano bionic melodic onboard simulation base. Prepared ROS runtime and build dependencies; applications and physical drivers are not included.
   type: simulation
   crossVersionUpdate: false
   limit: 0

@@ -5,9 +5,9 @@ COPY --from=tool-scripts onboard-baseline/baselines.json /onboard-baseline/basel
 COPY --from=tool-scripts onboard-baseline/onboard-baseline.sh /onboard-baseline/onboard-baseline.sh
 COPY --from=tool-scripts onboard-baseline/configure-ubuntu-mirror.sh /onboard-baseline/configure-ubuntu-mirror.sh
 COPY --from=tool-scripts onboard-baseline/prepare-apt.sh /onboard-baseline/prepare-apt.sh
+COPY --from=tool-scripts onboard-baseline/configure-product-apt.sh /onboard-baseline/configure-product-apt.sh
 COPY --from=tool-scripts onboard-baseline/install-source-deps.sh /onboard-baseline/install-source-deps.sh
 COPY --from=tool-scripts scripts/build/install-toolchains.sh /onboard-baseline/install-toolchains.sh
-COPY onboard-baseline/image-entrypoint.sh /onboard-baseline/image-entrypoint.sh
 COPY onboard-baseline/image-healthcheck.sh /onboard-baseline/image-healthcheck.sh
 COPY onboard-baseline/assert-base-only.sh /onboard-baseline/assert-base-only.sh
 COPY --from=tool-scripts scripts/build/install-ros-apt-source.sh /onboard-baseline/install-ros-apt-source.sh
@@ -19,8 +19,7 @@ ENV ONBOARD_BASELINE_PROFILE=wheeltec-bionic-melodic
 ENV ONBOARD_BASELINE_USER=wheeltec
 ENV ROS_DISTRO=melodic
 ENV DISABLE_ROS1_EOL_WARNINGS=1
-ENV RUSTUP_HOME=/usr/local/rustup CARGO_HOME=/usr/local/cargo
-ENV PATH="/usr/local/go/bin:/usr/local/cargo/bin:${PATH}"
+ENV PATH="/usr/local/go/bin:${PATH}"
 
 COPY --from=runtime-sources /onboard-baseline/ /opt/xgc2/onboard-baseline/
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 profile="${ONBOARD_BASELINE_PROFILE:?}"
-# The shared check loads ROS and validates this image's runtime dependencies.
-# Agent installation and Core registration belong to the powered environment.
-/opt/xgc2/onboard-baseline/assert-base-only.sh
+# Runtime readiness checks the same dependencies as physical setup.
+# Base package exclusion is enforced once by the Dockerfile during image creation.
 exec /opt/xgc2/onboard-baseline/onboard-baseline.sh check --profile "$profile"

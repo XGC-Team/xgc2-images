@@ -2,7 +2,7 @@ key: onboard-sim-fs150-focal-noetic
 name: FS150 focal noetic onboard simulation base
 version: latest
 image: ghcr.io/xgc-team/xgc2-images/onboard-sim-fs150-focal-noetic:latest
-description: FS150 focal noetic onboard simulation base. Third-party ROS environment and robot account; no XGC2 products or physical drivers.
+description: FS150 focal noetic onboard simulation base. Prepared ROS runtime and build dependencies with a robot account; applications and physical drivers are not included.
 type: simulation
 repositoryContext: true
 tags:

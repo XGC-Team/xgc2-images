@@ -1,9 +1,12 @@
 """Release extraction must work without executing scripts or trusting tar paths."""
 import importlib.util
 import io
+import json
 from pathlib import Path
 import tarfile
 import tempfile
+import subprocess
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -28,6 +31,19 @@ def bundle(extra=None):
 
 
 class ContextTest(unittest.TestCase):
+    def test_consumer_manifest_selects_its_own_immutable_release(self):
+        with tempfile.TemporaryDirectory() as directory:
+            lock = Path(directory) / 'robot-scripts.json'
+            url = 'https://fixture/revisions/' + 'a'*40 + '/tool-scripts.tar.gz'
+            lock.write_text(json.dumps({'context': url}))
+            result = subprocess.run([sys.executable, str(SCRIPT), '--lock', str(lock), '--url-only'],
+                                    text=True, capture_output=True, check=True)
+            self.assertEqual(result.stdout.strip(), url)
+            lock.write_text(json.dumps({'context': 'https://fixture/latest.tar.gz'}))
+            result = subprocess.run([sys.executable, str(SCRIPT), '--lock', str(lock), '--url-only'],
+                                    text=True, capture_output=True)
+            self.assertNotEqual(result.returncode, 0)
+
     def test_scaffolding_preserves_existing_apps_and_uses_the_selected_parent(self):
         source = SCRIPT.parent/'build/generate-build-apps.py'
         definition = importlib.util.spec_from_file_location('build_scaffold', source)

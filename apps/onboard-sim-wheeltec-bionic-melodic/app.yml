@@ -2,7 +2,7 @@ key: onboard-sim-wheeltec-bionic-melodic
 name: Wheeltec Nano bionic melodic onboard simulation base
 version: latest
 image: ghcr.io/xgc-team/xgc2-images/onboard-sim-wheeltec-bionic-melodic:latest
-description: Wheeltec Nano bionic melodic onboard simulation base. Third-party ROS environment and robot account; no XGC2 products or physical drivers.
+description: Wheeltec Nano bionic melodic onboard simulation base. Prepared ROS runtime and build dependencies with a robot account; applications and physical drivers are not included.
 type: simulation
 repositoryContext: true
 tags:

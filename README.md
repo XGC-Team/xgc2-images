@@ -276,8 +276,11 @@ current sources. No combined robot `full` image is produced.
 
 ## Shared environment scripts
 
-`tool-scripts.json` selects an immutable, allowlisted public script build context
-from tool-scripts. `scripts/tool-scripts-context.py` downloads and safely expands
+`tool-scripts.json` selects the immutable public script release for CI compiler images.
+`onboard-baseline/tool-scripts.json` selects the release for robot bases. Both consume
+the same tool-scripts implementation; updating robot dependencies does not rebuild
+unrelated compiler images. Pass `--lock onboard-baseline/tool-scripts.json` when
+materializing a robot-base context. `scripts/tool-scripts-context.py` downloads and safely expands
 that release into `.work/tool-scripts/<revision>/`, a disposable image-build cache
 ignored by Git. HTTP named contexts do not unpack archives, so builds use this
 materialized directory. All image builds using shared scripts require the named context:

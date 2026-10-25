@@ -38,12 +38,14 @@ def materialize(context, destination):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--lock', type=Path, default=Path('tool-scripts.json'),
+                        help='Repository-relative manifest for this image consumer')
     parser.add_argument('--url-only', action='store_true', help='Print selected release without downloading')
     args = parser.parse_args()
-    context = json.loads((ROOT / 'tool-scripts.json').read_text())['context']
+    context = json.loads((ROOT / args.lock).read_text())['context']
     match = re.fullmatch(r'https://[^/\s]+/revisions/([0-9a-f]{40})/tool-scripts\.tar\.gz', context)
     if not match:
-        raise SystemExit('Select an immutable tool-scripts revision in tool-scripts.json')
+        raise SystemExit('Select an immutable tool-scripts revision in ' + str(args.lock))
     if args.url_only:
         print(context)
     else:

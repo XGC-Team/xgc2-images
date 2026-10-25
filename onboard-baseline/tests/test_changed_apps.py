@@ -20,6 +20,9 @@ class ChangedAppsTest(unittest.TestCase):
             path.mkdir(parents=True)
             (path/'Dockerfile').write_text('FROM scratch\n')
         self.write('tool-scripts.json', '{}')
+        self.write('onboard-baseline/tool-scripts.json', '{}')
+        self.write('apps/compiler/app.yml', 'type: build\n')
+        self.write('apps/xgc2-ros1-central-sim/Dockerfile', 'FROM scratch\n')
         self.git('add','.')
         self.git('-c','user.name=Test','-c','user.email=test@localhost','commit','-qm','fixture')
         self.base = self.git('rev-parse','HEAD')
@@ -43,20 +46,24 @@ class ChangedAppsTest(unittest.TestCase):
         self.assertEqual(self.changed(), [])
 
     def test_base_inputs_rebuild_all_four_profiles(self):
-        self.write('tool-scripts.json','{"changed":true}')
+        self.write('onboard-baseline/tool-scripts.json','{"changed":true}')
         self.assertEqual(set(self.changed()), set(APPS))
 
-    def test_base_entrypoint_is_a_real_image_input(self):
-        self.write('onboard-baseline/image-entrypoint.sh','entrypoint')
+    def test_dependency_healthcheck_is_a_real_image_input(self):
+        self.write('onboard-baseline/image-healthcheck.sh','dependencies')
         self.assertEqual(set(self.changed()), set(APPS))
 
-    def test_mirror_policy_is_a_real_image_input(self):
+    def test_legacy_agent_entrypoint_does_not_rebuild_dependency_bases(self):
+        self.write('onboard-baseline/image-entrypoint.sh', 'legacy entrypoint')
+        self.assertEqual(self.changed(), ['xgc2-ros1-central-sim'])
+
+    def test_host_materializer_does_not_invalidate_image_contents(self):
         self.write('scripts/tool-scripts-context.py','mirror')
-        self.assertEqual(set(self.changed()), set(APPS))
+        self.assertEqual(self.changed(), [])
 
-    def test_source_sdk_is_a_real_image_input(self):
+    def test_build_image_release_does_not_invalidate_robot_release(self):
         self.write('tool-scripts.json','sdk')
-        self.assertEqual(set(self.changed()), set(APPS))
+        self.assertEqual(self.changed(), ['compiler'])
 
     def test_one_robot_dockerfile_only_rebuilds_that_profile(self):
         self.write('apps/'+APPS[0]+'/Dockerfile','FROM other\n')

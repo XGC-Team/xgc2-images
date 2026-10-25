@@ -2,7 +2,7 @@ key: onboard-sim-scout-bionic-melodic
 name: Scout AGX bionic melodic onboard simulation base
 version: latest
 image: ghcr.io/xgc-team/xgc2-images/onboard-sim-scout-bionic-melodic:latest
-description: Scout AGX bionic melodic onboard simulation base. Third-party ROS environment and robot account; no XGC2 products or physical drivers.
+description: Scout AGX bionic melodic onboard simulation base. Prepared ROS runtime and build dependencies with a robot account; applications and physical drivers are not included.
 type: simulation
 repositoryContext: true
 tags:

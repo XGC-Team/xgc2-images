@@ -25,14 +25,12 @@ while IFS= read -r file; do
   [[ -z "$file" ]] && continue
   status="${file%%$'\t'*}"
   path="${file#*$'\t'}"
-  if [[ "$path" == tool-scripts.json || "$path" == scripts/tool-scripts-context.py ]] || [[ "$path" =~ ^scripts/build/ ]] || [[ "$path" == ".github/workflows/build.yml" ]] || [[ "$path" == ".github/workflows/reusable-build-images.yml" ]] || [[ "$path" == ".github/workflows/reusable-build-chain.yml" ]] || [[ "$path" == "scripts/detect-ci-matrices.rb" ]]; then
+  if [[ "$path" == tool-scripts.json ]] || [[ "$path" =~ ^scripts/build/ ]] || [[ "$path" == ".github/workflows/build.yml" ]] || [[ "$path" == ".github/workflows/reusable-build-chain.yml" ]] || [[ "$path" == "scripts/detect-ci-matrices.rb" ]]; then
     rebuild_all_build_images=true
   fi
   # Only files actually copied into the CI base invalidate robot latest.
   # Local developer recipes, source tooling and their tests have a separate lifecycle.
-  if [[ "$path" == tool-scripts.json ||
-        "$path" == scripts/tool-scripts-context.py ||
-        "$path" == onboard-baseline/image-entrypoint.sh ||
+  if [[ "$path" == onboard-baseline/tool-scripts.json ||
         "$path" == onboard-baseline/image-healthcheck.sh ||
         "$path" == onboard-baseline/assert-base-only.sh ]]; then
     for app in onboard-sim-fs150-focal-noetic onboard-sim-scout-bionic-melodic onboard-sim-scout-focal-noetic onboard-sim-wheeltec-bionic-melodic; do
