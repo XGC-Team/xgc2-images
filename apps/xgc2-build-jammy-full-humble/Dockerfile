@@ -22,11 +22,12 @@ COPY --from=tool-scripts onboard-baseline/prepare-apt.sh /tmp/xgc2-build/
 COPY apps/xgc2-build-jammy-full-humble/scripts/healthcheck.sh /usr/local/bin/xgc2-build-healthcheck
 COPY apps/xgc2-build-focal-full-noetic/native-vrpn/ /usr/local/share/xgc2/vrpn-native/
 
+COPY apps/xgc2-build-jammy-full-humble/json-http-packages.txt /tmp/xgc2-json-http-packages.txt
 RUN chmod +x /tmp/xgc2-build/*.sh /usr/local/bin/xgc2-build-healthcheck \
  && cp /tmp/xgc2-build/assert-no-xgc2-apt.sh /usr/local/bin/xgc2-build-assert-no-xgc2-apt.sh \
  && chmod +x /usr/local/bin/xgc2-build-assert-no-xgc2-apt.sh \
  && printf 'Acquire::Retries "5";\n' >/etc/apt/apt.conf.d/99-xgc2-retries \
- && /tmp/xgc2-build/install-packages.sh /tmp/xgc2-build/packages/full-sys-jammy.txt \
+ && /tmp/xgc2-build/install-packages.sh /tmp/xgc2-build/packages/full-sys-jammy.txt /tmp/xgc2-json-http-packages.txt \
  && /tmp/xgc2-build/install-ros-packages.sh humble /tmp/xgc2-build/packages/full-humble.txt \
  && CC=cc CXX=c++ python3 /usr/local/share/xgc2/vrpn-native/build.py \
       --work-dir /tmp/xgc2-vrpn-native-build --prefix /tmp/xgc2-vrpn-native-prefix \
@@ -41,13 +42,10 @@ RUN chmod +x /tmp/xgc2-build/*.sh /usr/local/bin/xgc2-build-healthcheck \
  && rm -rf /tmp/xgc2-build /var/lib/apt/lists/*
 
 # JSON-HTTP's header dependency is owned by this full build image.
-COPY apps/xgc2-build-jammy-full-humble/json-http-packages.txt /tmp/xgc2-json-http-packages.txt
-COPY scripts/build/install-packages.sh /tmp/xgc2-install-json-http.sh
 COPY apps/xgc2-build-jammy-full-humble/scripts/check-json-http.sh /usr/local/bin/xgc2-build-json-http-check
-RUN chmod +x /tmp/xgc2-install-json-http.sh /usr/local/bin/xgc2-build-json-http-check \
- && /tmp/xgc2-install-json-http.sh /tmp/xgc2-json-http-packages.txt \
+RUN chmod +x /usr/local/bin/xgc2-build-json-http-check \
  && printf '\n/usr/local/bin/xgc2-build-json-http-check\n' >> /usr/local/bin/xgc2-build-healthcheck \
- && rm -f /tmp/xgc2-install-json-http.sh /tmp/xgc2-json-http-packages.txt \
+ && rm -f /tmp/xgc2-json-http-packages.txt \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /work
