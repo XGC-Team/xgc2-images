@@ -4,6 +4,7 @@ FROM scratch AS runtime-sources
 COPY --from=tool-scripts onboard-baseline/baselines.json /onboard-baseline/baselines.json
 COPY --from=tool-scripts onboard-baseline/onboard-baseline.sh /onboard-baseline/onboard-baseline.sh
 COPY --from=tool-scripts onboard-baseline/configure-ubuntu-mirror.sh /onboard-baseline/configure-ubuntu-mirror.sh
+COPY --from=tool-scripts onboard-baseline/prepare-apt.sh /onboard-baseline/prepare-apt.sh
 COPY --from=tool-scripts onboard-baseline/install-source-deps.sh /onboard-baseline/install-source-deps.sh
 COPY --from=tool-scripts scripts/build/install-toolchains.sh /onboard-baseline/install-toolchains.sh
 COPY onboard-baseline/image-entrypoint.sh /onboard-baseline/image-entrypoint.sh

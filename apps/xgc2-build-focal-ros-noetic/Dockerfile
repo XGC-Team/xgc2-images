@@ -20,6 +20,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY scripts/build/ /tmp/xgc2-build/
 COPY --from=tool-scripts onboard-baseline/configure-ubuntu-mirror.sh /tmp/xgc2-build/
+COPY --from=tool-scripts onboard-baseline/prepare-apt.sh /tmp/xgc2-build/
 COPY --from=tool-scripts scripts/build/install-ros-apt-source.sh /tmp/xgc2-build/
 COPY apps/xgc2-build-focal-ros-noetic/scripts/healthcheck.sh /usr/local/bin/xgc2-build-healthcheck
 

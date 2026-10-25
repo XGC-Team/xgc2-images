@@ -180,6 +180,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY scripts/build/ /tmp/xgc2-build/
 COPY --from=tool-scripts onboard-baseline/configure-ubuntu-mirror.sh /tmp/xgc2-build/
+COPY --from=tool-scripts onboard-baseline/prepare-apt.sh /tmp/xgc2-build/
 {shared_copies}
 COPY apps/{app_key(ubuntu, layer, ros)}/scripts/healthcheck.sh /usr/local/bin/xgc2-build-healthcheck
 

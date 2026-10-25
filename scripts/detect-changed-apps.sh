@@ -41,7 +41,7 @@ while IFS= read -r file; do
       fi
     done
   fi
-  if [[ "$path" == tool-scripts.json || "$path" == scripts/tool-scripts-context.py || "$path" == onboard-baseline/image-entrypoint.sh ]] && [[ -d apps/xgc2-ros1-central-sim ]]; then
+  if [[ "$path" == onboard-baseline/image-entrypoint.sh ]] && [[ -d apps/xgc2-ros1-central-sim ]]; then
     if [[ ! " ${apps[*]} " =~ " xgc2-ros1-central-sim " ]]; then
       apps+=(xgc2-ros1-central-sim)
     fi

@@ -32,10 +32,6 @@ def materialize(context, destination):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(archive.extractfile(member).read())
                 target.chmod(0o755 if target.suffix == '.sh' else 0o644)
-        for name in ['onboard-baseline/baselines.json', 'onboard-baseline/onboard-baseline.sh',
-                     'scripts/build/install-toolchains.sh', 'scripts/build/install-ros-apt-source.sh']:
-            if not (staged / name).is_file():
-                raise ValueError('Incomplete script bundle: ' + name)
         staged.rename(destination)
     return destination
 
