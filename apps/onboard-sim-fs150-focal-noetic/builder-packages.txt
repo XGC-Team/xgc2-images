@@ -1,5 +1,4 @@
 libcgal-dev
 ros-noetic-rviz-visual-tools
 ros-noetic-jsk-rviz-plugins
-libzmqpp-dev
 libglpk-dev

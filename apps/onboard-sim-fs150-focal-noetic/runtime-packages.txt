@@ -45,5 +45,4 @@ libxgc2-math-dev
 xgc2-acados
 ros-noetic-xgc2-ros-msgs
 ros-noetic-xgc2-ros1-utils
-libzmqpp4
 libglpk40
