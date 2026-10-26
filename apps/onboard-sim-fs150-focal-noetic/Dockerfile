@@ -7,6 +7,7 @@ COPY --from=tool-scripts onboard-baseline/configure-ubuntu-mirror.sh /onboard-ba
 COPY --from=tool-scripts onboard-baseline/prepare-apt.sh /onboard-baseline/prepare-apt.sh
 COPY --from=tool-scripts onboard-baseline/configure-product-apt.sh /onboard-baseline/configure-product-apt.sh
 COPY --from=tool-scripts onboard-baseline/install-source-deps.sh /onboard-baseline/install-source-deps.sh
+COPY apps/onboard-sim-fs150-focal-noetic/install-zenoh.sh /onboard-baseline/install-zenoh.sh
 COPY --from=tool-scripts scripts/build/install-toolchains.sh /onboard-baseline/install-toolchains.sh
 COPY onboard-baseline/image-healthcheck.sh /onboard-baseline/image-healthcheck.sh
 COPY onboard-baseline/assert-base-only.sh /onboard-baseline/assert-base-only.sh
@@ -46,6 +47,7 @@ apt-get update
 packages=/opt/xgc2/onboard-baseline/simulation-packages
 cat "$packages/common.txt" "$packages/$(dpkg --print-architecture).txt" > /opt/xgc2/onboard-baseline/simulation-packages.txt
 cat /opt/xgc2/onboard-baseline/runtime-packages.txt /opt/xgc2/onboard-baseline/simulation-packages.txt | xargs -r apt-get install -y --no-install-recommends
+/opt/xgc2/onboard-baseline/install-zenoh.sh apply
 geographiclib-get-geoids egm96-5
 /opt/xgc2/onboard-baseline/check-image.sh
 /opt/xgc2/onboard-baseline/assert-base-only.sh

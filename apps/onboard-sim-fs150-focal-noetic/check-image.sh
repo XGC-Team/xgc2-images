@@ -2,6 +2,11 @@
 set -euo pipefail
 /opt/xgc2/onboard-baseline/check-simulation.sh
 test -s /usr/share/GeographicLib/geoids/egm96-5.pgm
+set +u # ROS setup reads optional variables.
+source /opt/ros/noetic/setup.bash
+set -u
+python3 -B -c "import rospy, zenoh"
+/opt/xgc2/onboard-baseline/install-zenoh.sh check
 dpkg-query -W libglpk40 >/dev/null
 if [[ "$ONBOARD_IMAGE_ROLE" == builder ]]; then
   dpkg-query -W libglpk-dev >/dev/null

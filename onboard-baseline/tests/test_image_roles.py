@@ -30,6 +30,29 @@ class ImageRolesTest(unittest.TestCase):
             role_branch=tags.split('if [[ "${{ matrix.version_only }}" == "true" ]]; then',1)[1].split('elif',1)[0]
             self.assertNotIn(':latest',role_branch)
 
+    def test_fs150_runtime_and_builder_share_pinned_zenoh_and_keep_glpk(self):
+        app = ROOT/'apps/onboard-sim-fs150-focal-noetic'
+        runtime = (app/'runtime-packages.txt').read_text().splitlines()
+        builder = (app/'builder-packages.txt').read_text().splitlines()
+        self.assertIn('python3-pip', runtime)
+        self.assertIn('libglpk40', runtime)
+        self.assertIn('libglpk-dev', builder)
+        self.assertNotIn('libzmqpp4', runtime)
+        self.assertNotIn('libzmqpp-dev', builder)
+        dockerfile = (app/'Dockerfile').read_text()
+        runtime_stage = dockerfile.split('FROM runtime AS builder')[0]
+        self.assertIn('COPY apps/onboard-sim-fs150-focal-noetic/install-zenoh.sh', runtime_stage)
+        self.assertIn('/opt/xgc2/onboard-baseline/install-zenoh.sh apply', runtime_stage)
+        installer = (app/'install-zenoh.sh').read_text()
+        self.assertIn('4c24202c46a4d0bd836bb35fb5eae77d47decbe9/requirements-runtime.txt', installer)
+        self.assertIn('2e1db99fe83c9ac36a6bc38b046fa1f989dcfb05566f5ed5ba488ead337626b0', installer)
+        self.assertIn('76781bbfa61fdc1e9626a03202c7dd8fd103f34761dc7b94b5a2d99f5aae629e', installer)
+        self.assertIn('0f142a36241e50eb3b86f9c3b0149138d2d1d7b6dd2038589fe4c62e12e776ea', installer)
+        check = (app/'check-image.sh').read_text()
+        self.assertIn('import rospy, zenoh', check)
+        self.assertIn('install-zenoh.sh check', check)
+        self.assertNotIn('libzmqpp', check)
+
     def test_builder_extends_runtime_and_owns_language_toolchains(self):
         text=(ROOT/'apps/onboard-sim-fs150-focal-noetic/Dockerfile').read_text()
         runtime,builder=text.split('FROM runtime AS builder')
