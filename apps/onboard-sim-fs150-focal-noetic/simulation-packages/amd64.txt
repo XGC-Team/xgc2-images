@@ -1,4 +1,2 @@
-ros-noetic-xgc2-gazebo-sim-fs150-sitl=1.1.0-33
-ros-noetic-xgc2-px4-sitl-1-12=1.12.3-28
 ros-noetic-vrpn-client-ros=0.2.2-1focal.20250520.001133
 ros-noetic-mavros=1.20.1-1focal.20250520.005419

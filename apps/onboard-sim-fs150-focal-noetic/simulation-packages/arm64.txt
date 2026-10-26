@@ -1,0 +1,2 @@
+ros-noetic-vrpn-client-ros=0.2.2-1focal.20250520.004643
+ros-noetic-mavros=1.20.1-1focal.20250520.052056

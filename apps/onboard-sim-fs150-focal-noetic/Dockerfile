@@ -36,13 +36,15 @@ runuser -u "$ONBOARD_BASELINE_USER" -- /opt/xgc2/onboard-baseline/onboard-baseli
 rm -rf /var/cache/xgc2-onboard /var/lib/apt/lists/*
 EOF
 
-COPY apps/onboard-sim-fs150-focal-noetic/simulation-packages.txt /opt/xgc2/onboard-baseline/simulation-packages.txt
+COPY apps/onboard-sim-fs150-focal-noetic/simulation-packages/ /opt/xgc2/onboard-baseline/simulation-packages/
 COPY apps/onboard-sim-fs150-focal-noetic/check-simulation.sh /opt/xgc2/onboard-baseline/check-simulation.sh
 
 RUN bash <<'EOF'
 set -euo pipefail
 # Stable simulation dependencies are installed at image build time, never on Run.
 chmod 0755 /opt/xgc2/onboard-baseline/check-simulation.sh
+packages=/opt/xgc2/onboard-baseline/simulation-packages
+cat "$packages/common.txt" "$packages/$(dpkg --print-architecture).txt" > /opt/xgc2/onboard-baseline/simulation-packages.txt
 apt-get update
 xargs -r apt-get install -y --no-install-recommends < /opt/xgc2/onboard-baseline/simulation-packages.txt
 /opt/xgc2/onboard-baseline/check-simulation.sh
