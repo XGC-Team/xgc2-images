@@ -56,7 +56,7 @@ CMD ["bash"]
 
 FROM runtime AS builder
 ENV ONBOARD_IMAGE_ROLE=builder
-ENV PATH="/usr/local/go/bin:/usr/local/cargo/bin:${PATH}"
+ENV PATH="/usr/local/go/bin:${PATH}"
 RUN bash <<'EOF'
 set -euo pipefail
 if [[ -z "${ONBOARD_APT_MIRROR:-}" ]]; then
