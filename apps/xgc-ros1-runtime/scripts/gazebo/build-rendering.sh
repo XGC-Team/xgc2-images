@@ -9,9 +9,13 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 version=11.15.1
 mkdir -p "${output_dir}" "${work_dir}"
 archive="${work_dir}/gazebo-${version}.tar.gz"
-curl -fL --retry 3 \
-  "https://github.com/gazebosim/gazebo-classic/archive/refs/tags/gazebo11_${version}.tar.gz" \
-  -o "${archive}"
+if ! printf '%s  %s\n' \
+  77a952971eabfd79e16d2582a355ee017a2e22cc369b68453323c0984b725126 \
+  "${archive}" | sha256sum -c - >/dev/null 2>&1; then
+  curl -fL --retry 3 \
+    "https://github.com/gazebosim/gazebo-classic/archive/refs/tags/gazebo11_${version}.tar.gz" \
+    -o "${archive}"
+fi
 printf '%s  %s\n' \
   77a952971eabfd79e16d2582a355ee017a2e22cc369b68453323c0984b725126 \
   "${archive}" | sha256sum -c -
