@@ -2,7 +2,9 @@
 set -euo pipefail
 /opt/xgc2/onboard-baseline/check-simulation.sh
 test -s /usr/share/GeographicLib/geoids/egm96-5.pgm
+dpkg-query -W libzmqpp4 libglpk40 >/dev/null
 if [[ "$ONBOARD_IMAGE_ROLE" == builder ]]; then
+  dpkg-query -W libzmqpp-dev libglpk-dev >/dev/null
   for executable in gcc g++ make cmake ninja go dpkg-deb fakeroot file; do command -v "$executable" >/dev/null || { echo "Missing builder tool: $executable" >&2; exit 1; }; done
 else
   # ROS packages may require CMake/headers transitively. Preserve declared dependencies.
