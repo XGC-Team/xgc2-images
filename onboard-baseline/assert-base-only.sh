@@ -3,6 +3,15 @@
 set -euo pipefail
 packages="$(dpkg-query -W -f='${binary:Package}\t${db:Status-Status}\n')"
 blocked="$(awk '$2 == "installed" {sub(/:[^:]+$/, "", $1); print $1}' <<<"$packages" | while IFS= read -r package; do
+  # This simulation base also supplies the published FS150 flight simulator.
+  # The package closure is explicit; other robot bases retain the interface-only boundary.
+  if [[ "${ONBOARD_BASELINE_PROFILE:-}" == fs150-focal-noetic ]]; then
+    case "$package" in
+      ros-noetic-xgc2-gazebo-sim-fs150-sitl|ros-noetic-xgc2-px4-sitl-1-12|\
+      ros-noetic-xgc2-gazebo-sim-px4-1-12|ros-noetic-xgc2-fs150-description|\
+      ros-noetic-xgc2-simple-lidar|ros-noetic-xgc2-gazebo-scene) continue ;;
+    esac
+  fi
   # Interface families only. Installation versions and dependency closure belong
   # to the shared preparation profile and the signed APT package metadata.
   case "$package" in

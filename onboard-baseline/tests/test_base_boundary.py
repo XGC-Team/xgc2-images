@@ -34,6 +34,12 @@ class BaseBoundaryTest(unittest.TestCase):
                     env = dict(os.environ, PATH=str(root)+':'+os.environ['PATH'], PACKAGE_STATE=package+'\tinstalled')
                     result = subprocess.run(['bash', str(ROOT/'onboard-baseline/assert-base-only.sh')], env=env, capture_output=True, text=True)
                     self.assertEqual(result.returncode, expected, result.stdout+result.stderr)
+            for profile, expected in [('fs150-focal-noetic', 0), ('scout-focal-noetic', 1)]:
+                env['ONBOARD_BASELINE_PROFILE'] = profile
+                env['PACKAGE_STATE'] = 'ros-noetic-xgc2-gazebo-sim-fs150-sitl\tinstalled'
+                result = subprocess.run(['bash', str(ROOT/'onboard-baseline/assert-base-only.sh')], env=env, capture_output=True, text=True)
+                self.assertEqual(result.returncode, expected, result.stderr)
+            env['ONBOARD_BASELINE_PROFILE'] = 'fs150-focal-noetic'
             env['PACKAGE_STATE'] = 'libxgc2-xrpc-dev\tinstalled\nxgc2-agent\tinstalled'
             result = subprocess.run(['bash', str(ROOT/'onboard-baseline/assert-base-only.sh')], env=env, capture_output=True, text=True)
             self.assertEqual(result.returncode, 1, result.stdout+result.stderr)
