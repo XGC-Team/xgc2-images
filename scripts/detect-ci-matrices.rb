@@ -157,25 +157,27 @@ expanded.each do |app|
 
   target = parent ? legacy_dependent_build : legacy_build
   manifest_target = parent ? legacy_dependent_manifest : legacy_manifest
-  entries.each do |entry|
-    target << entry.merge(
-      "app" => app,
-      "version" => version,
-      "image" => image,
-      "multiarch" => multiarch,
-      "no_cache" => force_no_cache || doc["noCache"] == true,
-      "version_only" => doc["publishVersionOnly"] == true,
-      "context" => (doc["repositoryContext"] == true ? "." : "apps/#{app}"),
-      "file" => "apps/#{app}/Dockerfile",
-      "parent_image" => ""
-    )
+  build_targets = Array(doc["buildTargets"] || [""])
+  build_targets.each do |build_target|
+    tag = build_target.empty? ? version : build_target
+    version_only = !build_target.empty? || doc["publishVersionOnly"] == true
+    entries.each do |entry|
+      target << entry.merge(
+        "app" => app, "version" => tag, "image" => image,
+        "multiarch" => multiarch,
+        "no_cache" => force_no_cache || doc["noCache"] == true,
+        "version_only" => version_only,
+        "target" => build_target,
+        "context" => (doc["repositoryContext"] == true ? "." : "apps/#{app}"),
+        "file" => "apps/#{app}/Dockerfile", "parent_image" => ""
+      )
+    end
+    manifest_target << {
+      "app" => app, "version" => tag, "image" => image,
+      "version_only" => version_only,
+      "arches" => entries.map { |entry| entry["arch"] }
+    } if multiarch
   end
-  manifest_target << {
-    "app" => app,
-    "version" => version,
-    "image" => image,
-    "arches" => entries.map { |entry| entry["arch"] }
-  } if multiarch
 end
 
 chain = []

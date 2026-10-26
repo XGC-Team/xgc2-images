@@ -1,8 +1,11 @@
 key: onboard-sim-fs150-focal-noetic
 name: FS150 focal noetic onboard simulation base
-version: latest
-image: ghcr.io/xgc-team/xgc2-images/onboard-sim-fs150-focal-noetic:latest
-description: FS150 focal noetic onboard simulation base. Prepared ROS runtime, build tools, systemd, and pinned PX4/FS150/MAVROS/VRPN simulation dependencies. Agent and algorithm applications are installed separately.
+version: runtime
+buildTargets:
+  - runtime
+  - builder
+image: ghcr.io/xgc-team/xgc2-images/onboard-sim-fs150-focal-noetic:runtime
+description: FS150 focal noetic onboard simulation base. Runtime provides systemd and robot dependencies; builder extends runtime with compilers and packaging tools. Applications are installed separately.
 type: simulation
 repositoryContext: true
 tags:
@@ -14,4 +17,4 @@ license: Apache-2.0
 source: https://github.com/XGC-Team/xgc2-images
 entrypoints:
   shell: /bin/bash
-  healthcheck: /opt/xgc2/onboard-baseline/image-healthcheck.sh
+  healthcheck: /opt/xgc2/onboard-baseline/check-image.sh

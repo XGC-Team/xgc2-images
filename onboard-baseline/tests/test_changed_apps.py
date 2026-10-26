@@ -45,6 +45,11 @@ class ChangedAppsTest(unittest.TestCase):
         self.write('onboard-baseline/tests/test_source_tool.py','test')
         self.assertEqual(self.changed(), [])
 
+    def test_matrix_and_publish_logic_do_not_rebuild_unrelated_images(self):
+        self.write('scripts/detect-ci-matrices.rb', 'matrix logic')
+        self.write('.github/workflows/reusable-build-images.yml', 'publish logic')
+        self.assertEqual(self.changed(), [])
+
     def test_base_inputs_rebuild_all_four_profiles(self):
         self.write('onboard-baseline/tool-scripts.json','{"changed":true}')
         self.assertEqual(set(self.changed()), set(APPS))
@@ -65,9 +70,9 @@ class ChangedAppsTest(unittest.TestCase):
         self.write('tool-scripts.json','sdk')
         self.assertEqual(self.changed(), ['compiler'])
 
-    def test_build_workflow_revalidates_robot_consumers_without_rebuilding_compilers(self):
+    def test_build_workflow_change_does_not_rebuild_image_contents(self):
         self.write('.github/workflows/build.yml', 'context selection')
-        self.assertEqual(set(self.changed()), set(APPS))
+        self.assertEqual(self.changed(), [])
 
     def test_one_robot_dockerfile_only_rebuilds_that_profile(self):
         self.write('apps/'+APPS[0]+'/Dockerfile','FROM other\n')

@@ -18,7 +18,7 @@ jobs:
       EXTRA_NAMESPACE: ${{ vars.EXTRA_NAMESPACE }}
       EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME }}
       EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD }}
-      LATEST_ONLY: ${{ github.event_name == 'schedule' || matrix.version == 'latest' }}
+      LATEST_ONLY: ${{ (github.event_name == 'schedule' && matrix.version_only != true) || matrix.version == 'latest' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(inputs.matrix_json) }}
@@ -60,12 +60,16 @@ jobs:
           if [[ "${LATEST_ONLY}" != "true" ]]; then
             create_manifest "${image}" "${{ matrix.version }}" "${arches[@]}"
           fi
-          create_manifest "${image}" "latest" "${arches[@]}"
+          if [[ "${{ matrix.version_only }}" != "true" ]]; then
+            create_manifest "${image}" "latest" "${arches[@]}"
+          fi
 
           if [[ -n "${EXTRA_ROOT}" ]]; then
             extra_image="${EXTRA_ROOT}/${{ matrix.app }}"
             if [[ "${LATEST_ONLY}" != "true" ]]; then
               create_manifest "${extra_image}" "${{ matrix.version }}" "${arches[@]}"
             fi
-            create_manifest "${extra_image}" "latest" "${arches[@]}"
+            if [[ "${{ matrix.version_only }}" != "true" ]]; then
+              create_manifest "${extra_image}" "latest" "${arches[@]}"
+            fi
           fi

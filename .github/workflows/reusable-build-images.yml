@@ -18,7 +18,7 @@ jobs:
       EXTRA_NAMESPACE: ${{ vars.EXTRA_NAMESPACE }}
       EXTRA_USERNAME: ${{ secrets.EXTRA_USERNAME }}
       EXTRA_PASSWORD: ${{ secrets.EXTRA_PASSWORD }}
-      LATEST_ONLY: ${{ github.event_name == 'schedule' || matrix.version == 'latest' }}
+      LATEST_ONLY: ${{ (github.event_name == 'schedule' && matrix.version_only != true) || matrix.version == 'latest' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(inputs.matrix_json) }}
@@ -44,7 +44,10 @@ jobs:
           # shellcheck source=scripts/ci-registry-roots.sh
           source scripts/ci-registry-roots.sh
           image="$(rewrite_ghcr "${{ matrix.image }}")"
-          if [[ "${LATEST_ONLY}" == "true" ]]; then
+          if [[ "${{ matrix.version_only }}" == "true" ]]; then
+            tags="${image}:${{ matrix.version }}-${{ matrix.arch }}"
+            if [[ "${{ matrix.multiarch }}" != "true" ]]; then tags="${tags}"$'\n'"${image}:${{ matrix.version }}"; fi
+          elif [[ "${LATEST_ONLY}" == "true" ]]; then
             tags="${image}:latest-${{ matrix.arch }}"
             if [[ "${{ matrix.multiarch }}" != "true" ]]; then
               tags="${tags}"$'\n'"${image}:latest"
@@ -58,7 +61,10 @@ jobs:
           fi
           if [[ -n "${EXTRA_ROOT}" ]]; then
             extra_image="${EXTRA_ROOT}/${{ matrix.app }}"
-            if [[ "${LATEST_ONLY}" == "true" ]]; then
+            if [[ "${{ matrix.version_only }}" == "true" ]]; then
+              tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}-${{ matrix.arch }}"
+              if [[ "${{ matrix.multiarch }}" != "true" ]]; then tags="${tags}"$'\n'"${extra_image}:${{ matrix.version }}"; fi
+            elif [[ "${LATEST_ONLY}" == "true" ]]; then
               tags="${tags}"$'\n'"${extra_image}:latest-${{ matrix.arch }}"
               if [[ "${{ matrix.multiarch }}" != "true" ]]; then
                 tags="${tags}"$'\n'"${extra_image}:latest"
@@ -91,6 +97,7 @@ jobs:
           build-contexts: tool-scripts=${{ steps.tool-scripts.outputs.context }}
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
+          target: ${{ matrix.target }}
           platforms: ${{ matrix.platform }}
           push: true
           provenance: false
@@ -99,8 +106,8 @@ jobs:
           tags: ${{ steps.tags.outputs.tags }}
           build-args: |
             PARENT_IMAGE=${{ matrix.parent_image }}
-          cache-from: type=gha,scope=${{ matrix.app }}-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.app }}-${{ matrix.arch }}
+          cache-from: type=gha,scope=${{ matrix.app }}-${{ matrix.arch }}-${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}-${{ matrix.arch }}-${{ matrix.target }}
 
       - name: Smoke image
         shell: bash
