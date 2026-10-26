@@ -55,6 +55,7 @@ ENTRYPOINT ["/ros_entrypoint.sh"]
 CMD ["bash"]
 
 FROM runtime AS builder
+COPY apps/onboard-sim-fs150-focal-noetic/builder-packages.txt /opt/xgc2/onboard-baseline/builder-packages.txt
 ENV ONBOARD_IMAGE_ROLE=builder
 ENV PATH="/usr/local/go/bin:${PATH}"
 RUN bash <<'EOF'
@@ -66,6 +67,8 @@ if [[ -z "${ONBOARD_APT_MIRROR:-}" ]]; then
   esac
 fi
 /opt/xgc2/onboard-baseline/onboard-baseline.sh apply --profile fs150-focal-noetic --replace-timesyncd
+apt-get update
+xargs -r apt-get install -y --no-install-recommends < /opt/xgc2/onboard-baseline/builder-packages.txt
 runuser -u "$ONBOARD_BASELINE_USER" -- /opt/xgc2/onboard-baseline/onboard-baseline.sh check --profile "$ONBOARD_BASELINE_PROFILE"
 /opt/xgc2/onboard-baseline/check-image.sh
 /opt/xgc2/onboard-baseline/assert-base-only.sh
