@@ -94,9 +94,13 @@ class LocalImageTest(unittest.TestCase):
             result = self.run_image(profile, 'linux/amd64')
             self.assertEqual(result.returncode, 0, result.stderr)
             build = self.builds()[-1]
-            self.assertIn('onboard-sim-' + profile + ':latest', build)
+            role='builder' if profile=='fs150-focal-noetic' else 'latest'
+            self.assertIn('onboard-sim-' + profile + ':' + role, build)
             self.assertIn('--pull', build)
-            self.assertNotIn('--target', build)
+            if profile=='fs150-focal-noetic':
+                self.assertEqual(build[build.index('--target')+1], 'builder')
+            else:
+                self.assertNotIn('--target', build)
 
     def test_product_inputs_cannot_contaminate_the_base(self):
         for variable in ('ONBOARD_AGENT_DEB', 'ONBOARD_BASELINE_AGENT_VERSION', 'ONBOARD_BASELINE_XSIM_VERSION'):
