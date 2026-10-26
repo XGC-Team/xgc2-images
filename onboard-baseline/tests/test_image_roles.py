@@ -47,6 +47,7 @@ class ImageRolesTest(unittest.TestCase):
         installer = (app/'install-zenoh.sh').read_text()
         self.assertIn('4c24202c46a4d0bd836bb35fb5eae77d47decbe9/requirements-runtime.txt', installer)
         self.assertIn('2e1db99fe83c9ac36a6bc38b046fa1f989dcfb05566f5ed5ba488ead337626b0', installer)
+        self.assertIn('deaf32dcd9ab821e359cd8330786bcd077604b5c5730c0b096eda46f95c24a2d', installer)
         self.assertIn('76781bbfa61fdc1e9626a03202c7dd8fd103f34761dc7b94b5a2d99f5aae629e', installer)
         self.assertIn('0f142a36241e50eb3b86f9c3b0149138d2d1d7b6dd2038589fe4c62e12e776ea', installer)
         check = (app/'check-image.sh').read_text()

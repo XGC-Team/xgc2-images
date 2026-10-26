@@ -46,6 +46,14 @@ case "${1:-}" in
         sha=0f142a36241e50eb3b86f9c3b0149138d2d1d7b6dd2038589fe4c62e12e776ea ;;
       *) echo 'Unsupported Zenoh architecture' >&2; exit 1 ;;
     esac
+    # Focal's pip 20.0 cannot recognize the ARM64 manylinux_2_28 wheel.
+    # Keep already-capable pip versions and upgrade only older system pip.
+    if ! python3 -c 'import pip, sys; sys.exit(tuple(int(v) for v in pip.__version__.split(".")[:2]) < (20, 3))'; then
+      pip_wheel=pip-21.3.1-py3-none-any.whl
+      curl -fsSL --retry 3 https://files.pythonhosted.org/packages/a4/6d/6463d49a933f547439d6b5b98b46af8742cc03ae83543e4d7688c2420f8b/$pip_wheel -o "$tmp/$pip_wheel"
+      echo 'deaf32dcd9ab821e359cd8330786bcd077604b5c5730c0b096eda46f95c24a2d  '"$tmp/$pip_wheel" | sha256sum -c -
+      python3 -m pip install --no-input --no-deps "$tmp/$pip_wheel"
+    fi
     curl -fsSL --retry 3 "$url" -o "$tmp/$wheel"
     echo "$sha  $tmp/$wheel" | sha256sum -c -
     python3 -m pip install --no-input --no-deps --force-reinstall "$tmp/$wheel"
