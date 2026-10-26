@@ -219,9 +219,9 @@ jobs:
 
           add_tags() {
             local image="$1"
-            if [[ "${{ matrix.version_only }}" == "true" && "${{ matrix.multiarch }}" != "true" ]]; then
-              if [[ "${latest_only}" == "true" ]]; then
-                printf '%s\n' "${image}:latest"
+            if [[ "${{ matrix.version_only }}" == "true" ]]; then
+              if [[ "${{ matrix.multiarch }}" == "true" ]]; then
+                printf '%s\n' "${image}:${{ matrix.version }}-${{ matrix.arch }}"
               else
                 printf '%s\n' "${image}:${{ matrix.version }}"
               fi
@@ -268,6 +268,7 @@ jobs:
           build-contexts: tool-scripts=${{ steps.tool-scripts.outputs.context }}
           context: ${{ matrix.context }}
           file: apps/${{ matrix.app }}/Dockerfile
+          target: ${{ matrix.target }}
           platforms: ${{ matrix.platform }}
           push: ${{ github.event_name != 'pull_request' }}
           load: ${{ github.event_name == 'pull_request' }}
@@ -275,8 +276,8 @@ jobs:
           sbom: false
           no-cache: ${{ matrix.no_cache }}
           tags: ${{ steps.tags.outputs.tags }}
-          cache-from: type=gha,scope=${{ matrix.app }}-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.app }}-${{ matrix.arch }}
+          cache-from: type=gha,scope=${{ matrix.app }}-${{ matrix.arch }}-${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}-${{ matrix.arch }}-${{ matrix.target }}
 
       - name: Smoke image
         if: github.event_name == 'pull_request'
@@ -343,17 +344,21 @@ jobs:
           }
 
           mapfile -t arches < <(jq -r '.[]' <<< '${{ toJson(matrix.arches) }}')
-          if [[ "${{ github.event_name }}" != "schedule" && "${{ matrix.version }}" != "latest" ]]; then
+          if [[ "${{ matrix.version_only }}" == "true" || ( "${{ github.event_name }}" != "schedule" && "${{ matrix.version }}" != "latest" ) ]]; then
             create_manifest "${image}" "${{ matrix.version }}" "${arches[@]}"
           fi
-          create_manifest "${image}" "latest" "${arches[@]}"
+          if [[ "${{ matrix.version_only }}" != "true" ]]; then
+            create_manifest "${image}" "latest" "${arches[@]}"
+          fi
 
           if [[ -n "${EXTRA_ROOT}" ]]; then
             extra_image="${EXTRA_ROOT}/${{ matrix.app }}"
-            if [[ "${{ github.event_name }}" != "schedule" && "${{ matrix.version }}" != "latest" ]]; then
+            if [[ "${{ matrix.version_only }}" == "true" || ( "${{ github.event_name }}" != "schedule" && "${{ matrix.version }}" != "latest" ) ]]; then
               create_manifest "${extra_image}" "${{ matrix.version }}" "${arches[@]}"
             fi
-            create_manifest "${extra_image}" "latest" "${arches[@]}"
+            if [[ "${{ matrix.version_only }}" != "true" ]]; then
+              create_manifest "${extra_image}" "latest" "${arches[@]}"
+            fi
           fi
 
   dependent_build:
@@ -405,9 +410,9 @@ jobs:
 
           add_tags() {
             local image="$1"
-            if [[ "${{ matrix.version_only }}" == "true" && "${{ matrix.multiarch }}" != "true" ]]; then
-              if [[ "${latest_only}" == "true" ]]; then
-                printf '%s\n' "${image}:latest"
+            if [[ "${{ matrix.version_only }}" == "true" ]]; then
+              if [[ "${{ matrix.multiarch }}" == "true" ]]; then
+                printf '%s\n' "${image}:${{ matrix.version }}-${{ matrix.arch }}"
               else
                 printf '%s\n' "${image}:${{ matrix.version }}"
               fi
@@ -454,6 +459,7 @@ jobs:
           build-contexts: tool-scripts=${{ steps.tool-scripts.outputs.context }}
           context: ${{ matrix.context }}
           file: apps/${{ matrix.app }}/Dockerfile
+          target: ${{ matrix.target }}
           platforms: ${{ matrix.platform }}
           push: ${{ github.event_name != 'pull_request' }}
           load: ${{ github.event_name == 'pull_request' }}
@@ -461,8 +467,8 @@ jobs:
           sbom: false
           no-cache: ${{ matrix.no_cache }}
           tags: ${{ steps.tags.outputs.tags }}
-          cache-from: type=gha,scope=${{ matrix.app }}-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.app }}-${{ matrix.arch }}
+          cache-from: type=gha,scope=${{ matrix.app }}-${{ matrix.arch }}-${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}-${{ matrix.arch }}-${{ matrix.target }}
 
       - name: Smoke image
         if: github.event_name == 'pull_request'
@@ -529,17 +535,21 @@ jobs:
           }
 
           mapfile -t arches < <(jq -r '.[]' <<< '${{ toJson(matrix.arches) }}')
-          if [[ "${{ github.event_name }}" != "schedule" && "${{ matrix.version }}" != "latest" ]]; then
+          if [[ "${{ matrix.version_only }}" == "true" || ( "${{ github.event_name }}" != "schedule" && "${{ matrix.version }}" != "latest" ) ]]; then
             create_manifest "${image}" "${{ matrix.version }}" "${arches[@]}"
           fi
-          create_manifest "${image}" "latest" "${arches[@]}"
+          if [[ "${{ matrix.version_only }}" != "true" ]]; then
+            create_manifest "${image}" "latest" "${arches[@]}"
+          fi
 
           if [[ -n "${EXTRA_ROOT}" ]]; then
             extra_image="${EXTRA_ROOT}/${{ matrix.app }}"
-            if [[ "${{ github.event_name }}" != "schedule" && "${{ matrix.version }}" != "latest" ]]; then
+            if [[ "${{ matrix.version_only }}" == "true" || ( "${{ github.event_name }}" != "schedule" && "${{ matrix.version }}" != "latest" ) ]]; then
               create_manifest "${extra_image}" "${{ matrix.version }}" "${arches[@]}"
             fi
-            create_manifest "${extra_image}" "latest" "${arches[@]}"
+            if [[ "${{ matrix.version_only }}" != "true" ]]; then
+              create_manifest "${extra_image}" "latest" "${arches[@]}"
+            fi
           fi
 
   mirror:

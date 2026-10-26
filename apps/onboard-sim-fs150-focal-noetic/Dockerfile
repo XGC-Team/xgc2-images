@@ -27,6 +27,12 @@ COPY apps/onboard-sim-fs150-focal-noetic/check-image.sh /opt/xgc2/onboard-baseli
 ARG ONBOARD_APT_MIRROR
 RUN bash <<'EOF'
 set -euo pipefail
+if [[ -z "${ONBOARD_APT_MIRROR:-}" ]]; then
+  case "$(dpkg --print-architecture)" in
+    amd64) export ONBOARD_APT_MIRROR=https://archive.ubuntu.com/ubuntu ;;
+    arm64) export ONBOARD_APT_MIRROR=https://ports.ubuntu.com/ubuntu-ports ;;
+  esac
+fi
 useradd --uid 1000 --create-home --shell /bin/bash --user-group "$ONBOARD_BASELINE_USER"
 chmod 0755 /opt/xgc2/onboard-baseline/*.sh
 printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d
@@ -53,6 +59,12 @@ ENV ONBOARD_IMAGE_ROLE=builder
 ENV PATH="/usr/local/go/bin:/usr/local/cargo/bin:${PATH}"
 RUN bash <<'EOF'
 set -euo pipefail
+if [[ -z "${ONBOARD_APT_MIRROR:-}" ]]; then
+  case "$(dpkg --print-architecture)" in
+    amd64) export ONBOARD_APT_MIRROR=https://archive.ubuntu.com/ubuntu ;;
+    arm64) export ONBOARD_APT_MIRROR=https://ports.ubuntu.com/ubuntu-ports ;;
+  esac
+fi
 /opt/xgc2/onboard-baseline/onboard-baseline.sh apply --profile fs150-focal-noetic --replace-timesyncd
 runuser -u "$ONBOARD_BASELINE_USER" -- /opt/xgc2/onboard-baseline/onboard-baseline.sh check --profile "$ONBOARD_BASELINE_PROFILE"
 /opt/xgc2/onboard-baseline/check-image.sh

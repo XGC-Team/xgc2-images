@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -19,6 +20,15 @@ class ImageRolesTest(unittest.TestCase):
             manifests=json.loads(values['manifest_matrix'])['include']
             self.assertEqual({r['version'] for r in manifests},{'runtime','builder'})
             self.assertTrue(all(r['version_only'] for r in manifests))
+
+    def test_actual_build_entry_passes_the_selected_docker_stage(self):
+        workflow=yaml.safe_load((ROOT/'.github/workflows/build.yml').read_text())
+        for job_name in ('build','dependent_build'):
+            build=next(step for step in workflow['jobs'][job_name]['steps'] if step.get('uses','').startswith('docker/build-push-action'))
+            self.assertEqual(build['with']['target'],'${{ matrix.target }}')
+            tags=next(step['run'] for step in workflow['jobs'][job_name]['steps'] if step.get('id')=='tags')
+            role_branch=tags.split('if [[ "${{ matrix.version_only }}" == "true" ]]; then',1)[1].split('elif',1)[0]
+            self.assertNotIn(':latest',role_branch)
 
     def test_builder_extends_runtime_and_owns_language_toolchains(self):
         text=(ROOT/'apps/onboard-sim-fs150-focal-noetic/Dockerfile').read_text()
