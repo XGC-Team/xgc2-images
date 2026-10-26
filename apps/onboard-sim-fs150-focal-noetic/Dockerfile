@@ -48,6 +48,7 @@ packages=/opt/xgc2/onboard-baseline/simulation-packages
 cat "$packages/common.txt" "$packages/$(dpkg --print-architecture).txt" > /opt/xgc2/onboard-baseline/simulation-packages.txt
 cat /opt/xgc2/onboard-baseline/runtime-packages.txt /opt/xgc2/onboard-baseline/simulation-packages.txt | xargs -r apt-get install -y --no-install-recommends
 /opt/xgc2/onboard-baseline/install-zenoh.sh apply
+install -D -m 0755 /opt/xgc2/onboard-baseline/install-zenoh.sh /usr/local/lib/xgc2/zenoh-baseline/install-zenoh.sh
 geographiclib-get-geoids egm96-5
 /opt/xgc2/onboard-baseline/check-image.sh
 /opt/xgc2/onboard-baseline/assert-base-only.sh

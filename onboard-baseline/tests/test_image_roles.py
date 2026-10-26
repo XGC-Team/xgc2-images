@@ -43,6 +43,7 @@ class ImageRolesTest(unittest.TestCase):
         runtime_stage = dockerfile.split('FROM runtime AS builder')[0]
         self.assertIn('COPY apps/onboard-sim-fs150-focal-noetic/install-zenoh.sh', runtime_stage)
         self.assertIn('/opt/xgc2/onboard-baseline/install-zenoh.sh apply', runtime_stage)
+        self.assertIn('/usr/local/lib/xgc2/zenoh-baseline/install-zenoh.sh', runtime_stage)
         installer = (app/'install-zenoh.sh').read_text()
         self.assertIn('4c24202c46a4d0bd836bb35fb5eae77d47decbe9/requirements-runtime.txt', installer)
         self.assertIn('2e1db99fe83c9ac36a6bc38b046fa1f989dcfb05566f5ed5ba488ead337626b0', installer)
