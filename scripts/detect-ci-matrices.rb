@@ -158,6 +158,10 @@ expanded.each do |app|
   target = parent ? legacy_dependent_build : legacy_build
   manifest_target = parent ? legacy_dependent_manifest : legacy_manifest
   build_targets = Array(doc["buildTargets"] || [""])
+  release_version = doc.fetch("releaseVersion", "").to_s
+  unless release_version.empty? || (doc["buildTargets"] && release_version.match?(/\A[0-9]+\.[0-9]+\.[0-9]+\z/))
+    raise "invalid role releaseVersion for #{app}"
+  end
   build_targets.each do |build_target|
     tag = build_target.empty? ? version : build_target
     version_only = !build_target.empty? || doc["publishVersionOnly"] == true
@@ -166,7 +170,7 @@ expanded.each do |app|
         "app" => app, "version" => tag, "image" => image,
         "multiarch" => multiarch,
         "no_cache" => force_no_cache || doc["noCache"] == true,
-        "version_only" => version_only,
+        "version_only" => version_only, "release_version" => release_version,
         "target" => build_target,
         "context" => (doc["repositoryContext"] == true ? "." : "apps/#{app}"),
         "file" => "apps/#{app}/Dockerfile", "parent_image" => ""
@@ -174,7 +178,7 @@ expanded.each do |app|
     end
     manifest_target << {
       "app" => app, "version" => tag, "image" => image,
-      "version_only" => version_only,
+      "version_only" => version_only, "release_version" => release_version,
       "arches" => entries.map { |entry| entry["arch"] }
     } if multiarch
   end

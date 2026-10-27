@@ -7,6 +7,7 @@ systemd
 systemd-sysv
 init-system-helpers
 iproute2
+netbase
 iputils-ping
 util-linux
 procps

@@ -225,6 +225,13 @@ jobs:
               else
                 printf '%s\n' "${image}:${{ matrix.version }}"
               fi
+              if [[ "${{ github.event_name }}" != "schedule" && -n "${{ matrix.release_version }}" ]]; then
+                if [[ "${{ matrix.multiarch }}" == "true" ]]; then
+                  printf '%s\n' "${image}:${{ matrix.version }}-${{ matrix.release_version }}-${{ matrix.arch }}"
+                else
+                  printf '%s\n' "${image}:${{ matrix.version }}-${{ matrix.release_version }}"
+                fi
+              fi
             elif [[ "${latest_only}" == "true" ]]; then
               printf '%s\n' "${image}:latest-${{ matrix.arch }}"
               if [[ "${{ matrix.multiarch }}" != "true" ]]; then
@@ -347,6 +354,9 @@ jobs:
           if [[ "${{ matrix.version_only }}" == "true" || ( "${{ github.event_name }}" != "schedule" && "${{ matrix.version }}" != "latest" ) ]]; then
             create_manifest "${image}" "${{ matrix.version }}" "${arches[@]}"
           fi
+          if [[ "${{ github.event_name }}" != "schedule" && -n "${{ matrix.release_version }}" ]]; then
+            create_manifest "${image}" "${{ matrix.version }}-${{ matrix.release_version }}" "${arches[@]}"
+          fi
           if [[ "${{ matrix.version_only }}" != "true" ]]; then
             create_manifest "${image}" "latest" "${arches[@]}"
           fi
@@ -355,6 +365,9 @@ jobs:
             extra_image="${EXTRA_ROOT}/${{ matrix.app }}"
             if [[ "${{ matrix.version_only }}" == "true" || ( "${{ github.event_name }}" != "schedule" && "${{ matrix.version }}" != "latest" ) ]]; then
               create_manifest "${extra_image}" "${{ matrix.version }}" "${arches[@]}"
+            fi
+            if [[ "${{ github.event_name }}" != "schedule" && -n "${{ matrix.release_version }}" ]]; then
+              create_manifest "${extra_image}" "${{ matrix.version }}-${{ matrix.release_version }}" "${arches[@]}"
             fi
             if [[ "${{ matrix.version_only }}" != "true" ]]; then
               create_manifest "${extra_image}" "latest" "${arches[@]}"
@@ -415,6 +428,13 @@ jobs:
                 printf '%s\n' "${image}:${{ matrix.version }}-${{ matrix.arch }}"
               else
                 printf '%s\n' "${image}:${{ matrix.version }}"
+              fi
+              if [[ "${{ github.event_name }}" != "schedule" && -n "${{ matrix.release_version }}" ]]; then
+                if [[ "${{ matrix.multiarch }}" == "true" ]]; then
+                  printf '%s\n' "${image}:${{ matrix.version }}-${{ matrix.release_version }}-${{ matrix.arch }}"
+                else
+                  printf '%s\n' "${image}:${{ matrix.version }}-${{ matrix.release_version }}"
+                fi
               fi
             elif [[ "${latest_only}" == "true" ]]; then
               printf '%s\n' "${image}:latest-${{ matrix.arch }}"
@@ -538,6 +558,9 @@ jobs:
           if [[ "${{ matrix.version_only }}" == "true" || ( "${{ github.event_name }}" != "schedule" && "${{ matrix.version }}" != "latest" ) ]]; then
             create_manifest "${image}" "${{ matrix.version }}" "${arches[@]}"
           fi
+          if [[ "${{ github.event_name }}" != "schedule" && -n "${{ matrix.release_version }}" ]]; then
+            create_manifest "${image}" "${{ matrix.version }}-${{ matrix.release_version }}" "${arches[@]}"
+          fi
           if [[ "${{ matrix.version_only }}" != "true" ]]; then
             create_manifest "${image}" "latest" "${arches[@]}"
           fi
@@ -546,6 +569,9 @@ jobs:
             extra_image="${EXTRA_ROOT}/${{ matrix.app }}"
             if [[ "${{ matrix.version_only }}" == "true" || ( "${{ github.event_name }}" != "schedule" && "${{ matrix.version }}" != "latest" ) ]]; then
               create_manifest "${extra_image}" "${{ matrix.version }}" "${arches[@]}"
+            fi
+            if [[ "${{ github.event_name }}" != "schedule" && -n "${{ matrix.release_version }}" ]]; then
+              create_manifest "${extra_image}" "${{ matrix.version }}-${{ matrix.release_version }}" "${arches[@]}"
             fi
             if [[ "${{ matrix.version_only }}" != "true" ]]; then
               create_manifest "${extra_image}" "latest" "${arches[@]}"

@@ -6,6 +6,8 @@ import subprocess
 import tempfile
 import unittest
 
+SCRIPT = Path(__file__).resolve().parents[2]/'apps/onboard-sim-fs150-focal-noetic/check-network-databases.sh'
+
 ROOT = Path(__file__).resolve().parents[2]
 
 class BaseBoundaryTest(unittest.TestCase):
@@ -63,3 +65,29 @@ class BaseBoundaryTest(unittest.TestCase):
                 else:
                     self.assertIn('version: latest\n', app)
                     self.assertIn(':latest\n', app)
+
+
+class NetworkDatabasesTest(unittest.TestCase):
+    def test_missing_files_and_wrong_protocols_fail(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            protocols = root/'protocols'; services = root/'services'
+            protocols.write_text('fixture'); services.write_text('fixture')
+            script = root/'check.sh'
+            script.write_text(SCRIPT.read_text().replace('/etc/protocols', str(protocols))
+                              .replace('/etc/services', str(services)))
+            binary = root/'bin'; binary.mkdir()
+            getent = binary/'getent'
+            getent.write_text('#!/bin/sh\ncase "$2" in tcp) echo "tcp ${TCP_NUMBER:-6}";; udp) echo "udp ${UDP_NUMBER:-17}";; *) exit 2;; esac\n')
+            getent.chmod(0o755)
+            env = dict(os.environ, PATH=str(binary)+':/usr/bin:/bin')
+            def run(overrides=None):
+                return subprocess.run(['bash', str(script)], env=dict(env, **(overrides or {})),
+                                      capture_output=True, text=True)
+            self.assertEqual(run().returncode, 0)
+            self.assertIn('tcp=6', run({'TCP_NUMBER':'7'}).stderr)
+            self.assertIn('udp=17', run({'UDP_NUMBER':'18'}).stderr)
+            services.unlink()
+            self.assertIn('services', run().stderr)
+            protocols.unlink()
+            self.assertIn('protocols', run().stderr)

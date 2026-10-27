@@ -17,9 +17,10 @@ class ImageRolesTest(unittest.TestCase):
             rows=json.loads(values['build_matrix'])['include']
             self.assertEqual({(r['target'],r['arch']) for r in rows},{('runtime','amd64'),('runtime','arm64'),('builder','amd64'),('builder','arm64')})
             self.assertTrue(all(r['version_only'] and r['version']==r['target'] for r in rows))
+            self.assertTrue(all(r['release_version']=='1.0.1' for r in rows))
             manifests=json.loads(values['manifest_matrix'])['include']
             self.assertEqual({r['version'] for r in manifests},{'runtime','builder'})
-            self.assertTrue(all(r['version_only'] for r in manifests))
+            self.assertTrue(all(r['version_only'] and r['release_version']=='1.0.1' for r in manifests))
 
     def test_actual_build_entry_passes_the_selected_docker_stage(self):
         workflow=yaml.safe_load((ROOT/'.github/workflows/build.yml').read_text())
@@ -29,18 +30,26 @@ class ImageRolesTest(unittest.TestCase):
             tags=next(step['run'] for step in workflow['jobs'][job_name]['steps'] if step.get('id')=='tags')
             role_branch=tags.split('if [[ "${{ matrix.version_only }}" == "true" ]]; then',1)[1].split('elif',1)[0]
             self.assertNotIn(':latest',role_branch)
+            self.assertIn('matrix.release_version', role_branch)
+            self.assertIn('github.event_name', role_branch)
+        for job_name in ('manifest', 'dependent_manifest'):
+            publish=next(step['run'] for step in workflow['jobs'][job_name]['steps'] if step.get('name')=='Publish multi-architecture manifests' or step.get('name')=='Publish dependent multi-architecture manifests')
+            self.assertIn('matrix.version }}-${{ matrix.release_version', publish)
+            self.assertIn('github.event_name }}" != "schedule"', publish)
 
     def test_fs150_runtime_and_builder_share_pinned_zenoh_and_keep_glpk(self):
         app = ROOT/'apps/onboard-sim-fs150-focal-noetic'
         runtime = (app/'runtime-packages.txt').read_text().splitlines()
         builder = (app/'builder-packages.txt').read_text().splitlines()
         self.assertIn('python3-pip', runtime)
+        self.assertIn('netbase', runtime)
         self.assertIn('libglpk40', runtime)
         self.assertIn('libglpk-dev', builder)
         self.assertNotIn('libzmqpp4', runtime)
         self.assertNotIn('libzmqpp-dev', builder)
         dockerfile = (app/'Dockerfile').read_text()
         runtime_stage = dockerfile.split('FROM runtime AS builder')[0]
+        self.assertIn('org.opencontainers.image.version="1.0.1"', runtime_stage)
         self.assertIn('COPY apps/onboard-sim-fs150-focal-noetic/install-zenoh.sh', runtime_stage)
         self.assertIn('/opt/xgc2/onboard-baseline/install-zenoh.sh apply', runtime_stage)
         self.assertIn('/usr/local/lib/xgc2/zenoh-baseline/install-zenoh.sh', runtime_stage)
@@ -51,6 +60,8 @@ class ImageRolesTest(unittest.TestCase):
         self.assertIn('76781bbfa61fdc1e9626a03202c7dd8fd103f34761dc7b94b5a2d99f5aae629e', installer)
         self.assertIn('0f142a36241e50eb3b86f9c3b0149138d2d1d7b6dd2038589fe4c62e12e776ea', installer)
         check = (app/'check-image.sh').read_text()
+        self.assertIn('runuser -u "$ONBOARD_BASELINE_USER"', check)
+        self.assertIn('check-network-databases.sh', check)
         self.assertIn('import rospy, zenoh', check)
         self.assertIn('install-zenoh.sh check', check)
         self.assertNotIn('libzmqpp', check)

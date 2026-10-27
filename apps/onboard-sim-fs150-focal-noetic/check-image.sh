@@ -2,6 +2,11 @@
 set -euo pipefail
 /opt/xgc2/onboard-baseline/check-simulation.sh
 test -s /usr/share/GeographicLib/geoids/egm96-5.pgm
+if [[ "$(id -u)" == 0 ]]; then
+  runuser -u "$ONBOARD_BASELINE_USER" -- /opt/xgc2/onboard-baseline/check-network-databases.sh
+else
+  /opt/xgc2/onboard-baseline/check-network-databases.sh
+fi
 set +u # ROS setup reads optional variables.
 source /opt/ros/noetic/setup.bash
 set -u
