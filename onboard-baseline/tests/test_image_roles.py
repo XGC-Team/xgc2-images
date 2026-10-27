@@ -17,10 +17,10 @@ class ImageRolesTest(unittest.TestCase):
             rows=json.loads(values['build_matrix'])['include']
             self.assertEqual({(r['target'],r['arch']) for r in rows},{('runtime','amd64'),('runtime','arm64'),('builder','amd64'),('builder','arm64')})
             self.assertTrue(all(r['version_only'] and r['version']==r['target'] for r in rows))
-            self.assertTrue(all(r['release_version']=='1.0.2' for r in rows))
+            self.assertTrue(all(r['release_version']=='1.0.3' for r in rows))
             manifests=json.loads(values['manifest_matrix'])['include']
             self.assertEqual({r['version'] for r in manifests},{'runtime','builder'})
-            self.assertTrue(all(r['version_only'] and r['release_version']=='1.0.2' for r in manifests))
+            self.assertTrue(all(r['version_only'] and r['release_version']=='1.0.3' for r in manifests))
 
     def test_actual_build_entry_passes_the_selected_docker_stage(self):
         workflow=yaml.safe_load((ROOT/'.github/workflows/build.yml').read_text())
@@ -43,6 +43,7 @@ class ImageRolesTest(unittest.TestCase):
         builder = (app/'builder-packages.txt').read_text().splitlines()
         self.assertIn('python3-pip', runtime)
         self.assertIn('netbase', runtime)
+        self.assertIn('chrony', runtime)
         self.assertIn('ros-noetic-mavros-extras', runtime)
         self.assertIn('libglpk40', runtime)
         self.assertIn('libglpk-dev', builder)
@@ -50,7 +51,7 @@ class ImageRolesTest(unittest.TestCase):
         self.assertNotIn('libzmqpp-dev', builder)
         dockerfile = (app/'Dockerfile').read_text()
         runtime_stage = dockerfile.split('FROM runtime AS builder')[0]
-        self.assertIn('org.opencontainers.image.version="1.0.2"', runtime_stage)
+        self.assertIn('org.opencontainers.image.version="1.0.3"', runtime_stage)
         self.assertIn('COPY apps/onboard-sim-fs150-focal-noetic/install-zenoh.sh', runtime_stage)
         self.assertIn('/opt/xgc2/onboard-baseline/install-zenoh.sh apply', runtime_stage)
         self.assertIn('/usr/local/lib/xgc2/zenoh-baseline/install-zenoh.sh', runtime_stage)
@@ -61,6 +62,7 @@ class ImageRolesTest(unittest.TestCase):
         self.assertIn('76781bbfa61fdc1e9626a03202c7dd8fd103f34761dc7b94b5a2d99f5aae629e', installer)
         self.assertIn('0f142a36241e50eb3b86f9c3b0149138d2d1d7b6dd2038589fe4c62e12e776ea', installer)
         check = (app/'check-image.sh').read_text()
+        self.assertIn('chrony.service chronyd.service', check)
         self.assertIn('runuser -u "$ONBOARD_BASELINE_USER"', check)
         self.assertIn('check-network-databases.sh', check)
         self.assertIn('check-mavros-vision-plugin.py', check)
@@ -76,5 +78,7 @@ class ImageRolesTest(unittest.TestCase):
         self.assertIn('onboard-baseline.sh apply',builder)
         self.assertIn('ONBOARD_IMAGE_ROLE=runtime',runtime)
         self.assertIn('ONBOARD_IMAGE_ROLE=builder',builder)
+        self.assertIn('/opt/xgc2/onboard-baseline/disable-image-chrony.sh', runtime)
+        self.assertIn('/opt/xgc2/onboard-baseline/disable-image-chrony.sh', builder)
 
 if __name__=='__main__':unittest.main()

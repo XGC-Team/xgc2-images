@@ -41,3 +41,16 @@ Agent, adapters, XSim, controllers and algorithms are absent from this base; the
 source-built artifacts are installed through an explicit Builder/Deployer workflow.
 
 Baseline and mirror behavior tests now belong to tool-scripts; images tests cover image ownership, entrypoints, selected context and build arguments.
+
+FS150 chrony systemd regression (use a disposable Docker test environment):
+
+```sh
+bash onboard-baseline/tests/smoke-systemd-chrony.sh ghcr.io/xgc-team/xgc2-images/onboard-sim-fs150-focal-noetic:runtime-1.0.3
+bash onboard-baseline/tests/smoke-systemd-chrony.sh ghcr.io/xgc-team/xgc2-images/onboard-sim-fs150-focal-noetic:builder-1.0.3
+```
+
+This boots real systemd in a private cgroup/PID namespace without networking,
+`CAP_SYS_TIME`, host mounts or `--privileged`. It needs `SYS_ADMIN` and temporary
+seccomp/AppArmor relaxation solely to remount the container's cgroup view. It
+checks the multi-user target, both masked unit names, no `chronyd`, retained
+chrony tools and the image healthcheck. The uniquely named container is removed.

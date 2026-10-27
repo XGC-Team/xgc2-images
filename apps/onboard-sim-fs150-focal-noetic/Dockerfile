@@ -8,13 +8,14 @@ COPY --from=tool-scripts onboard-baseline/prepare-apt.sh /onboard-baseline/prepa
 COPY --from=tool-scripts onboard-baseline/configure-product-apt.sh /onboard-baseline/configure-product-apt.sh
 COPY --from=tool-scripts onboard-baseline/install-source-deps.sh /onboard-baseline/install-source-deps.sh
 COPY apps/onboard-sim-fs150-focal-noetic/install-zenoh.sh /onboard-baseline/install-zenoh.sh
+COPY apps/onboard-sim-fs150-focal-noetic/disable-image-chrony.sh /onboard-baseline/disable-image-chrony.sh
 COPY --from=tool-scripts scripts/build/install-toolchains.sh /onboard-baseline/install-toolchains.sh
 COPY onboard-baseline/image-healthcheck.sh /onboard-baseline/image-healthcheck.sh
 COPY onboard-baseline/assert-base-only.sh /onboard-baseline/assert-base-only.sh
 COPY --from=tool-scripts scripts/build/install-ros-apt-source.sh /onboard-baseline/install-ros-apt-source.sh
 
 FROM ${PARENT_IMAGE} AS runtime
-LABEL org.opencontainers.image.version="1.0.2"
+LABEL org.opencontainers.image.version="1.0.3"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ONBOARD_BASELINE_PROFILE=fs150-focal-noetic
 ENV ONBOARD_BASELINE_USER=marvsmart
@@ -50,6 +51,7 @@ apt-get update
 packages=/opt/xgc2/onboard-baseline/simulation-packages
 cat "$packages/common.txt" "$packages/$(dpkg --print-architecture).txt" > /opt/xgc2/onboard-baseline/simulation-packages.txt
 cat /opt/xgc2/onboard-baseline/runtime-packages.txt /opt/xgc2/onboard-baseline/simulation-packages.txt | xargs -r apt-get install -y --no-install-recommends
+/opt/xgc2/onboard-baseline/disable-image-chrony.sh
 /opt/xgc2/onboard-baseline/install-zenoh.sh apply
 install -D -m 0755 /opt/xgc2/onboard-baseline/install-zenoh.sh /usr/local/lib/xgc2/zenoh-baseline/install-zenoh.sh
 geographiclib-get-geoids egm96-5
@@ -73,6 +75,7 @@ if [[ -z "${ONBOARD_APT_MIRROR:-}" ]]; then
   esac
 fi
 /opt/xgc2/onboard-baseline/onboard-baseline.sh apply --profile fs150-focal-noetic --replace-timesyncd
+/opt/xgc2/onboard-baseline/disable-image-chrony.sh
 apt-get update
 xargs -r apt-get install -y --no-install-recommends < /opt/xgc2/onboard-baseline/builder-packages.txt
 runuser -u "$ONBOARD_BASELINE_USER" -- /opt/xgc2/onboard-baseline/onboard-baseline.sh check --profile "$ONBOARD_BASELINE_PROFILE"

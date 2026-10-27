@@ -2,6 +2,15 @@
 set -euo pipefail
 /opt/xgc2/onboard-baseline/check-simulation.sh
 test -s /usr/share/GeographicLib/geoids/egm96-5.pgm
+# Units are masked in the image, not on the host. Keep the chrony tools.
+test -x /usr/bin/chronyc
+test -x /usr/sbin/chronyd
+for unit in chrony.service chronyd.service; do
+  path="/etc/systemd/system/$unit"
+  [[ -L "$path" && "$(readlink "$path")" == /dev/null ]] || {
+    echo "Chrony unit is not masked: $unit" >&2; exit 1;
+  }
+done
 if [[ "$(id -u)" == 0 ]]; then
   runuser -u "$ONBOARD_BASELINE_USER" -- /opt/xgc2/onboard-baseline/check-network-databases.sh
 else
