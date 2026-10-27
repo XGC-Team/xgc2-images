@@ -11,6 +11,12 @@ set +u # ROS setup reads optional variables.
 source /opt/ros/noetic/setup.bash
 set -u
 python3 -B -c "import rospy, zenoh"
+python3 -B /opt/xgc2/onboard-baseline/check-mavros-vision-plugin.py
+vision_deps="$(ldd /opt/ros/noetic/lib/libmavros_extras.so)"
+if grep -q 'not found' <<<"$vision_deps"; then
+  printf '%s\n' "$vision_deps" >&2
+  exit 1
+fi
 /opt/xgc2/onboard-baseline/install-zenoh.sh check
 dpkg-query -W libglpk40 >/dev/null
 if [[ "$ONBOARD_IMAGE_ROLE" == builder ]]; then

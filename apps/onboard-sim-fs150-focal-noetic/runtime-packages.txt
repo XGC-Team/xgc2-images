@@ -20,6 +20,7 @@ python3-jsonschema
 python3-protobuf
 ros-noetic-ros-base
 ros-noetic-mavros
+ros-noetic-mavros-extras
 ros-noetic-vrpn-client-ros
 geographiclib-tools
 bzip2

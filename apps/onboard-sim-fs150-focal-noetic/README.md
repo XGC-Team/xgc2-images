@@ -13,7 +13,8 @@ The tool-scripts named context remains independently pinned by
 app's image source context. The role tags are mutable: consumers requiring an
 exact build must resolve and pin its published registry digest.
 
-Release 1.0.1 adds Ubuntu `netbase` for VRPN protocol/service lookups. CI
-publishes the existing `runtime` and `builder` role tags plus versioned
-`runtime-1.0.1` and `builder-1.0.1` tags for both architectures; scheduled
-refreshes update only the role tags.
+Release 1.0.2 adds MAVROS extras including the vision pose plugin; 1.0.1
+added Ubuntu `netbase` for VRPN protocol/service lookups. CI publishes the
+existing `runtime` and `builder` role tags plus versioned `runtime-1.0.2`
+and `builder-1.0.2` tags for both architectures; scheduled refreshes update only
+the role tags.

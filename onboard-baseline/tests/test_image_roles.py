@@ -17,10 +17,10 @@ class ImageRolesTest(unittest.TestCase):
             rows=json.loads(values['build_matrix'])['include']
             self.assertEqual({(r['target'],r['arch']) for r in rows},{('runtime','amd64'),('runtime','arm64'),('builder','amd64'),('builder','arm64')})
             self.assertTrue(all(r['version_only'] and r['version']==r['target'] for r in rows))
-            self.assertTrue(all(r['release_version']=='1.0.1' for r in rows))
+            self.assertTrue(all(r['release_version']=='1.0.2' for r in rows))
             manifests=json.loads(values['manifest_matrix'])['include']
             self.assertEqual({r['version'] for r in manifests},{'runtime','builder'})
-            self.assertTrue(all(r['version_only'] and r['release_version']=='1.0.1' for r in manifests))
+            self.assertTrue(all(r['version_only'] and r['release_version']=='1.0.2' for r in manifests))
 
     def test_actual_build_entry_passes_the_selected_docker_stage(self):
         workflow=yaml.safe_load((ROOT/'.github/workflows/build.yml').read_text())
@@ -43,13 +43,14 @@ class ImageRolesTest(unittest.TestCase):
         builder = (app/'builder-packages.txt').read_text().splitlines()
         self.assertIn('python3-pip', runtime)
         self.assertIn('netbase', runtime)
+        self.assertIn('ros-noetic-mavros-extras', runtime)
         self.assertIn('libglpk40', runtime)
         self.assertIn('libglpk-dev', builder)
         self.assertNotIn('libzmqpp4', runtime)
         self.assertNotIn('libzmqpp-dev', builder)
         dockerfile = (app/'Dockerfile').read_text()
         runtime_stage = dockerfile.split('FROM runtime AS builder')[0]
-        self.assertIn('org.opencontainers.image.version="1.0.1"', runtime_stage)
+        self.assertIn('org.opencontainers.image.version="1.0.2"', runtime_stage)
         self.assertIn('COPY apps/onboard-sim-fs150-focal-noetic/install-zenoh.sh', runtime_stage)
         self.assertIn('/opt/xgc2/onboard-baseline/install-zenoh.sh apply', runtime_stage)
         self.assertIn('/usr/local/lib/xgc2/zenoh-baseline/install-zenoh.sh', runtime_stage)
@@ -62,6 +63,8 @@ class ImageRolesTest(unittest.TestCase):
         check = (app/'check-image.sh').read_text()
         self.assertIn('runuser -u "$ONBOARD_BASELINE_USER"', check)
         self.assertIn('check-network-databases.sh', check)
+        self.assertIn('check-mavros-vision-plugin.py', check)
+        self.assertIn('ldd /opt/ros/noetic/lib/libmavros_extras.so', check)
         self.assertIn('import rospy, zenoh', check)
         self.assertIn('install-zenoh.sh check', check)
         self.assertNotIn('libzmqpp', check)

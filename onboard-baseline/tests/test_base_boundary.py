@@ -91,3 +91,32 @@ class NetworkDatabasesTest(unittest.TestCase):
             self.assertIn('services', run().stderr)
             protocols.unlink()
             self.assertIn('protocols', run().stderr)
+
+class MavrosVisionPluginTest(unittest.TestCase):
+    def test_plugin_export_class_and_library_are_required(self):
+        import importlib.util
+        path = ROOT/'apps/onboard-sim-fs150-focal-noetic/check-mavros-vision-plugin.py'
+        spec = importlib.util.spec_from_file_location('vision_plugin_check', path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temporary:
+            prefix = Path(temporary)
+            package_dir = prefix/'share/mavros_extras'; package_dir.mkdir(parents=True)
+            library_dir = prefix/'lib'; library_dir.mkdir()
+            manifest = package_dir/'package.xml'
+            xml = package_dir/'mavros_plugins.xml'
+            library = library_dir/'libmavros_extras.so'
+            manifest.write_text('<package><export><mavros plugin="${prefix}/mavros_plugins.xml"/></export></package>')
+            xml.write_text('<library path="lib/libmavros_extras"><class name="vision_pose_estimate" '
+                           'type="mavros::extra_plugins::VisionPoseEstimatePlugin" '
+                           'base_class_type="mavros::plugin::PluginBase"/></library>')
+            library.write_bytes(b'fixture')
+            module.check(prefix)
+            xml.write_text(xml.read_text().replace('vision_pose_estimate', 'another_plugin'))
+            with self.assertRaisesRegex(ValueError, 'class is missing'): module.check(prefix)
+            xml.write_text(xml.read_text().replace('another_plugin', 'vision_pose_estimate'))
+            manifest.write_text('<package><export/></package>')
+            with self.assertRaisesRegex(ValueError, 'export is missing'): module.check(prefix)
+            manifest.write_text('<package><export><mavros plugin="${prefix}/mavros_plugins.xml"/></export></package>')
+            library.unlink()
+            with self.assertRaisesRegex(ValueError, 'libmavros_extras'): module.check(prefix)

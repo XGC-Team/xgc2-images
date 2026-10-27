@@ -14,7 +14,7 @@ COPY onboard-baseline/assert-base-only.sh /onboard-baseline/assert-base-only.sh
 COPY --from=tool-scripts scripts/build/install-ros-apt-source.sh /onboard-baseline/install-ros-apt-source.sh
 
 FROM ${PARENT_IMAGE} AS runtime
-LABEL org.opencontainers.image.version="1.0.1"
+LABEL org.opencontainers.image.version="1.0.2"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ONBOARD_BASELINE_PROFILE=fs150-focal-noetic
 ENV ONBOARD_BASELINE_USER=marvsmart
@@ -26,6 +26,7 @@ COPY apps/onboard-sim-fs150-focal-noetic/simulation-packages/ /opt/xgc2/onboard-
 COPY apps/onboard-sim-fs150-focal-noetic/runtime-packages.txt /opt/xgc2/onboard-baseline/runtime-packages.txt
 COPY apps/onboard-sim-fs150-focal-noetic/check-simulation.sh /opt/xgc2/onboard-baseline/check-simulation.sh
 COPY apps/onboard-sim-fs150-focal-noetic/check-image.sh /opt/xgc2/onboard-baseline/check-image.sh
+COPY apps/onboard-sim-fs150-focal-noetic/check-mavros-vision-plugin.py /opt/xgc2/onboard-baseline/check-mavros-vision-plugin.py
 COPY apps/onboard-sim-fs150-focal-noetic/check-network-databases.sh /opt/xgc2/onboard-baseline/check-network-databases.sh
 ARG ONBOARD_APT_MIRROR
 RUN bash <<'EOF'
