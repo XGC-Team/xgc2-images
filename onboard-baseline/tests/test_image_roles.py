@@ -71,6 +71,27 @@ class ImageRolesTest(unittest.TestCase):
         self.assertIn('install-zenoh.sh check', check)
         self.assertNotIn('libzmqpp', check)
 
+    def test_systemd_probe_passes_checks_to_container_stdin(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake = Path(tmp)/'docker'
+            fake.write_text("#!/usr/bin/env python3\n"
+                            "import os,sys\n"
+                            "a=sys.argv[1:]\n"
+                            "open(os.environ['DOCKER_CALLS'],'a').write(a[0]+'\\n')\n"
+                            "if a[0]=='exec':\n"
+                            "    assert a[1]=='-i', 'container stdin is not attached'\n"
+                            "    body=sys.stdin.read()\n"
+                            "    assert 'systemctl show' in body and 'CAP_SYS_TIME' in body\n"
+                            "    print('fixture checks received')\n")
+            fake.chmod(0o755)
+            log=Path(tmp)/'calls'
+            env=dict(os.environ, PATH=tmp+':'+os.environ['PATH'], DOCKER_CALLS=str(log))
+            result=subprocess.run(['bash', str(ROOT/'onboard-baseline/tests/smoke-systemd-chrony.sh'),
+                                   'fixture-image'], env=env, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('fixture checks received', result.stdout)
+            self.assertEqual(log.read_text().splitlines(), ['run', 'exec', 'stop'])
+
     def test_builder_extends_runtime_and_owns_language_toolchains(self):
         text=(ROOT/'apps/onboard-sim-fs150-focal-noetic/Dockerfile').read_text()
         runtime,builder=text.split('FROM runtime AS builder')

@@ -14,7 +14,7 @@ docker run -d --rm --name "$name" --network none --cgroupns private \
   --security-opt apparmor=unconfined --tmpfs /run --tmpfs /run/lock --tmpfs /tmp \
   --stop-signal SIGRTMIN+3 --entrypoint bash "$image" \
   -c 'set -e; mount -o remount,rw /sys/fs/cgroup; exec /sbin/init' >/dev/null
-docker exec "$name" bash -se <<'CHECK'
+docker exec -i "$name" bash -se <<'CHECK'
 for ((i=0; i<40; i++)); do
   state="$(systemctl show multi-user.target -p ActiveState --value 2>/dev/null || true)"
   [[ "$state" != active ]] || break
