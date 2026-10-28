@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Materialize the selected script release for Docker's named build context."""
 import argparse
+import hashlib
 import io
 import json
 from pathlib import Path, PurePosixPath
@@ -49,7 +50,8 @@ def main():
     if args.url_only:
         print(context)
     else:
-        print(materialize(context, ROOT / '.work/tool-scripts' / match[1]))
+        cache_key = match[1] + '-' + hashlib.sha256(context.encode()).hexdigest()[:12]
+        print(materialize(context, ROOT / '.work/tool-scripts' / cache_key))
 
 
 if __name__ == '__main__':
