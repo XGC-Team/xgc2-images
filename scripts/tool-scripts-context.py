@@ -43,7 +43,7 @@ def main():
     parser.add_argument('--url-only', action='store_true', help='Print selected release without downloading')
     args = parser.parse_args()
     context = json.loads((ROOT / args.lock).read_text())['context']
-    match = re.fullmatch(r'https://[^/\s]+/revisions/([0-9a-f]{40})/tool-scripts\.tar\.gz', context)
+    match = re.fullmatch(r'https://[^/\s]+/scripts/revisions/([0-9a-f]{40})/tool-scripts\.tar\.gz', context)
     if not match:
         raise SystemExit('Select an immutable tool-scripts revision in ' + str(args.lock))
     if args.url_only:
