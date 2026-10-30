@@ -1,0 +1,7 @@
+# Pinned conda-forge GCC runtime archives for the private acados codegen Python.
+# Root-supplied native archives; no conda environment or package manager.
+# Each line is: <dpkg arch> <package> <version> <archive filename> <url> <sha256>.
+amd64 libstdcxx-ng 12.3.0 libstdcxx-ng-12.3.0-hc0a3c3a_13.conda https://conda.anaconda.org/conda-forge/linux-64/libstdcxx-ng-12.3.0-hc0a3c3a_13.conda 123d97faccdd39aa65a7beaf0dd031dad61e3ed45149c8ed91b07ae3aea6d86b
+amd64 libgcc-ng 12.3.0 libgcc-ng-12.3.0-h77fa898_13.conda https://conda.anaconda.org/conda-forge/linux-64/libgcc-ng-12.3.0-h77fa898_13.conda cad9fc19ea75b6be4a4a47ac742136aa63410c86584b580ee549639ad8817d79
+arm64 libstdcxx-ng 12.3.0 libstdcxx-ng-12.3.0-h3f4de04_13.conda https://conda.anaconda.org/conda-forge/linux-aarch64/libstdcxx-ng-12.3.0-h3f4de04_13.conda b4f8fb112da98f35df74e66748d4cd3859e10b9a615317a33614611381f48279
+arm64 libgcc-ng 12.3.0 libgcc-ng-12.3.0-he277a41_13.conda https://conda.anaconda.org/conda-forge/linux-aarch64/libgcc-ng-12.3.0-he277a41_13.conda c0a9ba9726d6fa4bacaef5e25f77e5b8d8921c37659e85ad4a3e51f6ef087091

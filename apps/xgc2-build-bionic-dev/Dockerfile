@@ -35,10 +35,17 @@ RUN chmod +x /tmp/xgc2-build/*.sh /usr/local/bin/xgc2-build-healthcheck \
 COPY apps/xgc2-build-bionic-dev/scripts/install-pinned-cmake.sh /tmp/install-pinned-cmake.sh
 RUN bash /tmp/install-pinned-cmake.sh && rm -f /tmp/install-pinned-cmake.sh
 
+# .conda archives are zstd-compressed tar payloads. Keep the extractor
+# app-scoped; no shared toolchain or host change.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends zstd \
+ && rm -rf /var/lib/apt/lists/*
+
 # Private acados code-generation interpreter for Ubuntu 18.04. The system
 # Python/ROS Python 3.6 stays untouched; the pinned wheels are installed only
 # into this copied private prefix during the image build.
 COPY apps/xgc2-build-bionic-dev/lock/acados-codegen-wheels.lock \
+     apps/xgc2-build-bionic-dev/lock/acados-codegen-runtime.lock \
      apps/xgc2-build-bionic-dev/scripts/install-acados-codegen-python.sh \
      /tmp/acados-codegen/
 RUN bash /tmp/acados-codegen/install-acados-codegen-python.sh \

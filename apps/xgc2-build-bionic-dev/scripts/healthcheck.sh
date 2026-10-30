@@ -19,29 +19,44 @@ command -v buf >/dev/null
 command -v rg >/dev/null
 dpkg-query -W libzmq3-dev libzmqpp-dev cmake fakeroot dpkg-dev \
   libeigen3-dev libgtest-dev libgflags-dev meson >/dev/null
-python3 -c 'import yaml,numpy,casadi,deprecated; assert casadi.__version__.startswith("3.5.")'
-test "$(/usr/bin/python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])')" = "3.6"
+env -u LD_LIBRARY_PATH /usr/bin/python3 -c 'import yaml,numpy,casadi,deprecated; assert casadi.__version__.startswith("3.5.")'
+test "$(env -u LD_LIBRARY_PATH /usr/bin/python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])')" = "3.6"
 
 acados_codegen_prefix="/opt/xgc2/acados-codegen-python"
+test -x "${acados_codegen_prefix}/bin/python3"
+test ! -L "${acados_codegen_prefix}/bin/python3"
 test -x "${acados_codegen_prefix}/bin/python3.12"
+test -f "${acados_codegen_prefix}/lib/libstdc++.so.6.0.30"
+test -L "${acados_codegen_prefix}/lib/libstdc++.so.6"
+test -f "${acados_codegen_prefix}/lib/libgcc_s.so.1"
+test -L "${acados_codegen_prefix}/lib/libgcc_s.so"
 
 check_acados_codegen_python() {
-  local prefix="$1"
-  "${prefix}/bin/python3.12" -I - "$prefix" <<'PY'
+  local prefix="$1" order="$2"
+  "${prefix}/bin/python3" -I - "$prefix" "$order" <<'PY'
+import os
 import sys
+from importlib.metadata import version
 
-expected_prefix = sys.argv[1]
+expected_prefix, order = sys.argv[1], sys.argv[2]
 assert sys.executable == expected_prefix + "/bin/python3.12", sys.executable
 assert sys.version_info[:3] == (3, 12, 12), sys.version_info
 assert sys.prefix == expected_prefix, (sys.prefix, expected_prefix)
 assert sys.base_prefix == expected_prefix, (sys.base_prefix, expected_prefix)
+assert os.environ.get("LD_LIBRARY_PATH") == expected_prefix + "/lib", os.environ.get("LD_LIBRARY_PATH")
 assert all(not path.startswith("/usr/local/share/uv/python") for path in sys.path), sys.path
 
-from importlib.metadata import version
-import casadi
+if order == "numpy-first":
+    import numpy
+    import casadi
+elif order == "casadi-first":
+    import casadi
+    import numpy
+else:
+    raise AssertionError(order)
+
 import Cython
 import deprecated
-import numpy
 import scipy
 import typing_extensions
 import wrapt
@@ -58,10 +73,15 @@ expected = {
 for name, want in expected.items():
     have = version(name)
     assert have == want, (name, have, want)
+
+x = casadi.MX.sym("x")
+f = casadi.Function("f", [x], [x * x])
+assert float(f(2.0)) == 4.0, f(2.0)
 PY
 }
 
-check_acados_codegen_python "$acados_codegen_prefix"
+check_acados_codegen_python "$acados_codegen_prefix" numpy-first
+check_acados_codegen_python "$acados_codegen_prefix" casadi-first
 
 # Exercise the same prefix from a different path. This is the relocation
 # contract used when the acados package stages codegen-python into the deb.
@@ -72,7 +92,8 @@ if ! cp -al "$acados_codegen_prefix" "$relocated" 2>/dev/null; then
   rm -rf "$relocated"
   cp -a "$acados_codegen_prefix" "$relocated"
 fi
-check_acados_codegen_python "$relocated"
+check_acados_codegen_python "$relocated" numpy-first
+check_acados_codegen_python "$relocated" casadi-first
 
 node -v | grep -q '^v16'
 if dpkg-query -W -f='${Package}\n' | grep -E '^(lib)?xgc2-|ros-[a-z]+-xgc2-'; then
