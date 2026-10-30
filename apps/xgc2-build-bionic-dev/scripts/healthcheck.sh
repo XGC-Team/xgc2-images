@@ -33,7 +33,7 @@ test -L "${acados_codegen_prefix}/lib/libgcc_s.so"
 
 check_acados_codegen_python() {
   local prefix="$1" order="$2"
-  "${prefix}/bin/python3" -I - "$prefix" "$order" <<'PY'
+  env -u LD_LIBRARY_PATH "${prefix}/bin/python3" -I - "$prefix" "$order" <<'PY'
 import os
 import sys
 from importlib.metadata import version
@@ -82,6 +82,23 @@ PY
 
 check_acados_codegen_python "$acados_codegen_prefix" numpy-first
 check_acados_codegen_python "$acados_codegen_prefix" casadi-first
+
+# Entry contract with an inherited SDK/caller suffix: prepend only the private
+# lib, preserve the suffix, and do not mutate the parent environment.
+parent_ld="${LD_LIBRARY_PATH-__unset__}"
+sentinel="/opt/xgc2/caller-sdk-lib"
+env LD_LIBRARY_PATH="$sentinel" "${acados_codegen_prefix}/bin/python3" -I - \
+  "$acados_codegen_prefix" "$sentinel" <<'PY'
+import os
+import sys
+expected_prefix, sentinel = sys.argv[1], sys.argv[2]
+assert sys.executable == expected_prefix + "/bin/python3.12", sys.executable
+assert os.environ.get("LD_LIBRARY_PATH") == expected_prefix + "/lib:" + sentinel, os.environ.get("LD_LIBRARY_PATH")
+PY
+[[ "${LD_LIBRARY_PATH-__unset__}" == "$parent_ld" ]] || {
+  echo "launcher mutated the parent LD_LIBRARY_PATH" >&2
+  exit 1
+}
 
 # Exercise the same prefix from a different path. This is the relocation
 # contract used when the acados package stages codegen-python into the deb.

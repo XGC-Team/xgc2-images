@@ -175,7 +175,7 @@ cat >"${destination}/bin/python3" <<'SH'
 #!/bin/sh
 set -eu
 prefix=$(CDPATH= cd -P "$(dirname "$0")/.." && pwd)
-LD_LIBRARY_PATH="$prefix/lib"
+LD_LIBRARY_PATH="$prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export LD_LIBRARY_PATH
 exec "$prefix/bin/python3.12" "$@"
 SH
@@ -183,8 +183,19 @@ chmod 0755 "${destination}/bin/python3"
 [[ ! -L "${destination}/bin/python3" ]] || fail "private python3 entry is still a symlink"
 [[ "$(sha256sum "${destination}/bin/python3.12" | awk '{print $1}')" == "$python312_sha" ]] \
   || fail "bin/python3.12 was modified while installing the entry"
-"${destination}/bin/python3" -I -c 'import os, sys; assert sys.argv[1] == os.environ.get("LD_LIBRARY_PATH")' \
-  "${destination}/lib"
+
+# Entry contract: prepend only the private lib and preserve a caller/SDK
+# suffix. The parent environment must not be mutated.
+parent_ld="${LD_LIBRARY_PATH-__unset__}"
+sentinel="/opt/xgc2/caller-sdk-lib"
+env LD_LIBRARY_PATH="$sentinel" "${destination}/bin/python3" -I - "$destination" "$sentinel" <<'PY'
+import os
+import sys
+expected_prefix, sentinel = sys.argv[1], sys.argv[2]
+assert sys.executable == expected_prefix + "/bin/python3.12", sys.executable
+assert os.environ.get("LD_LIBRARY_PATH") == expected_prefix + "/lib:" + sentinel, os.environ.get("LD_LIBRARY_PATH")
+PY
+[[ "${LD_LIBRARY_PATH-__unset__}" == "$parent_ld" ]] || fail "launcher mutated the parent LD_LIBRARY_PATH"
 
 wheel_count=0
 while read -r wheel_arch package filename url sha; do
@@ -206,7 +217,7 @@ uv pip install --python "${destination}/bin/python3" \
 
 check_codegen() {
   local prefix="$1" order="$2"
-  "${prefix}/bin/python3" -I - "$prefix" "$order" <<'PY'
+  env -u LD_LIBRARY_PATH "${prefix}/bin/python3" -I - "$prefix" "$order" <<'PY'
 import os
 import sys
 from importlib.metadata import version
