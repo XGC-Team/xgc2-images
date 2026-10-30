@@ -24,8 +24,19 @@ XGC2 products are installed
 from `https://xgc2.apt.xiaokang.ink` only while the image is built. Container
 startup never runs `apt update` or installs products.
 
-Exact direct product versions live in `packages.lock`. Change the lock and bump
-the app version whenever the simulation release set changes.
+Exact direct product versions live in `packages.lock`. Regenerate it from the
+owning product metadata and the current focal APT index, then bump the app
+version whenever the simulation release set changes:
+
+```bash
+curl -fsSL https://xgc2.apt.xiaokang.ink/dists/focal/main/binary-amd64/Packages \
+  -o /tmp/Packages-focal-amd64
+python3 scripts/generate-central-sim-lock.py \
+  --lock apps/xgc2-ros1-central-sim/packages.lock \
+  --catalog ../../catalog/generated/products.json \
+  --devops-root ../.. \
+  --packages /tmp/Packages-focal-amd64
+```
 
 QGroundControl 4.4.4 is downloaded with a pinned SHA-256 and extracted while the
 image is built. Runtime execution uses the extracted `AppRun` tree and never
