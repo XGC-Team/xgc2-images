@@ -34,7 +34,7 @@ class ContextTest(unittest.TestCase):
     def test_consumer_manifest_selects_its_own_immutable_release(self):
         with tempfile.TemporaryDirectory() as directory:
             lock = Path(directory) / 'robot-scripts.json'
-            url = 'https://fixture/revisions/' + 'a'*40 + '/tool-scripts.tar.gz'
+            url = 'https://fixture/scripts/revisions/' + 'a'*40 + '/tool-scripts.tar.gz'
             lock.write_text(json.dumps({'context': url}))
             result = subprocess.run([sys.executable, str(SCRIPT), '--lock', str(lock), '--url-only'],
                                     text=True, capture_output=True, check=True)
