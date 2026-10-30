@@ -87,6 +87,17 @@ class ImageRolesTest(unittest.TestCase):
             self.assertNotEqual(blocked.returncode, 0)
             self.assertIn('xgc2-product', blocked.stderr)
 
+    def test_fs150_compose_healthcheck_uses_the_ci_check_image_contract(self):
+        app = ROOT/'apps/onboard-sim-fs150-focal-noetic'
+        compose = yaml.safe_load((app/'docker-compose.yml').read_text())
+        self.assertEqual(compose['services']['onboard-sim-fs150-focal-noetic']['healthcheck']['test'],
+                         ['CMD', '/opt/xgc2/onboard-baseline/check-image.sh'])
+        app_meta = yaml.safe_load((app/'app.yml').read_text())
+        self.assertEqual(app_meta['entrypoints']['healthcheck'],
+                         '/opt/xgc2/onboard-baseline/check-image.sh')
+        self.assertIn('/opt/xgc2/onboard-baseline/install-zenoh.sh check',
+                      (app/'check-image.sh').read_text())
+
     def test_systemd_probe_passes_checks_to_container_stdin(self):
         with tempfile.TemporaryDirectory() as tmp:
             fake = Path(tmp)/'docker'

@@ -5,7 +5,7 @@ services:
     stdin_open: true
     tty: true
     healthcheck:
-      test: ["CMD", "/opt/xgc2/onboard-baseline/image-healthcheck.sh"]
+      test: ["CMD", "/opt/xgc2/onboard-baseline/check-image.sh"]
       interval: 30s
       timeout: 20s
       retries: 3
