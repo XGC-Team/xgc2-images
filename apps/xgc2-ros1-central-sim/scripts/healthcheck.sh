@@ -94,7 +94,13 @@ for forbidden_package in \
   ros-noetic-xgc2-unitree-b2-adapter \
   ros-noetic-xgc2-mocap-rotor-adapter \
   ros-noetic-xgc2-mocap-rotor-forwarder; do
-  if dpkg-query -W "${forbidden_package}" >/dev/null 2>&1; then
+  # A plain `dpkg-query -W NAME` also matches the "un" stub that dpkg
+  # synthesizes for names referenced by an installed package's Breaks: field,
+  # so test the real package state instead of name awareness.
+  installed_state="$(
+    dpkg-query -W -f='${db:Status-Abbrev}' "${forbidden_package}" 2>/dev/null || true
+  )"
+  if [[ "${installed_state}" == i* ]]; then
     echo "forbidden package is installed: ${forbidden_package}" >&2
     exit 1
   fi
