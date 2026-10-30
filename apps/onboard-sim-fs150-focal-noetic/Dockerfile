@@ -7,7 +7,7 @@ COPY --from=tool-scripts onboard-baseline/configure-ubuntu-mirror.sh /onboard-ba
 COPY --from=tool-scripts onboard-baseline/prepare-apt.sh /onboard-baseline/prepare-apt.sh
 COPY --from=tool-scripts onboard-baseline/configure-product-apt.sh /onboard-baseline/configure-product-apt.sh
 COPY --from=tool-scripts onboard-baseline/install-source-deps.sh /onboard-baseline/install-source-deps.sh
-COPY apps/onboard-sim-fs150-focal-noetic/install-zenoh.sh /onboard-baseline/install-zenoh.sh
+COPY --from=tool-scripts onboard-baseline/install-zenoh.sh /onboard-baseline/install-zenoh.sh
 COPY apps/onboard-sim-fs150-focal-noetic/disable-image-chrony.sh /onboard-baseline/disable-image-chrony.sh
 COPY --from=tool-scripts scripts/build/install-toolchains.sh /onboard-baseline/install-toolchains.sh
 COPY onboard-baseline/image-healthcheck.sh /onboard-baseline/image-healthcheck.sh
@@ -15,7 +15,7 @@ COPY onboard-baseline/assert-base-only.sh /onboard-baseline/assert-base-only.sh
 COPY --from=tool-scripts scripts/build/install-ros-apt-source.sh /onboard-baseline/install-ros-apt-source.sh
 
 FROM ${PARENT_IMAGE} AS runtime
-LABEL org.opencontainers.image.version="1.0.3"
+LABEL org.opencontainers.image.version="1.0.4"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ONBOARD_BASELINE_PROFILE=fs150-focal-noetic
 ENV ONBOARD_BASELINE_USER=marvsmart
@@ -77,6 +77,11 @@ fi
 /opt/xgc2/onboard-baseline/onboard-baseline.sh apply --profile fs150-focal-noetic --replace-timesyncd
 /opt/xgc2/onboard-baseline/disable-image-chrony.sh
 apt-get update
+# Builder SDK supply (published APT only, exact pins in builder-packages.txt):
+#   xgc2-protobuf-dev=0.9.0-1~focal (source 8256cc2d, message RetireControllerRequest /
+#   rpc RetireController present in server.proto) and libxgc2-xrpc-dev/-grpc-dev/-udp-dev=0.2.1-2~focal.
+# Verified layer: xgc2-builder-sdk:fs150-focal-amd64-20261031
+#   sha256:b430919ec415cfc776997f12c625dce0ac063c443d05620e6233c21874a6493c
 xargs -r apt-get install -y --no-install-recommends < /opt/xgc2/onboard-baseline/builder-packages.txt
 runuser -u "$ONBOARD_BASELINE_USER" -- /opt/xgc2/onboard-baseline/onboard-baseline.sh check --profile "$ONBOARD_BASELINE_PROFILE"
 /opt/xgc2/onboard-baseline/check-image.sh

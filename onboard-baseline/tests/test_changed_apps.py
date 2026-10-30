@@ -54,6 +54,10 @@ class ChangedAppsTest(unittest.TestCase):
         self.write('onboard-baseline/tool-scripts.json','{"changed":true}')
         self.assertEqual(set(self.changed()), set(APPS))
 
+    def test_foundation_guard_change_rebuilds_all_four_profiles(self):
+        self.write('onboard-baseline/assert-base-only.sh', 'foundation SDK allowlist')
+        self.assertEqual(set(self.changed()), set(APPS))
+
     def test_dependency_healthcheck_is_a_real_image_input(self):
         self.write('onboard-baseline/image-healthcheck.sh','dependencies')
         self.assertEqual(set(self.changed()), set(APPS))

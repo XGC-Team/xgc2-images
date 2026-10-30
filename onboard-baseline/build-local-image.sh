@@ -28,8 +28,12 @@ if [[ "$PROFILE" == fs150-focal-noetic ]]; then
   tag="onboard-sim-${PROFILE}:builder"
   target_args=(--target builder)
 fi
+script_lock="apps/onboard-sim-${PROFILE}/tool-scripts.json"
+if [[ ! -f "$ROOT/$script_lock" ]]; then
+  script_lock=onboard-baseline/tool-scripts.json
+fi
 DOCKER_BUILDKIT=1 docker build --platform "$PLATFORM" --pull "${target_args[@]}" \
-  --build-context "tool-scripts=$(python3 "$ROOT/scripts/tool-scripts-context.py")" \
+  --build-context "tool-scripts=$(python3 "$ROOT/scripts/tool-scripts-context.py" --lock "$script_lock")" \
   --build-arg "ONBOARD_APT_MIRROR=${ONBOARD_APT_MIRROR:-}" \
   -f "${ROOT}/apps/onboard-sim-${PROFILE}/Dockerfile" -t "$tag" "$ROOT"
 actual="$(docker image inspect "$tag" --format '{{.Os}}/{{.Architecture}}')"

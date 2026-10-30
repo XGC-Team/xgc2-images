@@ -86,9 +86,12 @@ jobs:
       - name: Select shared environment scripts
         id: tool-scripts
         run: |
-          script_lock=tool-scripts.json
-          if [[ '${{ matrix.app }}' == onboard-sim-* ]]; then
-            script_lock=onboard-baseline/tool-scripts.json
+          script_lock="apps/${{ matrix.app }}/tool-scripts.json"
+          if [[ ! -f "${script_lock}" ]]; then
+            script_lock=tool-scripts.json
+            if [[ '${{ matrix.app }}' == onboard-sim-* ]]; then
+              script_lock=onboard-baseline/tool-scripts.json
+            fi
           fi
           echo "context=$(python3 scripts/tool-scripts-context.py --lock "$script_lock")" >> "$GITHUB_OUTPUT"
 

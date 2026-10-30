@@ -17,10 +17,10 @@ class ImageRolesTest(unittest.TestCase):
             rows=json.loads(values['build_matrix'])['include']
             self.assertEqual({(r['target'],r['arch']) for r in rows},{('runtime','amd64'),('runtime','arm64'),('builder','amd64'),('builder','arm64')})
             self.assertTrue(all(r['version_only'] and r['version']==r['target'] for r in rows))
-            self.assertTrue(all(r['release_version']=='1.0.3' for r in rows))
+            self.assertTrue(all(r['release_version']=='1.0.4' for r in rows))
             manifests=json.loads(values['manifest_matrix'])['include']
             self.assertEqual({r['version'] for r in manifests},{'runtime','builder'})
-            self.assertTrue(all(r['version_only'] and r['release_version']=='1.0.3' for r in manifests))
+            self.assertTrue(all(r['version_only'] and r['release_version']=='1.0.4' for r in manifests))
 
     def test_actual_build_entry_passes_the_selected_docker_stage(self):
         workflow=yaml.safe_load((ROOT/'.github/workflows/build.yml').read_text())
@@ -51,16 +51,17 @@ class ImageRolesTest(unittest.TestCase):
         self.assertNotIn('libzmqpp-dev', builder)
         dockerfile = (app/'Dockerfile').read_text()
         runtime_stage = dockerfile.split('FROM runtime AS builder')[0]
-        self.assertIn('org.opencontainers.image.version="1.0.3"', runtime_stage)
-        self.assertIn('COPY apps/onboard-sim-fs150-focal-noetic/install-zenoh.sh', runtime_stage)
+        self.assertIn('org.opencontainers.image.version="1.0.4"', runtime_stage)
+        self.assertIn('xgc2-zenoh=1.8.0-1~focal', runtime)
+        self.assertIn('COPY --from=tool-scripts onboard-baseline/install-zenoh.sh', runtime_stage)
+        self.assertNotIn('COPY apps/onboard-sim-fs150-focal-noetic/install-zenoh.sh', runtime_stage)
         self.assertIn('/opt/xgc2/onboard-baseline/install-zenoh.sh apply', runtime_stage)
         self.assertIn('/usr/local/lib/xgc2/zenoh-baseline/install-zenoh.sh', runtime_stage)
-        installer = (app/'install-zenoh.sh').read_text()
-        self.assertIn('4c24202c46a4d0bd836bb35fb5eae77d47decbe9/requirements-runtime.txt', installer)
-        self.assertIn('2e1db99fe83c9ac36a6bc38b046fa1f989dcfb05566f5ed5ba488ead337626b0', installer)
-        self.assertIn('deaf32dcd9ab821e359cd8330786bcd077604b5c5730c0b096eda46f95c24a2d', installer)
-        self.assertIn('76781bbfa61fdc1e9626a03202c7dd8fd103f34761dc7b94b5a2d99f5aae629e', installer)
-        self.assertIn('0f142a36241e50eb3b86f9c3b0149138d2d1d7b6dd2038589fe4c62e12e776ea', installer)
+        self.assertFalse((app/'install-zenoh.sh').exists())
+        import json as _json
+        lock = _json.loads((app/'tool-scripts.json').read_text())['context']
+        self.assertIn('1613d29d55824ce08c1b8d7039fb6ba5f22c7a1e', lock)
+        self.assertIn('xgc2-zenoh', (ROOT/'onboard-baseline/assert-base-only.sh').read_text())
         check = (app/'check-image.sh').read_text()
         self.assertIn('chrony.service chronyd.service', check)
         self.assertIn('runuser -u "$ONBOARD_BASELINE_USER"', check)
@@ -70,6 +71,21 @@ class ImageRolesTest(unittest.TestCase):
         self.assertIn('import rospy, zenoh', check)
         self.assertIn('install-zenoh.sh check', check)
         self.assertNotIn('libzmqpp', check)
+
+    def test_fs150_guard_accepts_apt_owned_zenoh_and_still_blocks_products(self):
+        guard = ROOT/'onboard-baseline/assert-base-only.sh'
+        with tempfile.TemporaryDirectory() as directory:
+            fake = Path(directory)/'dpkg-query'
+            env = dict(os.environ, PATH=directory+':'+os.environ['PATH'], ONBOARD_BASELINE_PROFILE='fs150-focal-noetic')
+            fake.write_text('#!/bin/sh\nprintf "xgc2-zenoh\\tinstalled\\n"\n')
+            fake.chmod(0o755)
+            allowed = subprocess.run(['bash', str(guard)], env=env, capture_output=True, text=True)
+            self.assertEqual(allowed.returncode, 0, allowed.stderr)
+            fake.write_text('#!/bin/sh\nprintf "xgc2-product\\tinstalled\\n"\n')
+            fake.chmod(0o755)
+            blocked = subprocess.run(['bash', str(guard)], env=env, capture_output=True, text=True)
+            self.assertNotEqual(blocked.returncode, 0)
+            self.assertIn('xgc2-product', blocked.stderr)
 
     def test_systemd_probe_passes_checks_to_container_stdin(self):
         with tempfile.TemporaryDirectory() as tmp:

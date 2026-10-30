@@ -14,11 +14,13 @@ blocked="$(awk '$2 == "installed" {sub(/:[^:]+$/, "", $1); print $1}' <<<"$packa
   fi
   # Interface families only. Installation versions and dependency closure belong
   # to the shared preparation profile and the signed APT package metadata.
+  # xgc2-zenoh is the published APT-owned SDK foundation (exact 1.8.0 pin in
+  # runtime-packages.txt); it is not an iterated product or a physical driver.
   case "$package" in
     libxgc2-math-dev|libxgc2-math-*-dev|libxgc2-state-machine-dev|\
     libxgc2-xrpc*|node-xgc2-xrpc|node-xgc2-xrpc-client|\
     libxgc2-chassis-hold*|libxgc2-hover-thrust*|\
-    xgc2-protobuf-dev|xgc2-acados|\
+    xgc2-protobuf-dev|xgc2-acados|xgc2-zenoh|\
     ros-*-xgc2-*-msgs|ros-*-scout-msgs|ros-*-xgc2-ros1-utils|\
     ros-noetic-xgc2-estimator-hover-thrust) continue ;;
   esac

@@ -49,3 +49,4 @@ xgc2-acados
 ros-noetic-xgc2-ros-msgs
 ros-noetic-xgc2-ros1-utils
 libglpk40
+xgc2-zenoh=1.8.0-1~focal

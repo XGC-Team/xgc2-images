@@ -11,6 +11,7 @@ import unittest
 from unittest.mock import patch
 
 SCRIPT = Path(__file__).resolve().parents[2] / 'scripts/tool-scripts-context.py'
+ROOT = SCRIPT.parents[1]
 spec = importlib.util.spec_from_file_location('tool_context', SCRIPT)
 context = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(context)
@@ -43,6 +44,14 @@ class ContextTest(unittest.TestCase):
             result = subprocess.run([sys.executable, str(SCRIPT), '--lock', str(lock), '--url-only'],
                                     text=True, capture_output=True)
             self.assertNotEqual(result.returncode, 0)
+
+    def test_fs150_app_lock_selects_the_published_zenoh_release(self):
+        lock = ROOT / 'apps/onboard-sim-fs150-focal-noetic/tool-scripts.json'
+        url = json.loads(lock.read_text())['context']
+        self.assertIn('1613d29d55824ce08c1b8d7039fb6ba5f22c7a1e', url)
+        result = subprocess.run([sys.executable, str(SCRIPT), '--lock', str(lock), '--url-only'],
+                                text=True, capture_output=True, check=True)
+        self.assertEqual(result.stdout.strip(), url)
 
     def test_scaffolding_preserves_existing_apps_and_uses_the_selected_parent(self):
         source = SCRIPT.parent/'build/generate-build-apps.py'

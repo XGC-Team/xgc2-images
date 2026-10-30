@@ -2,3 +2,7 @@ libcgal-dev
 ros-noetic-rviz-visual-tools
 ros-noetic-jsk-rviz-plugins
 libglpk-dev
+xgc2-protobuf-dev=0.9.0-1~focal
+libxgc2-xrpc-dev=0.2.1-2~focal
+libxgc2-xrpc-grpc-dev=0.2.1-2~focal
+libxgc2-xrpc-udp-dev=0.2.1-2~focal
