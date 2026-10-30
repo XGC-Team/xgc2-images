@@ -42,6 +42,20 @@ class BaseBoundaryTest(unittest.TestCase):
                 result = subprocess.run(['bash', str(ROOT/'onboard-baseline/assert-base-only.sh')], env=env, capture_output=True, text=True)
                 self.assertEqual(result.returncode, expected, result.stderr)
             env['ONBOARD_BASELINE_PROFILE'] = 'fs150-focal-noetic'
+            env['PACKAGE_STATE'] = 'ros-noetic-xgc2-runtime-sync\tinstalled'
+            result = subprocess.run(['bash', str(ROOT/'onboard-baseline/assert-base-only.sh')], env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+            env['ONBOARD_BASELINE_PROFILE'] = 'scout-focal-noetic'
+            env['PACKAGE_STATE'] = 'ros-noetic-xgc2-runtime-sync\tinstalled'
+            result = subprocess.run(['bash', str(ROOT/'onboard-baseline/assert-base-only.sh')], env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 1, result.stdout+result.stderr)
+            env['ONBOARD_BASELINE_PROFILE'] = 'fs150-focal-noetic'
+            env['PACKAGE_STATE'] = 'ros-noetic-xgc2-runtime-sync\tinstalled\nxgc2-agent\tinstalled'
+            result = subprocess.run(['bash', str(ROOT/'onboard-baseline/assert-base-only.sh')], env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 1, result.stdout+result.stderr)
+            env['PACKAGE_STATE'] = 'ros-noetic-xgc2-runtime-sync\tinstalled\nros-noetic-xgc2-px4-multirotor-adapter\tinstalled'
+            result = subprocess.run(['bash', str(ROOT/'onboard-baseline/assert-base-only.sh')], env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 1, result.stdout+result.stderr)
             env['PACKAGE_STATE'] = 'libxgc2-xrpc-dev\tinstalled\nxgc2-agent\tinstalled'
             result = subprocess.run(['bash', str(ROOT/'onboard-baseline/assert-base-only.sh')], env=env, capture_output=True, text=True)
             self.assertEqual(result.returncode, 1, result.stdout+result.stderr)

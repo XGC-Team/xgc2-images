@@ -7,6 +7,8 @@ blocked="$(awk '$2 == "installed" {sub(/:[^:]+$/, "", $1); print $1}' <<<"$packa
   # The package closure is explicit; other robot bases retain the interface-only boundary.
   if [[ "${ONBOARD_BASELINE_PROFILE:-}" == fs150-focal-noetic ]]; then
     case "$package" in
+      # D15-approved formal coordination message package; FS150 runtime only.
+      ros-noetic-xgc2-runtime-sync|\
       ros-noetic-xgc2-gazebo-sim-fs150-sitl|ros-noetic-xgc2-px4-sitl-1-12|\
       ros-noetic-xgc2-gazebo-sim-px4-1-12|ros-noetic-xgc2-fs150-description|\
       ros-noetic-xgc2-simple-lidar|ros-noetic-xgc2-gazebo-scene) continue ;;
