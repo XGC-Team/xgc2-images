@@ -15,7 +15,7 @@ COPY onboard-baseline/assert-base-only.sh /onboard-baseline/assert-base-only.sh
 COPY --from=tool-scripts scripts/build/install-ros-apt-source.sh /onboard-baseline/install-ros-apt-source.sh
 
 FROM ${PARENT_IMAGE} AS runtime
-LABEL org.opencontainers.image.version="1.0.7"
+LABEL org.opencontainers.image.version="1.0.8"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ONBOARD_BASELINE_PROFILE=fs150-focal-noetic
 ENV ONBOARD_BASELINE_USER=marvsmart
