@@ -20,6 +20,24 @@ set +u # ROS setup reads optional variables.
 source /opt/ros/noetic/setup.bash
 set -u
 python3 -B -c "import rospy, zenoh"
+# The SDK package owns the code-generation entry; this is a runtime consumer
+# check only, never a second install path.
+set +u
+source /opt/xgc2/acados/setup.bash
+set -u
+test "${XGC2_ACADOS_PYTHON:-}" = "/usr/bin/python3"
+test "$(dpkg-query -W -f='${Version}' xgc2-acados)" = "0.6.0-1~focal"
+"${XGC2_ACADOS_PYTHON}" -B - <<'PY'
+import pathlib
+
+import acados_template
+import casadi
+
+root = pathlib.Path('/opt/xgc2/acados').resolve()
+assert casadi.__version__ == '3.7.2'
+assert root in pathlib.Path(acados_template.__file__).resolve().parents
+assert (root / 'python').resolve() in pathlib.Path(casadi.__file__).resolve().parents
+PY
 python3 -B /opt/xgc2/onboard-baseline/check-mavros-vision-plugin.py
 vision_deps="$(ldd /opt/ros/noetic/lib/libmavros_extras.so)"
 if grep -q 'not found' <<<"$vision_deps"; then

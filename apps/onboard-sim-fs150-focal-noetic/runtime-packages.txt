@@ -45,7 +45,7 @@ libxgc2-chassis-hold1
 libxgc2-hover-thrust-dev
 libxgc2-state-machine-dev
 libxgc2-math-dev
-xgc2-acados
+xgc2-acados=0.6.0-1~focal
 ros-noetic-xgc2-ros-msgs
 ros-noetic-xgc2-ros1-utils
 libglpk40

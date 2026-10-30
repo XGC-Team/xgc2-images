@@ -1,7 +1,7 @@
 key: onboard-sim-fs150-focal-noetic
 name: FS150 focal noetic onboard simulation base
 version: runtime
-releaseVersion: "1.0.4"
+releaseVersion: "1.0.5"
 buildTargets:
   - runtime
   - builder
