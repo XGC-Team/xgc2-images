@@ -30,5 +30,10 @@ RUN chmod +x /tmp/xgc2-build/*.sh /usr/local/bin/xgc2-build-healthcheck \
  && /tmp/xgc2-build/assert-no-xgc2-apt.sh \
  && rm -rf /tmp/xgc2-build /var/lib/apt/lists/*
 
+# Keep the existing compiler/toolchain layer reusable; only the pinned CMake
+# supply changes for this image revision.
+COPY apps/xgc2-build-bionic-dev/scripts/install-pinned-cmake.sh /tmp/install-pinned-cmake.sh
+RUN bash /tmp/install-pinned-cmake.sh && rm -f /tmp/install-pinned-cmake.sh
+
 WORKDIR /work
 CMD ["bash"]

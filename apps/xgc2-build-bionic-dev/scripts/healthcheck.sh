@@ -5,6 +5,7 @@ test "${VERSION_CODENAME}" = "bionic"
 /usr/local/bin/xgc2-build-assert-no-xgc2-apt.sh
 command -v g++ >/dev/null
 command -v cmake >/dev/null
+cmake --version | awk 'NR==1 { split($3, v, "."); exit !(v[1] > 3 || (v[1] == 3 && v[2] >= 16)) }'
 command -v dpkg-buildpackage >/dev/null
 command -v jq >/dev/null
 command -v node >/dev/null
