@@ -51,14 +51,15 @@ class ImageRolesTest(unittest.TestCase):
         self.assertNotIn('libzmqpp4', runtime)
         self.assertNotIn('libzmqpp-dev', builder)
         dockerfile = (app/'Dockerfile').read_text()
-        runtime_stage = dockerfile.split('FROM runtime AS builder')[0]
+        runtime_stage = dockerfile.split('FROM ${FS150_BUILDER_BASE} AS builder')[0]
         release_version = str(yaml.safe_load((app/'app.yml').read_text())['releaseVersion'])
         self.assertIn('org.opencontainers.image.version="'+release_version+'"', runtime_stage)
         self.assertIn('xgc2-zenoh=1.8.0-1~focal', runtime)
         self.assertIn('COPY --from=tool-scripts onboard-baseline/install-zenoh.sh', runtime_stage)
         self.assertNotIn('COPY apps/onboard-sim-fs150-focal-noetic/install-zenoh.sh', runtime_stage)
-        self.assertIn('/opt/xgc2/onboard-baseline/install-zenoh.sh apply', runtime_stage)
-        self.assertIn('/usr/local/lib/xgc2/zenoh-baseline/install-zenoh.sh', runtime_stage)
+        upgrade = (app/'upgrade-image-baseline.sh').read_text()
+        self.assertIn('/usr/local/lib/xgc2/zenoh-baseline/install-zenoh.sh', upgrade)
+        self.assertIn('"$root/check-image.sh"', upgrade)
         self.assertFalse((app/'install-zenoh.sh').exists())
         import json as _json
         lock = _json.loads((app/'tool-scripts.json').read_text())['context']
@@ -121,14 +122,16 @@ class ImageRolesTest(unittest.TestCase):
             self.assertIn('fixture checks received', result.stdout)
             self.assertEqual(log.read_text().splitlines(), ['run', 'exec', 'stop'])
 
-    def test_builder_extends_runtime_and_owns_language_toolchains(self):
+    def test_roles_reuse_immutable_bases_and_check_current_dependencies(self):
         text=(ROOT/'apps/onboard-sim-fs150-focal-noetic/Dockerfile').read_text()
-        runtime,builder=text.split('FROM runtime AS builder')
-        self.assertNotIn('onboard-baseline.sh apply',runtime)
-        self.assertIn('onboard-baseline.sh apply',builder)
+        runtime,builder=text.split('FROM ${FS150_BUILDER_BASE} AS builder')
+        for role in ('RUNTIME', 'BUILDER'):
+            self.assertRegex(text, rf'(?m)^ARG FS150_{role}_BASE=ghcr\.io/[^\s]+@sha256:[0-9a-f]{{64}}$')
+        self.assertEqual(text.count('COPY --from=runtime-sources /onboard-baseline/ /opt/xgc2/onboard-baseline/'), 2)
         self.assertIn('ONBOARD_IMAGE_ROLE=runtime',runtime)
         self.assertIn('ONBOARD_IMAGE_ROLE=builder',builder)
-        self.assertIn('/opt/xgc2/onboard-baseline/disable-image-chrony.sh', runtime)
-        self.assertIn('/opt/xgc2/onboard-baseline/disable-image-chrony.sh', builder)
+        upgrade=(ROOT/'apps/onboard-sim-fs150-focal-noetic/upgrade-image-baseline.sh').read_text()
+        self.assertIn('"$root/onboard-baseline.sh" check --profile', upgrade)
+        self.assertIn('"$root/assert-base-only.sh"', upgrade)
 
 if __name__=='__main__':unittest.main()

@@ -67,15 +67,20 @@ class BaseBoundaryTest(unittest.TestCase):
                 text = (ROOT/'apps'/('onboard-sim-'+profile)/'Dockerfile').read_text()
                 for forbidden in ('install-agent', 'install-xsim', 'install-sitl', 'agentdeb', 'AGENT_INSTALL', 'image-entrypoint.sh'):
                     self.assertNotIn(forbidden, text)
-                self.assertIn('/opt/xgc2/onboard-baseline/assert-base-only.sh', text)
+                if profile == 'fs150-focal-noetic':
+                    upgrade = (ROOT/'apps'/('onboard-sim-'+profile)/'upgrade-image-baseline.sh').read_text()
+                    self.assertIn('"$root/assert-base-only.sh"', upgrade)
+                    self.assertIn('/usr/sbin/policy-rc.d', upgrade)
+                else:
+                    self.assertIn('/opt/xgc2/onboard-baseline/assert-base-only.sh', text)
+                    self.assertIn('/usr/sbin/policy-rc.d', text)
                 self.assertIn('ENTRYPOINT ["/ros_entrypoint.sh"]', text)
                 self.assertIn('COPY --from=tool-scripts onboard-baseline/baselines.json', text)
-                self.assertIn('/usr/sbin/policy-rc.d', text)
                 app = (ROOT/'apps'/('onboard-sim-'+profile)/'app.yml').read_text()
                 if profile == 'fs150-focal-noetic':
                     self.assertIn('version: runtime\n', app)
                     self.assertIn('  - builder\n', app)
-                    self.assertIn('FROM runtime AS builder', text)
+                    self.assertIn('FROM ${FS150_BUILDER_BASE} AS builder', text)
                 else:
                     self.assertIn('version: latest\n', app)
                     self.assertIn(':latest\n', app)
