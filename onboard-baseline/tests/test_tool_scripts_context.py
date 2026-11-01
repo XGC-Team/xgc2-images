@@ -45,10 +45,11 @@ class ContextTest(unittest.TestCase):
                                     text=True, capture_output=True)
             self.assertNotEqual(result.returncode, 0)
 
-    def test_fs150_app_lock_selects_the_published_zenoh_release(self):
+    def test_focal_app_and_shared_lock_select_published_required_toolchains(self):
         lock = ROOT / 'apps/onboard-sim-fs150-focal-noetic/tool-scripts.json'
         url = json.loads(lock.read_text())['context']
-        self.assertIn('1613d29d55824ce08c1b8d7039fb6ba5f22c7a1e', url)
+        self.assertIn('a7f1823716c7706b23a44ce49d3e3865201cf845', url)
+        self.assertEqual(json.loads((ROOT/'onboard-baseline/tool-scripts.json').read_text())['context'], url)
         result = subprocess.run([sys.executable, str(SCRIPT), '--lock', str(lock), '--url-only'],
                                 text=True, capture_output=True, check=True)
         self.assertEqual(result.stdout.strip(), url)
