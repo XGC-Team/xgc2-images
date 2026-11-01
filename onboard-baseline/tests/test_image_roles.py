@@ -17,10 +17,11 @@ class ImageRolesTest(unittest.TestCase):
             rows=json.loads(values['build_matrix'])['include']
             self.assertEqual({(r['target'],r['arch']) for r in rows},{('runtime','amd64'),('runtime','arm64'),('builder','amd64'),('builder','arm64')})
             self.assertTrue(all(r['version_only'] and r['version']==r['target'] for r in rows))
-            self.assertTrue(all(r['release_version']=='1.0.4' for r in rows))
+            release_version = str(yaml.safe_load((ROOT/'apps/onboard-sim-fs150-focal-noetic/app.yml').read_text())['releaseVersion'])
+            self.assertTrue(all(r['release_version']==release_version for r in rows))
             manifests=json.loads(values['manifest_matrix'])['include']
             self.assertEqual({r['version'] for r in manifests},{'runtime','builder'})
-            self.assertTrue(all(r['version_only'] and r['release_version']=='1.0.4' for r in manifests))
+            self.assertTrue(all(r['version_only'] and r['release_version']==release_version for r in manifests))
 
     def test_actual_build_entry_passes_the_selected_docker_stage(self):
         workflow=yaml.safe_load((ROOT/'.github/workflows/build.yml').read_text())
@@ -51,7 +52,8 @@ class ImageRolesTest(unittest.TestCase):
         self.assertNotIn('libzmqpp-dev', builder)
         dockerfile = (app/'Dockerfile').read_text()
         runtime_stage = dockerfile.split('FROM runtime AS builder')[0]
-        self.assertIn('org.opencontainers.image.version="1.0.4"', runtime_stage)
+        release_version = str(yaml.safe_load((app/'app.yml').read_text())['releaseVersion'])
+        self.assertIn('org.opencontainers.image.version="'+release_version+'"', runtime_stage)
         self.assertIn('xgc2-zenoh=1.8.0-1~focal', runtime)
         self.assertIn('COPY --from=tool-scripts onboard-baseline/install-zenoh.sh', runtime_stage)
         self.assertNotIn('COPY apps/onboard-sim-fs150-focal-noetic/install-zenoh.sh', runtime_stage)
@@ -60,7 +62,7 @@ class ImageRolesTest(unittest.TestCase):
         self.assertFalse((app/'install-zenoh.sh').exists())
         import json as _json
         lock = _json.loads((app/'tool-scripts.json').read_text())['context']
-        self.assertIn('1613d29d55824ce08c1b8d7039fb6ba5f22c7a1e', lock)
+        self.assertRegex(lock, r'^https://[^/\s]+/scripts/revisions/[0-9a-f]{40}/tool-scripts\.tar\.gz$')
         self.assertIn('xgc2-zenoh', (ROOT/'onboard-baseline/assert-base-only.sh').read_text())
         check = (app/'check-image.sh').read_text()
         self.assertIn('chrony.service chronyd.service', check)

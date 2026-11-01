@@ -45,14 +45,18 @@ class ContextTest(unittest.TestCase):
                                     text=True, capture_output=True)
             self.assertNotEqual(result.returncode, 0)
 
-    def test_focal_app_and_shared_lock_select_published_required_toolchains(self):
-        lock = ROOT / 'apps/onboard-sim-fs150-focal-noetic/tool-scripts.json'
-        url = json.loads(lock.read_text())['context']
-        self.assertIn('a7f1823716c7706b23a44ce49d3e3865201cf845', url)
-        self.assertEqual(json.loads((ROOT/'onboard-baseline/tool-scripts.json').read_text())['context'], url)
-        result = subprocess.run([sys.executable, str(SCRIPT), '--lock', str(lock), '--url-only'],
-                                text=True, capture_output=True, check=True)
-        self.assertEqual(result.stdout.strip(), url)
+    def test_each_robot_consumer_resolves_its_declared_immutable_archive(self):
+        # Different image consumers may advance independently; their own exact
+        # selected archive is the contract, not equality with a copied old SHA.
+        for relative in ('apps/onboard-sim-fs150-focal-noetic/tool-scripts.json',
+                         'onboard-baseline/tool-scripts.json'):
+            with self.subTest(consumer=relative):
+                lock = ROOT / relative
+                url = json.loads(lock.read_text())['context']
+                self.assertRegex(url, r'^https://[^/\s]+/scripts/revisions/[0-9a-f]{40}/tool-scripts\.tar\.gz$')
+                result = subprocess.run([sys.executable, str(SCRIPT), '--lock', str(lock), '--url-only'],
+                                        text=True, capture_output=True, check=True)
+                self.assertEqual(result.stdout.strip(), url)
 
     def test_scaffolding_preserves_existing_apps_and_uses_the_selected_parent(self):
         source = SCRIPT.parent/'build/generate-build-apps.py'

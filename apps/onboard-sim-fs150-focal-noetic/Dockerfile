@@ -15,7 +15,7 @@ COPY onboard-baseline/assert-base-only.sh /onboard-baseline/assert-base-only.sh
 COPY --from=tool-scripts scripts/build/install-ros-apt-source.sh /onboard-baseline/install-ros-apt-source.sh
 
 FROM ${PARENT_IMAGE} AS runtime
-LABEL org.opencontainers.image.version="1.0.8"
+LABEL org.opencontainers.image.version="1.0.9"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ONBOARD_BASELINE_PROFILE=fs150-focal-noetic
 ENV ONBOARD_BASELINE_USER=marvsmart
@@ -79,7 +79,7 @@ fi
 apt-get update
 # Builder SDK supply (published APT only, exact pins in builder-packages.txt):
 #   xgc2-protobuf-dev=0.9.0-1~focal (source 8256cc2d, message RetireControllerRequest /
-#   rpc RetireController present in server.proto) and libxgc2-xrpc-dev/-grpc-dev/-udp-dev=0.2.1-2~focal.
+#   rpc RetireController present in server.proto) and libxgc2-xrpc-dev/-grpc-dev/-udp-dev=0.2.1-3~focal.
 # Verified layer: xgc2-builder-sdk:fs150-focal-amd64-20261031
 #   sha256:b430919ec415cfc776997f12c625dce0ac063c443d05620e6233c21874a6493c
 xargs -r apt-get install -y --no-install-recommends < /opt/xgc2/onboard-baseline/builder-packages.txt
