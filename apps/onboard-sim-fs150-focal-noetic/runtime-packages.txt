@@ -41,8 +41,8 @@ libpcl-search1.10
 libjsoncpp1
 libgrpc++1
 libprotobuf17
-libxgc2-xrpc2=0.2.1-3~focal
-libxgc2-xrpc-grpc2=0.2.1-3~focal
+libxgc2-xrpc2=0.2.1-4~focal
+libxgc2-xrpc-grpc2=0.2.1-4~focal
 libxgc2-chassis-hold1
 libxgc2-hover-thrust-dev
 libxgc2-state-machine-dev
