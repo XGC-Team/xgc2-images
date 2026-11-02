@@ -101,6 +101,15 @@ class ImageRolesTest(unittest.TestCase):
         self.assertIn('/opt/xgc2/onboard-baseline/install-zenoh.sh check',
                       (app/'check-image.sh').read_text())
 
+    def test_fs150_tools_dependency_is_in_both_roles(self):
+        app = ROOT/'apps/onboard-sim-fs150-focal-noetic'
+        runtime = (app/'runtime-packages.txt').read_text().splitlines()
+        self.assertIn('ros-noetic-rosbag', runtime)
+        self.assertIn('ros-noetic-ros-babel-fish', runtime)
+        upgrade = (app/'upgrade-image-baseline.sh').read_text()
+        self.assertIn('ros1-snapshots.list', upgrade)
+        self.assertIn('--no-install-recommends --no-remove ros-noetic-ros-babel-fish', upgrade)
+
     def test_systemd_probe_passes_checks_to_container_stdin(self):
         with tempfile.TemporaryDirectory() as tmp:
             fake = Path(tmp)/'docker'
