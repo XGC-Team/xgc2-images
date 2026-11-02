@@ -14,7 +14,8 @@ ROOT = Path(__file__).resolve().parents[2]
 class WorkflowContextTest(unittest.TestCase):
     def test_all_workflow_callers_use_the_selected_consumer_manifest(self):
         expected = {
-            'onboard-sim-fs150-focal-noetic': json.loads((ROOT/'onboard-baseline/tool-scripts.json').read_text())['context'],
+            'onboard-sim-fs150-focal-noetic': json.loads((ROOT/'apps/onboard-sim-fs150-focal-noetic/tool-scripts.json').read_text())['context'],
+            'onboard-sim-scout-focal-noetic': json.loads((ROOT/'onboard-baseline/tool-scripts.json').read_text())['context'],
             'xgc2-latex-toolchain': json.loads((ROOT/'tool-scripts.json').read_text())['context'],
         }
         steps = []
