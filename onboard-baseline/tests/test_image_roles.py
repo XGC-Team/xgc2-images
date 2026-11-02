@@ -108,6 +108,7 @@ class ImageRolesTest(unittest.TestCase):
         self.assertIn('ros-noetic-ros-babel-fish', runtime)
         upgrade = (app/'upgrade-image-baseline.sh').read_text()
         self.assertIn('ros1-snapshots.list', upgrade)
+        self.assertEqual(upgrade.count('APT::Get::List-Cleanup=0'), 2)
         self.assertIn('--no-install-recommends --no-remove ros-noetic-ros-babel-fish', upgrade)
 
     def test_systemd_probe_passes_checks_to_container_stdin(self):

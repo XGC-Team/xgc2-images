@@ -12,12 +12,12 @@ id "$ONBOARD_BASELINE_USER" >/dev/null
 test -x /usr/sbin/policy-rc.d
 chmod 0755 "$root"/*.sh
 "$root/configure-product-apt.sh" https://xgc2.apt.xiaokang.ink focal
-apt-get update -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/xgc2.list -o Dir::Etc::sourceparts=-
+apt-get -o APT::Get::List-Cleanup=0 update -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/xgc2.list -o Dir::Etc::sourceparts=-
 # ROS1 Tools consumes the distro Babel Fish library in both image roles. The
 # immutable older role bases may predate it; resolve it from the ROS owner only
 # when missing, without rebuilding it or upgrading unrelated packages.
 if [[ "$(dpkg-query -W -f='${db:Status-Status}' ros-noetic-ros-babel-fish 2>/dev/null || true)" != installed ]]; then
-  apt-get update -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/ros1-snapshots.list -o Dir::Etc::sourceparts=-
+  apt-get -o APT::Get::List-Cleanup=0 update -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/ros1-snapshots.list -o Dir::Etc::sourceparts=-
   apt-get install -y --no-install-recommends --no-remove ros-noetic-ros-babel-fish
 fi
 awk -F= 'NF == 2 && $0 !~ /^[[:space:]]*#/ {print}' "${declarations[@]}" |
