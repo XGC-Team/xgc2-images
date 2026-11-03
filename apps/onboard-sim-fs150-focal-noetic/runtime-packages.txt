@@ -43,6 +43,7 @@ libgrpc++1
 libprotobuf17
 libxgc2-xrpc2=0.2.1-4~focal
 libxgc2-xrpc-grpc2=0.2.1-4~focal
+python3-xgc2-xrpc=0.2.1-5~focal
 libxgc2-chassis-hold1
 libxgc2-hover-thrust-dev
 libxgc2-state-machine-dev
