@@ -74,13 +74,3 @@ for entry in "${packages[@]}"; do
     exit 1
   fi
 done
-
-# First-party wheel from the same trusted SDK push as the formal Debian release.
-# All third-party Python requirements are owned by the pinned runtime image.
-sdk_wheel=/tmp/xgc2_xrpc-0.2.0-py3-none-any.whl
-curl -fsSL --retry 5 \
-  https://github.com/XGC-Team/xgc2-xrpc/releases/download/v0.2.0-1/xgc2_xrpc-0.2.0-py3-none-any.whl \
-  -o "$sdk_wheel"
-echo "fc81fe2ee5ef1abf2e7313ff4ae9401ce60f3dee14292b5228ea46e01f97c298  $sdk_wheel" | sha256sum -c -
-python3 -m pip install --no-index --no-deps "$sdk_wheel"
-rm "$sdk_wheel"
