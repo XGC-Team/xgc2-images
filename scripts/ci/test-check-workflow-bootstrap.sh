@@ -11,10 +11,12 @@ trap 'rm -rf "${tmpdir}"' EXIT
 pass_dir="${tmpdir}/pass/.github/workflows"
 fail_dir="${tmpdir}/fail/.github/workflows"
 upstream_dir="${tmpdir}/upstream/.github/workflows"
+python_dir="${tmpdir}/python-thirdparty/.github/workflows"
 mkdir -p \
   "${pass_dir}" \
   "${fail_dir}" \
   "${upstream_dir}" \
+  "${python_dir}" \
   "${tmpdir}/pass/.xgc2/scripts" \
   "${tmpdir}/fail/.xgc2/scripts" \
   "${tmpdir}/upstream/.xgc2/scripts" \
@@ -36,6 +38,7 @@ jobs:
       - run: apt-get install -f
       - run: apt-get install -y --no-install-recommends xgc2-acados libxgc2-math-dev ros-noetic-xgc2-ros1-utils
       - run: apt-get install -y node-xgc2-xrpc node-xgc2-xrpc-client=0.2.0-1~noble
+      - run: apt-get install -y --no-install-recommends libxgc2-xrpc-dev python3-xgc2-xrpc
       - run: apt-get install -y --no-install-recommends ros-melodic-swarm-ros-bridge ros-noetic-scout-msgs
 EOF
 
@@ -59,6 +62,7 @@ jobs:
       - run: apt-get install -y node-xgc2-xrpc cmake
       - run: apt-get install -y node-external-sdk nodejs
       - run: apt-get install -y ros-noetic-roscpp
+      - run: apt-get install -y python3-numpy
       - run: curl --proto "=https" -sSf https://sh.rustup.rs | sh -s -- -y
 EOF
 
@@ -134,6 +138,21 @@ done
 printf '%s\n' 'id: another-product' > "${viewer}/.xgc2/product.yml"
 if python3 "${checker}" "${viewer}"; then
   echo "expected first-party Node bootstrap to fail" >&2
+  fail=1
+fi
+
+cat >"${python_dir}/ci.yml" <<'EOF'
+name: third-party-python
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: ghcr.io/xgc-team/xgc2-images/xgc2-build-noble-dev:1.0.0
+    steps:
+      - run: apt-get install -y python3-numpy
+EOF
+if python3 "${checker}" "${tmpdir}/python-thirdparty"; then
+  echo "expected third-party python3 package to fail" >&2
   fail=1
 fi
 
