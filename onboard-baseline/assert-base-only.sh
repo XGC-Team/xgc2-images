@@ -18,6 +18,15 @@ blocked="$(awk '$2 == "installed" {sub(/:[^:]+$/, "", $1); print $1}' <<<"$packa
   # to the shared preparation profile and the signed APT package metadata.
   # xgc2-zenoh is the published APT-owned SDK foundation (exact 1.8.0 pin in
   # runtime-packages.txt); it is not an iterated product or a physical driver.
+  # The fs150 builder additionally carries the published VRPN->Zenoh bridge
+  # runtime/dev interface so Adapter source builds resolve its proto/CMake
+  # instead of vendoring them. The runtime role stays free of it.
+  if [[ "${ONBOARD_IMAGE_ROLE:-}" == builder &&
+        "${ONBOARD_BASELINE_PROFILE:-}" == fs150-focal-noetic ]]; then
+    case "$package" in
+      xgc2-vrpn-zenoh|xgc2-vrpn-zenoh-dev) continue ;;
+    esac
+  fi
   case "$package" in
     libxgc2-math-dev|libxgc2-math-*-dev|libxgc2-state-machine-dev|\
     libxgc2-xrpc*|node-xgc2-xrpc|node-xgc2-xrpc-client|\
