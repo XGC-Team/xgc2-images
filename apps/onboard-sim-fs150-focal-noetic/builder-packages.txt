@@ -8,3 +8,4 @@ libxgc2-xrpc-grpc-dev=0.2.1-5~focal
 libxgc2-xrpc-udp-dev=0.2.1-5~focal
 xgc2-vrpn-zenoh=0.1.0-4~focal
 xgc2-vrpn-zenoh-dev=0.1.0-4~focal
+ros-noetic-ros-babel-fish
