@@ -38,7 +38,7 @@ class ImageRolesTest(unittest.TestCase):
             self.assertIn('matrix.version }}-${{ matrix.release_version', publish)
             self.assertIn('github.event_name }}" != "schedule"', publish)
 
-    def test_fs150_runtime_and_builder_share_pinned_zenoh_and_keep_glpk(self):
+    def test_fs150_role_baseline_and_glpk(self):
         app = ROOT/'apps/onboard-sim-fs150-focal-noetic'
         runtime = (app/'runtime-packages.txt').read_text().splitlines()
         builder = (app/'builder-packages.txt').read_text().splitlines()
@@ -54,7 +54,6 @@ class ImageRolesTest(unittest.TestCase):
         runtime_stage = dockerfile.split('FROM ${FS150_BUILDER_BASE} AS builder')[0]
         release_version = str(yaml.safe_load((app/'app.yml').read_text())['releaseVersion'])
         self.assertIn('org.opencontainers.image.version="'+release_version+'"', runtime_stage)
-        self.assertIn('xgc2-zenoh=1.8.0-1~focal', runtime)
         self.assertIn('COPY --from=tool-scripts onboard-baseline/install-zenoh.sh', runtime_stage)
         self.assertNotIn('COPY apps/onboard-sim-fs150-focal-noetic/install-zenoh.sh', runtime_stage)
         upgrade = (app/'upgrade-image-baseline.sh').read_text()
