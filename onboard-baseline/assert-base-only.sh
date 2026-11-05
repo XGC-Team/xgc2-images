@@ -24,7 +24,7 @@ blocked="$(awk '$2 == "installed" {sub(/:[^:]+$/, "", $1); print $1}' <<<"$packa
   if [[ "${ONBOARD_IMAGE_ROLE:-}" == builder &&
         "${ONBOARD_BASELINE_PROFILE:-}" == fs150-focal-noetic ]]; then
     case "$package" in
-      xgc2-vrpn-zenoh|xgc2-vrpn-zenoh-dev) continue ;;
+      xgc2-vrpn-zenoh|xgc2-vrpn-zenoh-dev|libxgc2-module-dev) continue ;;
     esac
   fi
   case "$package" in
