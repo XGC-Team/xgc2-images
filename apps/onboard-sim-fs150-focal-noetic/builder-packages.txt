@@ -10,4 +10,4 @@ xgc2-vrpn-zenoh=0.1.0-4~focal
 xgc2-vrpn-zenoh-dev=0.1.0-4~focal
 libxgc2-chassis-hold-dev=0.2.0-2~focal
 libxgc2-module-dev=0.3.0-1~focal
-libxgc2-state-machine-dev=0.2.0-1~focal
+libxgc2-state-machine-dev=0.2.0-3~focal
