@@ -29,7 +29,7 @@ FROM ${FS150_RUNTIME_BASE} AS runtime
 ENV DEBIAN_FRONTEND=noninteractive ONBOARD_BASELINE_PROFILE=fs150-focal-noetic ONBOARD_BASELINE_USER=marvsmart ONBOARD_IMAGE_ROLE=runtime
 COPY --from=runtime-sources /onboard-baseline/ /opt/xgc2/onboard-baseline/
 RUN bash /opt/xgc2/onboard-baseline/upgrade-image-baseline.sh
-LABEL org.opencontainers.image.version="1.0.16"
+LABEL org.opencontainers.image.version="1.0.17"
 ENTRYPOINT ["/ros_entrypoint.sh"]
 CMD ["bash"]
 
@@ -37,6 +37,6 @@ FROM ${FS150_BUILDER_BASE} AS builder
 ENV DEBIAN_FRONTEND=noninteractive ONBOARD_BASELINE_PROFILE=fs150-focal-noetic ONBOARD_BASELINE_USER=marvsmart ONBOARD_IMAGE_ROLE=builder
 COPY --from=runtime-sources /onboard-baseline/ /opt/xgc2/onboard-baseline/
 RUN bash /opt/xgc2/onboard-baseline/upgrade-image-baseline.sh
-LABEL org.opencontainers.image.version="1.0.16"
+LABEL org.opencontainers.image.version="1.0.17"
 ENTRYPOINT ["/ros_entrypoint.sh"]
 CMD ["bash"]

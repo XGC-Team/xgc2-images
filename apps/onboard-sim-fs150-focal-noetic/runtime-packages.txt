@@ -46,10 +46,10 @@ libxgc2-xrpc-grpc2=0.2.1-5~focal
 python3-xgc2-xrpc=0.2.1-5~focal
 libxgc2-chassis-hold1
 libxgc2-hover-thrust-dev
-libxgc2-state-machine-dev
+libxgc2-state-machine-dev=0.2.0-4~focal
 libxgc2-math-dev
 xgc2-acados=0.6.0-1~focal
 ros-noetic-xgc2-ros-msgs
-ros-noetic-xgc2-ros1-utils
+ros-noetic-xgc2-ros1-utils=1.1.1-11
 libglpk40
 xgc2-zenoh=1.8.0-2~focal
