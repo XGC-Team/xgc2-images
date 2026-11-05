@@ -16,9 +16,10 @@ exact build must resolve and pin its published registry digest.
 
 Release 1.0.18 moves the runtime and builder Zenoh pin to `1.10.2-1~focal`
 and the builder VRPN-to-Zenoh bridge pins to `0.1.0-5~focal`, rebuilt
-against the same SDK. The SDK4, ROS utilities 1.1.1-11 and other package pins
-are unchanged. Adapter packages are not part of this base; any Adapter
-consumer build must use the same SDK and its own reviewed pin.
+against the same SDK. It also pins the tool-scripts baseline's
+`xgc2-mavlink-router=3.0.0-14+focal`. The SDK4, ROS utilities 1.1.1-11 and
+other package pins are unchanged. Adapter packages are not part of this base;
+any Adapter consumer build must use the same SDK and its own reviewed pin.
 
 Release 1.0.8 is the same FS150 runtime/builder supply as 1.0.7, versioned for
 the shared robot-baseline commit so the already-published 1.0.7 digests remain

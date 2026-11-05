@@ -52,4 +52,5 @@ xgc2-acados=0.6.0-1~focal
 ros-noetic-xgc2-ros-msgs
 ros-noetic-xgc2-ros1-utils=1.1.1-11
 libglpk40
+xgc2-mavlink-router=3.0.0-14+focal
 xgc2-zenoh=1.10.2-1~focal
